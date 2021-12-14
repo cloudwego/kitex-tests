@@ -61,9 +61,16 @@ which protoc || install_protoc
 which thriftgo || go install github.com/cloudwego/thriftgo@latest
 
 # Install kitex and generate codes
-KITEX_VERSION=${1:-develop}
+LOCAL_REPO=$1
 
-go install github.com/cloudwego/kitex/tool/cmd/kitex@${KITEX_VERSION}
+if [[ -n $LOCAL_REPO ]]; then
+    cd ${LOCAL_REPO}
+    go install ${LOCAL_REPO}/tool/cmd/kitex
+    cd -
+else
+    go install github.com/cloudwego/kitex/tool/cmd/kitex@latest
+fi
+
 test -d kitex_gen && rm -rf kitex_gen
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
@@ -72,7 +79,12 @@ kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/stabi
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
-go get github.com/cloudwego/kitex@${KITEX_VERSION}
+go get github.com/cloudwego/kitex
+
+if [[ -n $LOCAL_REPO ]]; then
+    go mod edit -replace github.com/cloudwgo/kitex=${LOCAL_REPO}
+fi
+
 go mod tidy
 
 # static check
