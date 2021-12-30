@@ -65,7 +65,7 @@ func TestClient(t *testing.T) {
 	req.Header.Set("token", "1")
 	customReq, err := generic.FromHTTPRequest(req)
 	test.Assert(t, err == nil, err)
-	respI, err := cli.GenericCall(context.Background(), "", customReq, callopt.WithRPCTimeout(100*time.Second))
+	respI, err := cli.GenericCall(context.Background(), "", customReq, callopt.WithRPCTimeout(time.Second))
 	test.Assert(t, err == nil, err)
 	resp, ok := respI.(*generic.HTTPResponse)
 	test.Assert(t, ok)
