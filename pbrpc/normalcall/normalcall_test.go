@@ -67,7 +67,7 @@ func TestStTReqWithTTHeader(t *testing.T) {
 	cli := getKitexClient(transport.TTHeader)
 
 	ctx, stReq := pbrpc.CreateSTRequest(context.Background())
-	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(100*time.Second), callopt.WithConnectTimeout(1*time.Second))
+	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(time.Second))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, stReq.Str == stResp.Str)
 }

@@ -16,13 +16,11 @@ package tests
 
 import (
 	"context"
-	"encoding/base64"
 	"testing"
 	"time"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
 )
@@ -63,7 +61,7 @@ func TestClient(t *testing.T) {
 			"ID": int64(232324),
 		},
 	}
-	resp, err := cli.GenericCall(context.Background(), "Echo", req, callopt.WithRPCTimeout(100*time.Second))
+	resp, err := cli.GenericCall(context.Background(), "Echo", req)
 	test.Assert(t, err == nil)
 	respM, ok := resp.(map[string]interface{})
 	test.Assert(t, ok)
@@ -73,7 +71,7 @@ func TestClient(t *testing.T) {
 	test.Assert(t, int32(1) == respM["I32"])
 	test.Assert(t, int64(1) == respM["I64"])
 	test.Assert(t, int32(1) == respM["ErrorCode"])
-	test.Assert(t, base64.StdEncoding.EncodeToString([]byte("world")) == respM["Binary"], respM["Binary"])
+	test.Assert(t, "world" == respM["Binary"], respM["Binary"])
 	test.DeepEqual(t, map[interface{}]interface{}{"hello": "world"}, respM["Map"])
 	test.DeepEqual(t, []interface{}{"hello", "world"}, respM["Set"])
 	test.DeepEqual(t, []interface{}{"hello", "world"}, respM["List"])
