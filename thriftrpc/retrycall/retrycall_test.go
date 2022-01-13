@@ -44,6 +44,7 @@ func TestMain(m *testing.M) {
 
 	time.Sleep(time.Second)
 	m.Run()
+	time.Sleep(2 * time.Second)
 	svr.Stop()
 }
 

@@ -51,8 +51,9 @@ func TestMain(m *testing.M) {
 	}, nil, server.WithCodec(&mockedCodec{
 		Codec: codec.NewDefaultCodec(),
 	}))
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 	m.Run()
+	time.Sleep(2 * time.Second)
 	svr.Stop()
 }
 
