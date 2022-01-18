@@ -42,9 +42,9 @@ func TestMain(m *testing.M) {
 		Address: ":9001",
 	}, new(STServiceHandler))
 
-	time.Sleep(time.Second)
+	time.Sleep(3 * time.Second)
 	m.Run()
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	svr.Stop()
 }
 

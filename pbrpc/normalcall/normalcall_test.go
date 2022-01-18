@@ -32,9 +32,9 @@ func TestMain(m *testing.M) {
 		Network: "tcp",
 		Address: ":8001",
 	}, nil)
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	m.Run()
-	time.Sleep(2 * time.Second)
+	time.Sleep(3 * time.Second)
 	svr.Stop()
 }
 
