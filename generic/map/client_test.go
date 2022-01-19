@@ -27,9 +27,8 @@ import (
 
 func TestMain(m *testing.M) {
 	svc := runServer()
-	time.Sleep(3 * time.Second)
+	time.Sleep(time.Second)
 	m.Run()
-	time.Sleep(3 * time.Second)
 	svc.Stop()
 }
 

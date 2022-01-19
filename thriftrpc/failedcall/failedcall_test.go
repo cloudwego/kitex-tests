@@ -51,9 +51,8 @@ func TestMain(m *testing.M) {
 	}, nil, server.WithCodec(&mockedCodec{
 		Codec: codec.NewDefaultCodec(),
 	}))
-	time.Sleep(3 * time.Second)
+	time.Sleep(time.Second)
 	m.Run()
-	time.Sleep(3 * time.Second)
 	svr.Stop()
 }
 
@@ -129,10 +128,12 @@ func TestVisitOneway(t *testing.T) {
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
 
+	time.Sleep(time.Second / 2) // wait for the TCP close signal from server
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	err = cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
 
+	time.Sleep(time.Second / 2) // wait for the TCP close signal from server
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	err = cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
