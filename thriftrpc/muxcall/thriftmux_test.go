@@ -32,9 +32,8 @@ func TestMain(m *testing.M) {
 		Address:  ":9002",
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil)
-	time.Sleep(3 * time.Second)
+	time.Sleep(time.Second)
 	m.Run()
-	time.Sleep(3 * time.Second)
 	svr.Stop()
 }
 
