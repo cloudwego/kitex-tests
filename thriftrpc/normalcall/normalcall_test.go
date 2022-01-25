@@ -16,7 +16,9 @@ package normalcall
 
 import (
 	"context"
+	"errors"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,7 +26,9 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
+	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/transport"
 )
 
@@ -38,13 +42,13 @@ func TestMain(m *testing.M) {
 	svr.Stop()
 }
 
-func getKitexClient(p transport.Protocol) stservice.Client {
+func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
 		HostPorts:         []string{":9001"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
-	})
+	}, opts...)
 }
 
 func TestStTReq(t *testing.T) {
@@ -126,6 +130,18 @@ func TestVisitOneway(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	err = cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
+}
+
+func TestRPCTimeoutPriority(t *testing.T) {
+	cli := getKitexClient(transport.TTHeaderFramed, client.WithRPCTimeout(500*time.Millisecond))
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	var durationStr = "300ms"
+	stReq.MockCost = &durationStr
+	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(200*time.Millisecond))
+	test.Assert(t, err != nil)
+	test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
+	test.Assert(t, strings.Contains(err.Error(), "timeout=200ms"))
+	test.Assert(t, stResp == nil)
 }
 
 func BenchmarkThriftCall(b *testing.B) {

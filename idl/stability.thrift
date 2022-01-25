@@ -45,6 +45,7 @@ struct STRequest {
     13: TestEnum e,
     14: required string flagMsg
     15: required string framework = "kitex",
+    16: optional string mockCost,
 }
 
 struct STResponse {

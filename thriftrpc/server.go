@@ -83,6 +83,13 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,
 	}
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return nil, err
+		} else {
+			time.Sleep(mockSleep)
+		}
+	}
 	return resp, nil
 }
 
@@ -93,6 +100,13 @@ func (*STServiceHandler) TestObjReq(ctx context.Context, req *instparam.ObjReq) 
 		MsgSet:  req.MsgSet,
 		MsgMap:  req.MsgMap,
 		FlagMsg: req.FlagMsg,
+	}
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return nil, err
+		} else {
+			time.Sleep(mockSleep)
+		}
 	}
 	return resp, nil
 }
