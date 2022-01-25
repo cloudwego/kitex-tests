@@ -33,6 +33,7 @@ struct ObjReq {
     3: required list<SubMessage> subMsgs
     4: optional set<Message> msgSet
     5: required string flagMsg
+    6: optional string mockCost
 }
 
 struct ObjResp {

@@ -37,6 +37,7 @@ message ObjReq {
     repeated SubMessage subMsgs = 3;
     repeated Message msgs = 4;
     string flagMsg = 5;
+    string mockCost = 6;
 }
 
 message ObjResp {
