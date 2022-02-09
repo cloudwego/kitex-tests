@@ -135,7 +135,7 @@ func TestVisitOneway(t *testing.T) {
 func TestRPCTimeoutPriority(t *testing.T) {
 	cli := getKitexClient(transport.TTHeaderFramed, client.WithRPCTimeout(500*time.Millisecond))
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	var durationStr = "300ms"
+	durationStr := "300ms"
 	stReq.MockCost = &durationStr
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(200*time.Millisecond))
 	test.Assert(t, err != nil)
