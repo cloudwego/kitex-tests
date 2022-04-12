@@ -82,7 +82,7 @@ go get github.com/apache/thrift@v0.13.0
 go get github.com/cloudwego/kitex
 
 if [[ -n $LOCAL_REPO ]]; then
-    go mod edit -replace github.com/cloudwgo/kitex=${LOCAL_REPO}
+    go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
 fi
 
 go mod tidy
