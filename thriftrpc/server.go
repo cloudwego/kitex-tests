@@ -118,8 +118,10 @@ func (*STServiceHandler) TestException(ctx context.Context, req *stability.STReq
 }
 
 // VisitOneway .
+var CheckNum int32
+
 func (*STServiceHandler) VisitOneway(ctx context.Context, req *stability.STRequest) (err error) {
-	// no nothing
+	atomic.AddInt32(&CheckNum, 1)
 	return nil
 }
 

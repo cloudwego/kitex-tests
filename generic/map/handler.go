@@ -16,6 +16,7 @@ package tests
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
 )
@@ -25,42 +26,7 @@ type EchoServiceImpl struct{}
 
 // Echo implements the EchoServiceImpl interface.
 func (s *EchoServiceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r *tenant.EchoResponse, err error) {
-	if err := assert(req.GetMsg(), "hello"); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetI8(), int8(1)); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetI16(), int16(1)); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetI32(), int32(1)); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetI64(), int64(1)); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetBinary(), []byte("hello")); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetMap(), map[string]string{
-		"hello": "world",
-	}); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetSet(), []string{"hello", "world"}); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetList(), []string{"hello", "world"}); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetErrorCode(), tenant.ErrorCode_FAILURE); err != nil {
-		return nil, err
-	}
-	if err := assert(req.GetInfo(), &tenant.Info{
-		Map: map[string]string{"hello": "world"},
-		ID:  232324,
-	}); err != nil {
+	if err := assertRequest(req); err != nil {
 		return nil, err
 	}
 	return &tenant.EchoResponse{
@@ -79,4 +45,56 @@ func (s *EchoServiceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r 
 			ID:  233333,
 		},
 	}, nil
+}
+
+var checkNum int32
+
+func (s *EchoServiceImpl) EchoOneway(ctx context.Context, req *tenant.EchoRequest) error {
+	if err := assertRequest(req); err != nil {
+		return err
+	}
+	atomic.AddInt32(&checkNum, 1)
+	return nil
+}
+
+func assertRequest(req *tenant.EchoRequest) error {
+	if err := assert(req.GetMsg(), "hello"); err != nil {
+		return err
+	}
+	if err := assert(req.GetI8(), int8(1)); err != nil {
+		return err
+	}
+	if err := assert(req.GetI16(), int16(1)); err != nil {
+		return err
+	}
+	if err := assert(req.GetI32(), int32(1)); err != nil {
+		return err
+	}
+	if err := assert(req.GetI64(), int64(1)); err != nil {
+		return err
+	}
+	if err := assert(req.GetBinary(), []byte("hello")); err != nil {
+		return err
+	}
+	if err := assert(req.GetMap(), map[string]string{
+		"hello": "world",
+	}); err != nil {
+		return err
+	}
+	if err := assert(req.GetSet(), []string{"hello", "world"}); err != nil {
+		return err
+	}
+	if err := assert(req.GetList(), []string{"hello", "world"}); err != nil {
+		return err
+	}
+	if err := assert(req.GetErrorCode(), tenant.ErrorCode_FAILURE); err != nil {
+		return err
+	}
+	if err := assert(req.GetInfo(), &tenant.Info{
+		Map: map[string]string{"hello": "world"},
+		ID:  232324,
+	}); err != nil {
+		return err
+	}
+	return nil
 }

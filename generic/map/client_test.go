@@ -16,6 +16,7 @@ package tests
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -81,4 +82,43 @@ func TestClient(t *testing.T) {
 		},
 		"ID": int64(233333),
 	}, respM["Info"])
+}
+
+func TestGeneric(t *testing.T) {
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	test.Assert(t, err == nil)
+	g, err := generic.MapThriftGeneric(p)
+	test.Assert(t, err == nil)
+
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(address))
+	test.Assert(t, err == nil)
+
+	req := map[string]interface{}{
+		"Msg":    "hello",
+		"I8":     int8(1),
+		"I16":    int16(1),
+		"I32":    int32(1),
+		"I64":    int64(1),
+		"Binary": []byte("hello"),
+		"Map": map[interface{}]interface{}{
+			"hello": "world",
+		},
+		"Set":       []interface{}{"hello", "world"},
+		"List":      []interface{}{"hello", "world"},
+		"ErrorCode": int32(1),
+		"Info": map[string]interface{}{
+			"Map": map[interface{}]interface{}{
+				"hello": "world",
+			},
+			"ID": int64(232324),
+		},
+	}
+	num := 10
+	for i := 0; i < num; i++ {
+		_, err = cli.GenericCall(context.Background(), "EchoOneway", req)
+		test.Assert(t, err == nil)
+	}
+	// wait for request received
+	time.Sleep(200 * time.Millisecond)
+	test.Assert(t, atomic.LoadInt32(&checkNum) == int32(num))
 }
