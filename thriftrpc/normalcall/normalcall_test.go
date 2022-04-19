@@ -19,6 +19,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -130,6 +131,9 @@ func TestVisitOneway(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	err = cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
+
+	time.Sleep(200 * time.Millisecond)
+	test.Assert(t, atomic.LoadInt32(&thriftrpc.CheckNum) == int32(3))
 }
 
 func TestRPCTimeoutPriority(t *testing.T) {

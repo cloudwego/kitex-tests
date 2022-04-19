@@ -56,4 +56,5 @@ struct EchoResponse {
 
 service EchoService {
     EchoResponse Echo(1: EchoRequest request);
+    oneway void EchoOneway(1: EchoRequest request);
 }
