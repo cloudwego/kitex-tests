@@ -79,7 +79,7 @@ kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/stabi
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
-go get github.com/cloudwego/kitex
+go get github.com/cloudwego/kitex@develop
 
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
