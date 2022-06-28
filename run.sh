@@ -76,6 +76,8 @@ kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
 kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/stability.proto
+kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/unknown_handler.proto
+
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
@@ -90,7 +92,7 @@ go mod tidy
 # static check
 go vet -stdmethods=false $(go list ./...)
 go install mvdan.cc/gofumpt@v0.2.0
-test -z "$(gofumpt -l -extra .)" 
+test -z "$(gofumpt -l -extra .)"
 
 # run tests
 go test ./thriftrpc/normalcall/...
@@ -103,3 +105,4 @@ go test ./pbrpc/muxcall/...
 go test ./pbrpc/failedcall/...
 go test ./generic/http/...
 go test ./generic/map/...
+go test ./grpc/...
