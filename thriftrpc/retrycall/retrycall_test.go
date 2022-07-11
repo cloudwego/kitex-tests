@@ -16,6 +16,7 @@ package retrycall
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -29,6 +30,7 @@ import (
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
+	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/transport"
@@ -37,14 +39,20 @@ import (
 var retryChainStopStr = "chain stop retry"
 
 func TestMain(m *testing.M) {
-	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+	svr1 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9001",
 	}, new(STServiceHandler))
 
+	svr2 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: ":9002",
+	}, new(STServiceMockResultHandler))
+
 	time.Sleep(time.Second)
 	m.Run()
-	svr.Stop()
+	svr1.Stop()
+	svr2.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
@@ -180,6 +188,70 @@ func TestServiceCB(t *testing.T) {
 		}
 	}
 	test.Assert(t, cbCount == 200, cbCount)
+}
+
+func TestRetryWithSpecifiedResult(t *testing.T) {
+	methodPolicy := make(map[string]bool)
+	isResultRetry := &retry.IsResultRetry{IsErrorRetry: func(err error, ri rpcinfo.RPCInfo) bool {
+		if ri.To().Method() == "testObjReq" {
+			if te, ok := errors.Unwrap(err).(*remote.TransError); ok && te.TypeID() == 1000 && te.Error() == "retry [biz error]" {
+				methodPolicy[ri.To().Method()] = true
+				return true
+			}
+		}
+		return false
+	}, IsRespRetry: func(result interface{}, ri rpcinfo.RPCInfo) bool {
+		if ri.To().Method() == "testSTReq" {
+			if r, ok1 := result.(interface{ GetResult() interface{} }); ok1 {
+				if resp, ok2 := r.GetResult().(*stability.STResponse); ok2 && resp.FlagMsg == retryMsg {
+					methodPolicy[ri.To().Method()] = true
+					return true
+				}
+			}
+		} else if ri.To().Method() == "testException" {
+			teResult := result.(*stability.STServiceTestExceptionResult)
+			if r, ok1 := result.(interface{ GetResult() interface{} }); ok1 {
+				if resp, ok2 := r.GetResult().(*stability.STResponse); ok2 && resp != nil {
+					teResult.SetStException(nil)
+				} else if teResult.IsSetStException() && teResult.StException.Message == retryMsg {
+					methodPolicy[ri.To().Method()] = true
+					return true
+				}
+			}
+		}
+		return false
+	}}
+	cli := getKitexClient(
+		transport.PurePayload,
+		client.WithFailureRetry(retry.NewFailurePolicy()),
+		client.WithRetryMethodPolicies(map[string]retry.Policy{
+			"testSTReq":        retry.BuildFailurePolicy(retry.NewFailurePolicy()),
+			"testObjReq":       retry.BuildFailurePolicy(retry.NewFailurePolicy()),
+			"circuitBreakTest": retry.BuildBackupRequest(retry.NewBackupPolicy(10))}),
+		client.WithSpecifiedResultRetry(isResultRetry),
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithHostPorts(":9002"),
+	)
+
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	_, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testSTReq"])
+
+	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
+	_, err = cli.TestObjReq(ctx, objReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testObjReq"])
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestException(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testException"])
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.CircuitBreakTest(ctx, stReq)
+	test.Assert(t, err == nil, err)
+
 }
 
 func BenchmarkRetryNoCB(b *testing.B) {
