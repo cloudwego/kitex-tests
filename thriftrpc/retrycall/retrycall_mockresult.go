@@ -32,7 +32,7 @@ var _ stability.STService = &STServiceMockResultHandler{}
 // STServiceMockResultHandler .
 type STServiceMockResultHandler struct{}
 
-// TestSTReq mock retrun resp with 'retry' msg
+// TestSTReq mock return resp with 'retry' msg
 func (h *STServiceMockResultHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
 	resp := &stability.STResponse{
 		Str:     req.Str,

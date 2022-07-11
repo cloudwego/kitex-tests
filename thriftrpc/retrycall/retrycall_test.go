@@ -192,7 +192,7 @@ func TestServiceCB(t *testing.T) {
 
 func TestRetryWithSpecifiedResult(t *testing.T) {
 	methodPolicy := make(map[string]bool)
-	isResultRetry := &retry.IsResultRetry{IsErrorRetry: func(err error, ri rpcinfo.RPCInfo) bool {
+	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testObjReq" {
 			if te, ok := errors.Unwrap(err).(*remote.TransError); ok && te.TypeID() == 1000 && te.Error() == "retry [biz error]" {
 				methodPolicy[ri.To().Method()] = true
@@ -200,27 +200,27 @@ func TestRetryWithSpecifiedResult(t *testing.T) {
 			}
 		}
 		return false
-	}, IsRespRetry: func(result interface{}, ri rpcinfo.RPCInfo) bool {
+	}
+	isRespRetry := func(resp interface{}, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testSTReq" {
-			if r, ok1 := result.(interface{ GetResult() interface{} }); ok1 {
-				if resp, ok2 := r.GetResult().(*stability.STResponse); ok2 && resp.FlagMsg == retryMsg {
+			if respI, ok1 := resp.(interface{ GetResult() interface{} }); ok1 {
+				if r, ok2 := respI.GetResult().(*stability.STResponse); ok2 && r.FlagMsg == retryMsg {
 					methodPolicy[ri.To().Method()] = true
 					return true
 				}
 			}
 		} else if ri.To().Method() == "testException" {
-			teResult := result.(*stability.STServiceTestExceptionResult)
-			if r, ok1 := result.(interface{ GetResult() interface{} }); ok1 {
-				if resp, ok2 := r.GetResult().(*stability.STResponse); ok2 && resp != nil {
-					teResult.SetStException(nil)
-				} else if teResult.IsSetStException() && teResult.StException.Message == retryMsg {
-					methodPolicy[ri.To().Method()] = true
-					return true
-				}
+			teResult := resp.(*stability.STServiceTestExceptionResult)
+			if teResult.GetSuccess() != nil {
+				teResult.SetStException(nil)
+			} else if teResult.IsSetStException() && teResult.StException.Message == retryMsg {
+				methodPolicy[ri.To().Method()] = true
+				return true
 			}
 		}
 		return false
-	}}
+	}
+	isResultRetry := &retry.IsResultRetry{IsErrorRetry: isErrorRetry, IsRespRetry: isRespRetry}
 	cli := getKitexClient(
 		transport.PurePayload,
 		client.WithFailureRetry(retry.NewFailurePolicy()),
