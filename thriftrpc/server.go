@@ -122,6 +122,13 @@ var CheckNum int32
 
 func (*STServiceHandler) VisitOneway(ctx context.Context, req *stability.STRequest) (err error) {
 	atomic.AddInt32(&CheckNum, 1)
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return err
+		} else {
+			time.Sleep(mockSleep)
+		}
+	}
 	return nil
 }
 
