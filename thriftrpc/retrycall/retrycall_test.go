@@ -251,6 +251,71 @@ func TestRetryWithSpecifiedResult(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	_, err = cli.CircuitBreakTest(ctx, stReq)
 	test.Assert(t, err == nil, err)
+}
+
+func TestRetryNotify(t *testing.T) {
+	methodPolicy := make(map[string]bool)
+	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
+		if ri.To().Method() == "testObjReq" {
+			if te, ok := errors.Unwrap(err).(*remote.TransError); ok && te.TypeID() == 1000 && te.Error() == "retry [biz error]" {
+				methodPolicy[ri.To().Method()] = true
+				return true
+			}
+		}
+		return false
+	}
+	isRespRetry := func(resp interface{}, ri rpcinfo.RPCInfo) bool {
+		if ri.To().Method() == "testSTReq" {
+			if respI, ok1 := resp.(interface{ GetResult() interface{} }); ok1 {
+				if r, ok2 := respI.GetResult().(*stability.STResponse); ok2 && r.FlagMsg == retryMsg {
+					methodPolicy[ri.To().Method()] = true
+					return true
+				}
+			}
+		} else if ri.To().Method() == "testException" {
+			teResult := resp.(*stability.STServiceTestExceptionResult)
+			if teResult.GetSuccess() != nil {
+				teResult.SetStException(nil)
+			} else if teResult.IsSetStException() && teResult.StException.Message == retryMsg {
+				methodPolicy[ri.To().Method()] = true
+				return true
+			}
+		}
+		return false
+	}
+	isResultRetry := &retry.IsResultRetry{IsErrorRetry: isErrorRetry, IsRespRetry: isRespRetry}
+	rc := retry.NewRetryContainer()
+	rc.NotifyPolicyChange("*", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
+	rc.NotifyPolicyChange("testSTReq", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
+	rc.NotifyPolicyChange("testObjReq", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
+	rc.NotifyPolicyChange("circuitBreakTest", retry.BuildBackupRequest(retry.NewBackupPolicy(10)))
+
+	cli := getKitexClient(
+		transport.PurePayload,
+		client.WithRetryContainer(rc),
+		client.WithSpecifiedResultRetry(isResultRetry),
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithHostPorts(":9002"),
+	)
+
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	_, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testSTReq"])
+
+	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
+	_, err = cli.TestObjReq(ctx, objReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testObjReq"])
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestException(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testException"])
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.CircuitBreakTest(ctx, stReq)
+	test.Assert(t, err == nil, err)
 
 }
 
