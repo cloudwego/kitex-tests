@@ -221,7 +221,7 @@ func TestRetryWithSpecifiedResultRetry(t *testing.T) {
 		}
 		return false
 	}
-	isResultRetry := &retry.IsResultRetry{IsErrorRetry: isErrorRetry, IsRespRetry: isRespRetry}
+	isResultRetry := &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, RespRetry: isRespRetry}
 	cli := getKitexClient(
 		transport.PurePayload,
 		client.WithFailureRetry(retry.NewFailurePolicy()),
@@ -285,7 +285,7 @@ func TestFailureRetryWithSpecifiedResultRetry(t *testing.T) {
 		}
 		return false
 	}
-	isResultRetry := &retry.IsResultRetry{IsErrorRetry: isErrorRetry, IsRespRetry: isRespRetry}
+	isResultRetry := &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, RespRetry: isRespRetry}
 	cli := getKitexClient(
 		transport.PurePayload,
 		client.WithFailureRetry(retry.NewFailurePolicyWithResultRetry(isResultRetry)),
@@ -347,7 +347,7 @@ func TestRetryNotify(t *testing.T) {
 		}
 		return false
 	}
-	isResultRetry := &retry.IsResultRetry{IsErrorRetry: isErrorRetry, IsRespRetry: isRespRetry}
+	isResultRetry := &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, RespRetry: isRespRetry}
 	rc := retry.NewRetryContainer()
 	rc.NotifyPolicyChange("*", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
 	rc.NotifyPolicyChange("testSTReq", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
@@ -414,7 +414,7 @@ func TestRetryWithCallOpt(t *testing.T) {
 		}
 		return false
 	}
-	isResultRetry := &retry.IsResultRetry{IsErrorRetry: isErrorRetry, IsRespRetry: isRespRetry}
+	isResultRetry := &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, RespRetry: isRespRetry}
 	cli := getKitexClient(
 		transport.PurePayload,
 		// setup WithBackupRequest is to check the callopt priority is higher
