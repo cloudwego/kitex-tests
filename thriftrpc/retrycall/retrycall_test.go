@@ -228,7 +228,8 @@ func TestRetryWithSpecifiedResultRetry(t *testing.T) {
 		client.WithRetryMethodPolicies(map[string]retry.Policy{
 			"testSTReq":        retry.BuildFailurePolicy(retry.NewFailurePolicy()),
 			"testObjReq":       retry.BuildFailurePolicy(retry.NewFailurePolicy()),
-			"circuitBreakTest": retry.BuildBackupRequest(retry.NewBackupPolicy(10))}),
+			"circuitBreakTest": retry.BuildBackupRequest(retry.NewBackupPolicy(10)),
+		}),
 		client.WithSpecifiedResultRetry(isResultRetry),
 		client.WithTransportProtocol(transport.TTHeader),
 		client.WithHostPorts(":9002"),
@@ -292,7 +293,8 @@ func TestFailureRetryWithSpecifiedResultRetry(t *testing.T) {
 		client.WithRetryMethodPolicies(map[string]retry.Policy{
 			"testSTReq":        retry.BuildFailurePolicy(retry.NewFailurePolicyWithResultRetry(isResultRetry)),
 			"testObjReq":       retry.BuildFailurePolicy(retry.NewFailurePolicyWithResultRetry(isResultRetry)),
-			"circuitBreakTest": retry.BuildBackupRequest(retry.NewBackupPolicy(10))}),
+			"circuitBreakTest": retry.BuildBackupRequest(retry.NewBackupPolicy(10)),
+		}),
 		client.WithTransportProtocol(transport.TTHeader),
 		client.WithHostPorts(":9002"),
 	)
@@ -380,7 +382,6 @@ func TestRetryNotify(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	_, err = cli.CircuitBreakTest(ctx, stReq)
 	test.Assert(t, err == nil, err)
-
 }
 
 // TestRetryWithCallOpt setup the retry policy with callopt.
