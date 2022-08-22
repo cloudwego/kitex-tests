@@ -61,7 +61,9 @@ type ClientInitParam struct {
 // CreateKitexClient .
 func CreateKitexClient(param *ClientInitParam, opts ...client.Option) stservice.Client {
 	if len(param.HostPorts) > 0 {
-		opts = append(opts, client.WithHostPorts(param.HostPorts...))
+		opt := []client.Option{client.WithHostPorts(param.HostPorts...)}
+		// the priority of param host port is lower
+		opts = append(opt, opts...)
 	}
 
 	if param.Protocol != transport.PurePayload {
