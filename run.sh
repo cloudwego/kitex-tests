@@ -96,8 +96,8 @@ go mod tidy
 
 # static check
 go vet -stdmethods=false $(go list ./...)
-go_install mvdan.cc/gofumpt@v0.2.0
-test -z "$(gofumpt -l -extra .)"
+#go_install mvdan.cc/gofumpt@v0.2.0
+#test -z "$(gofumpt -l -extra .)"
 
 # run tests
 go test ./thriftrpc/normalcall/...
