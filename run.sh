@@ -16,6 +16,7 @@
 set -e
 set -x
 
+export GO111MODULE=on
 export GOBIN=$(pwd)/bin
 export PATH=${GOBIN}:$PATH
 mkdir -p ${GOBIN}
@@ -55,20 +56,24 @@ install_protoc() {
     done
 }
 
+go_install() {
+    go install $@ || go get $@
+}
+
 which protoc || install_protoc
 
 # Install thriftgo
-which thriftgo || go install github.com/cloudwego/thriftgo@latest
+which thriftgo || go_install github.com/cloudwego/thriftgo@latest
 
 # Install kitex and generate codes
 LOCAL_REPO=$1
 
 if [[ -n $LOCAL_REPO ]]; then
     cd ${LOCAL_REPO}
-    go install ${LOCAL_REPO}/tool/cmd/kitex
+    go_install ${LOCAL_REPO}/tool/cmd/kitex
     cd -
 else
-    go install github.com/cloudwego/kitex/tool/cmd/kitex@latest
+    go_install github.com/cloudwego/kitex/tool/cmd/kitex@latest
 fi
 
 test -d kitex_gen && rm -rf kitex_gen
@@ -91,7 +96,7 @@ go mod tidy
 
 # static check
 go vet -stdmethods=false $(go list ./...)
-go install mvdan.cc/gofumpt@v0.2.0
+go_install mvdan.cc/gofumpt@v0.2.0
 test -z "$(gofumpt -l -extra .)"
 
 # run tests
