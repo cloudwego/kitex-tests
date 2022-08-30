@@ -20,6 +20,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
+	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 )
@@ -28,6 +29,7 @@ var (
 	normalErr     = errors.New("mock handler normal err")
 	kitexTransErr = remote.NewTransErrorWithMsg(1900, "mock handler TransError")
 	grpcStatus    = status.Errorf(1900, "mock handler StatusError")
+	bizErr        = kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
 	panicStr      = "panic"
 )
 
@@ -48,6 +50,8 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 		return nil, kitexTransErr
 	case grpcStatus.Error():
 		return nil, grpcStatus
+	case bizErr.Error():
+		return nil, bizErr
 	case panicStr:
 		panic("mock handler panic")
 	}
