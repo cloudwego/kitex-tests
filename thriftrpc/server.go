@@ -35,6 +35,7 @@ type ServerInitParam struct {
 	Network  string
 	Address  string
 	ConnMode ConnectionMode
+	Limiter  *limit.Option
 }
 
 // RunServer .
@@ -59,6 +60,9 @@ func RunServer(param *ServerInitParam, handler stability.STService, opts ...serv
 	}))
 	if param.ConnMode == ConnectionMultiplexed {
 		opts = append(opts, server.WithMuxTransport())
+	}
+	if param.Limiter != nil {
+		opts = append(opts, server.WithLimit(param.Limiter))
 	}
 	if handler == nil {
 		handler = new(STServiceHandler)
