@@ -20,9 +20,15 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/stability"
+	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 )
+
+func init() {
+	kerrors.NewBizStatusError = kerrors.NewGRPCBizStatusError
+	kerrors.NewBizStatusErrorWithExtra = kerrors.NewGRPCBizStatusErrorWithExtra
+}
 
 var (
 	normalErr     = errors.New("mock handler normal err")
@@ -48,6 +54,15 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 		return nil, kitexTransErr
 	case grpcStatus.Error():
 		return nil, grpcStatus
+	case "bizErr":
+		return nil, kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
+	case "bizErrWithDetail":
+		bizStatusErr := kerrors.NewBizStatusErrorWithExtra(404, "not found", map[string]string{"version": "v1.0.0"})
+		if sterr, ok := bizStatusErr.(kerrors.GRPCStatusIface); ok {
+			st, _ := sterr.GRPCStatus().WithDetails(&stability.STRequest{Str: "hello world"})
+			sterr.SetGRPCStatus(st)
+		}
+		return nil, bizStatusErr
 	case panicStr:
 		panic("mock handler panic")
 	}

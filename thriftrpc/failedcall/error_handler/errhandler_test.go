@@ -16,6 +16,7 @@ package error_handler
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -23,8 +24,11 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
+	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
 
@@ -32,7 +36,7 @@ func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9002",
-	}, &STServiceHandler{})
+	}, &STServiceHandler{}, server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	time.Sleep(time.Second)
 	m.Run()
 	svr.Stop()
@@ -86,6 +90,20 @@ func TestHandlerReturnStatusError(t *testing.T) {
 	test.Assert(t, te.TypeID() == remote.InternalError)
 }
 
+func TestHandlerReturnBizStatusError(t *testing.T) {
+	cli := getKitexClient(transport.TTHeader)
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stReq.Name = bizErr.Error()
+	stResp, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err != nil)
+	test.Assert(t, stResp == nil)
+	bizerror, ok := kerrors.FromBizStatusError(err)
+	test.Assert(t, ok)
+	test.Assert(t, bizerror.BizStatusCode() == bizErr.BizStatusCode())
+	test.Assert(t, bizerror.BizMessage() == bizErr.BizMessage())
+	test.Assert(t, reflect.DeepEqual(bizerror.BizExtra(), bizErr.BizExtra()))
+}
+
 func TestHandlerPanic(t *testing.T) {
 	cli := getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
@@ -108,5 +126,5 @@ func getKitexClient(p transport.Protocol) stservice.Client {
 		HostPorts:         []string{":9002"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
-	})
+	}, client.WithMetaHandler(transmeta.ClientTTHeaderHandler), client.WithTransportProtocol(transport.TTHeader))
 }

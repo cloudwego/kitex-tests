@@ -16,17 +16,22 @@ package error_handler
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pbrpc"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
 
@@ -34,7 +39,7 @@ func TestMain(m *testing.M) {
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9001",
-	}, &STServiceHandler{})
+	}, &STServiceHandler{}, server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	time.Sleep(time.Second)
 	m.Run()
 	svr.Stop()
@@ -137,6 +142,49 @@ func TestHandlerReturnStatusError(t *testing.T) {
 	test.Assert(t, se.Code() == grpcStatus.(*status.Error).GRPCStatus().Code())
 }
 
+func TestHandlerReturnBizError(t *testing.T) {
+	bizErr := kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
+	cli := getKitexClient(transport.TTHeader)
+	ctx, stReq := pbrpc.CreateSTRequest(context.Background())
+	stReq.Name = "bizErr"
+	stResp, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err != nil)
+	test.Assert(t, stResp == nil)
+	bizerror, ok := kerrors.FromBizStatusError(err)
+	test.Assert(t, ok)
+	test.Assert(t, bizerror.BizStatusCode() == bizErr.BizStatusCode())
+	test.Assert(t, bizerror.BizMessage() == bizErr.BizMessage())
+	test.Assert(t, reflect.DeepEqual(bizerror.BizExtra(), bizErr.BizExtra()))
+
+	// Kitex gRPC unary
+	cli = getKitexClient(transport.GRPC)
+	ctx, stReq = pbrpc.CreateSTRequest(context.Background())
+	stReq.Name = "bizErr"
+	stResp, err = cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err != nil)
+	test.Assert(t, stResp == nil)
+	bizerror, ok = kerrors.FromBizStatusError(err)
+	test.Assert(t, ok)
+	test.Assert(t, bizerror.BizStatusCode() == bizErr.BizStatusCode())
+	test.Assert(t, bizerror.BizMessage() == bizErr.BizMessage())
+	test.Assert(t, reflect.DeepEqual(bizerror.BizExtra(), bizErr.BizExtra()))
+
+	// Kitex gRPC unary with details
+	cli = getKitexClient(transport.GRPC)
+	ctx, stReq = pbrpc.CreateSTRequest(context.Background())
+	stReq.Name = "bizErrWithDetail"
+	stResp, err = cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err != nil)
+	test.Assert(t, stResp == nil)
+	bizerror, ok = kerrors.FromBizStatusError(err)
+	test.Assert(t, ok)
+	test.Assert(t, bizerror.BizStatusCode() == 404)
+	test.Assert(t, bizerror.BizMessage() == "not found")
+	test.Assert(t, reflect.DeepEqual(bizerror.BizExtra(), map[string]string{"version": "v1.0.0"}))
+	str := bizerror.(status.Iface).GRPCStatus().Details()[0].(*stability.STRequest).Str
+	test.Assert(t, reflect.DeepEqual(str, "hello world"))
+}
+
 func TestHandlerPanic(t *testing.T) {
 	cli := getKitexClient(transport.TTHeader)
 	ctx, stReq := pbrpc.CreateSTRequest(context.Background())
@@ -175,5 +223,5 @@ func getKitexClient(p transport.Protocol) stservice.Client {
 		HostPorts:         []string{":9001"},
 		Protocol:          p,
 		ConnMode:          pbrpc.LongConnection,
-	})
+	}, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
 }
