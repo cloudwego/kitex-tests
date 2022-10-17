@@ -25,11 +25,6 @@ import (
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 )
 
-func init() {
-	kerrors.NewBizStatusError = kerrors.NewGRPCBizStatusError
-	kerrors.NewBizStatusErrorWithExtra = kerrors.NewGRPCBizStatusErrorWithExtra
-}
-
 var (
 	normalErr     = errors.New("mock handler normal err")
 	kitexTransErr = remote.NewTransErrorWithMsg(1900, "mock handler TransError")
@@ -55,9 +50,9 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 	case grpcStatus.Error():
 		return nil, grpcStatus
 	case "bizErr":
-		return nil, kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
+		return nil, kerrors.NewGRPCBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
 	case "bizErrWithDetail":
-		bizStatusErr := kerrors.NewBizStatusErrorWithExtra(404, "not found", map[string]string{"version": "v1.0.0"})
+		bizStatusErr := kerrors.NewGRPCBizStatusErrorWithExtra(404, "not found", map[string]string{"version": "v1.0.0"})
 		if sterr, ok := bizStatusErr.(kerrors.GRPCStatusIface); ok {
 			st, _ := sterr.GRPCStatus().WithDetails(&stability.STRequest{Str: "hello world"})
 			sterr.SetGRPCStatus(st)
