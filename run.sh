@@ -117,7 +117,15 @@ packages=(
 for pkg in ${packages[@]}
 do
     if [[ -n $LOCAL_REPO ]]; then
-        go test -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt -coverpkg=github.com/cloudwego/kitex/... $pkg
+        go test -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt.tmp -coverpkg=github.com/cloudwego/kitex/... $pkg
+        if [[ "$OSTYPE" =~ ^darwin ]];
+        then
+            sed -i '' 1d ${LOCAL_REPO}/coverage.txt.tmp
+        else
+            sed -i '1d' ${LOCAL_REPO}/coverage.txt.tmp
+        fi
+        cat ${LOCAL_REPO}/coverage.txt.tmp >> ${LOCAL_REPO}/coverage.txt
+        rm ${LOCAL_REPO}/coverage.txt.tmp
     else
         go test $pkg
     fi
