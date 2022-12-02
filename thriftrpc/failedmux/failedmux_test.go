@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
@@ -29,6 +30,8 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
+
+var cli stservice.Client
 
 type mockedCodec struct {
 	remote.Codec
@@ -67,7 +70,7 @@ func getKitexClient(p transport.Protocol) stservice.Client {
 
 // TestSTReq method mock STRequest param read failed in server
 func TestStTReqMux(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -78,7 +81,7 @@ func TestStTReqMux(t *testing.T) {
 
 // TestObjReq method mock ObjResp read failed in client
 func TestObjReqMux(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	objReq.FlagMsg = "ObjReq"
@@ -90,7 +93,7 @@ func TestObjReqMux(t *testing.T) {
 
 // oneway cannot read failed of server
 func TestVisitOnewayMux(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)

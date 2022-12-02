@@ -32,6 +32,8 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
+var cli stservice.Client
+
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
@@ -43,7 +45,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestHandlerReturnNormalError(t *testing.T) {
-	cli := getKitexClient(transport.PurePayload)
+	cli = getKitexClient(transport.PurePayload)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = normalErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -59,7 +61,7 @@ func TestHandlerReturnNormalError(t *testing.T) {
 }
 
 func TestHandlerReturnTransError(t *testing.T) {
-	cli := getKitexClient(transport.Framed)
+	cli = getKitexClient(transport.Framed)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = kitexTransErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -75,7 +77,7 @@ func TestHandlerReturnTransError(t *testing.T) {
 }
 
 func TestHandlerReturnStatusError(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = grpcStatus.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -91,7 +93,7 @@ func TestHandlerReturnStatusError(t *testing.T) {
 }
 
 func TestHandlerReturnBizStatusError(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = bizErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -105,7 +107,7 @@ func TestHandlerReturnBizStatusError(t *testing.T) {
 }
 
 func TestHandlerPanic(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = panicStr
 	stResp, err := cli.TestSTReq(ctx, stReq)

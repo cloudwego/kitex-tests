@@ -35,6 +35,8 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
+var cli stservice.Client
+
 func TestMain(m *testing.M) {
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
 		Network: "tcp",
@@ -47,7 +49,7 @@ func TestMain(m *testing.M) {
 
 func TestHandlerReturnNormalError(t *testing.T) {
 	// Kitex Protobuf
-	cli := getKitexClient(transport.Framed)
+	cli = getKitexClient(transport.Framed)
 	ctx, stReq := pbrpc.CreateSTRequest(context.Background())
 	stReq.Name = normalErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -79,7 +81,7 @@ func TestHandlerReturnNormalError(t *testing.T) {
 }
 
 func TestHandlerReturnTransError(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := pbrpc.CreateSTRequest(context.Background())
 	stReq.Name = kitexTransErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -111,7 +113,7 @@ func TestHandlerReturnTransError(t *testing.T) {
 }
 
 func TestHandlerReturnStatusError(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := pbrpc.CreateSTRequest(context.Background())
 	stReq.Name = grpcStatus.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
