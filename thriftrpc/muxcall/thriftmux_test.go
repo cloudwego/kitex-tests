@@ -26,6 +26,8 @@ import (
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
+var cli stservice.Client
+
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
@@ -46,7 +48,7 @@ func getKitexMuxClient() stservice.Client {
 }
 
 func TestStTReq(t *testing.T) {
-	cli := getKitexMuxClient()
+	cli = getKitexMuxClient()
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -55,7 +57,7 @@ func TestStTReq(t *testing.T) {
 }
 
 func TestObjReq(t *testing.T) {
-	cli := getKitexMuxClient()
+	cli = getKitexMuxClient()
 
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	objReq.FlagMsg = "ObjReq"
@@ -65,7 +67,7 @@ func TestObjReq(t *testing.T) {
 }
 
 func TestException(t *testing.T) {
-	cli := getKitexMuxClient()
+	cli = getKitexMuxClient()
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	_, err := cli.TestException(ctx, stReq)
@@ -77,14 +79,14 @@ func TestException(t *testing.T) {
 }
 
 func TestVisitOneway(t *testing.T) {
-	cli := getKitexMuxClient()
+	cli = getKitexMuxClient()
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
 }
 
 func BenchmarkMuxCall(b *testing.B) {
-	cli := getKitexMuxClient()
+	cli = getKitexMuxClient()
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
@@ -105,7 +107,7 @@ func BenchmarkMuxCall(b *testing.B) {
 }
 
 func BenchmarkMuxCallParallel(b *testing.B) {
-	cli := getKitexMuxClient()
+	cli = getKitexMuxClient()
 	b.ReportAllocs()
 	b.ResetTimer()
 
