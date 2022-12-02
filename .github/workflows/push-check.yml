@@ -20,14 +20,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Check License Header
-        uses: apache/skywalking-eyes/header@v0.4.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: typos-action
-        uses: crate-ci/typos@v1.2.1
-
       - name: Run Tests
         run: ./run.sh
 
