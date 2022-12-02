@@ -33,6 +33,8 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
+var cli stservice.Client
+
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
@@ -53,7 +55,7 @@ func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Clien
 }
 
 func TestStTReq(t *testing.T) {
-	cli := getKitexClient(transport.PurePayload)
+	cli = getKitexClient(transport.PurePayload)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -70,7 +72,7 @@ func TestStTReq(t *testing.T) {
 }
 
 func TestStTReqWithTTHeader(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -79,7 +81,7 @@ func TestStTReqWithTTHeader(t *testing.T) {
 }
 
 func TestStTReqWithFramed(t *testing.T) {
-	cli := getKitexClient(transport.Framed)
+	cli = getKitexClient(transport.Framed)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -88,7 +90,7 @@ func TestStTReqWithFramed(t *testing.T) {
 }
 
 func TestStTReqWithTTHeaderFramed(t *testing.T) {
-	cli := getKitexClient(transport.TTHeaderFramed)
+	cli = getKitexClient(transport.TTHeaderFramed)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -97,7 +99,7 @@ func TestStTReqWithTTHeaderFramed(t *testing.T) {
 }
 
 func TestObjReq(t *testing.T) {
-	cli := getKitexClient(transport.PurePayload)
+	cli = getKitexClient(transport.PurePayload)
 
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	objReq.FlagMsg = "ObjReq"
@@ -107,7 +109,7 @@ func TestObjReq(t *testing.T) {
 }
 
 func TestException(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	_, err := cli.TestException(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -119,7 +121,7 @@ func TestException(t *testing.T) {
 }
 
 func TestVisitOneway(t *testing.T) {
-	cli := getKitexClient(transport.TTHeaderFramed)
+	cli = getKitexClient(transport.TTHeaderFramed)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
@@ -137,7 +139,7 @@ func TestVisitOneway(t *testing.T) {
 }
 
 func TestRPCTimeoutPriority(t *testing.T) {
-	cli := getKitexClient(transport.TTHeaderFramed, client.WithRPCTimeout(500*time.Millisecond))
+	cli = getKitexClient(transport.TTHeaderFramed, client.WithRPCTimeout(500*time.Millisecond))
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	durationStr := "300ms"
 	stReq.MockCost = &durationStr
@@ -149,7 +151,7 @@ func TestRPCTimeoutPriority(t *testing.T) {
 }
 
 func BenchmarkThriftCall(b *testing.B) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	b.ReportAllocs()
@@ -169,7 +171,7 @@ func BenchmarkThriftCall(b *testing.B) {
 }
 
 func BenchmarkThriftCallParallel(b *testing.B) {
-	cli := getKitexClient(transport.PurePayload)
+	cli = getKitexClient(transport.PurePayload)
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -190,7 +192,7 @@ func BenchmarkThriftCallParallel(b *testing.B) {
 }
 
 func BenchmarkTTHeaderParallel(b *testing.B) {
-	cli := getKitexClient(transport.TTHeader)
+	cli = getKitexClient(transport.TTHeader)
 	b.ReportAllocs()
 	b.ResetTimer()
 
