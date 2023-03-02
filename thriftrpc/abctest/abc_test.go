@@ -27,6 +27,8 @@ import (
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/remote"
+	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
 
@@ -40,12 +42,12 @@ func TestMain(m *testing.M) {
 	svrb := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9001",
-	}, &STServiceHandler{cli: cli})
+	}, &stServiceHandler{cli: cli}, server.WithMetaHandler(testMetaHandler{}))
 
 	svrc := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9002",
-	}, &STServiceHandler{})
+	}, &stServiceHandler{})
 	time.Sleep(time.Second)
 	m.Run()
 	svrb.Stop()
@@ -80,13 +82,13 @@ func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Clien
 	}, opts...)
 }
 
-// STServiceHandler .
-type STServiceHandler struct {
+// stServiceHandler .
+type stServiceHandler struct {
 	cli stservice.Client
 }
 
 // TestSTReq .
-func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
+func (h *stServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
 	if h.cli != nil {
 		// it is service b, both has transient and persist key
 		val, ok := metainfo.GetValue(ctx, transientKV)
@@ -119,7 +121,7 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 }
 
 // TestObjReq .
-func (h *STServiceHandler) TestObjReq(ctx context.Context, req *instparam.ObjReq) (r *instparam.ObjResp, err error) {
+func (h *stServiceHandler) TestObjReq(ctx context.Context, req *instparam.ObjReq) (r *instparam.ObjResp, err error) {
 	resp := &instparam.ObjResp{
 		Msg:     req.Msg,
 		MsgSet:  req.MsgSet,
@@ -130,21 +132,35 @@ func (h *STServiceHandler) TestObjReq(ctx context.Context, req *instparam.ObjReq
 }
 
 // TestException .
-func (h *STServiceHandler) TestException(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
+func (h *stServiceHandler) TestException(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
 	err = &stability.STException{Message: "mock exception"}
 	return nil, err
 }
 
-func (h *STServiceHandler) VisitOneway(ctx context.Context, req *stability.STRequest) (err error) {
+func (h *stServiceHandler) VisitOneway(ctx context.Context, req *stability.STRequest) (err error) {
 	return nil
 }
 
 // CircuitBreakTest .
-func (h *STServiceHandler) CircuitBreakTest(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
+func (h *stServiceHandler) CircuitBreakTest(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
 	resp := &stability.STResponse{
 		Str:     req.Str,
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,
 	}
 	return resp, nil
+}
+
+type testMetaHandler struct {
+}
+
+func (t testMetaHandler) WriteMeta(ctx context.Context, msg remote.Message) (context.Context, error) {
+	return ctx, nil
+}
+
+func (t testMetaHandler) ReadMeta(ctx context.Context, msg remote.Message) (context.Context, error) {
+	tk1, tv1 := "tk1", "tv1"
+	// to check if kitex filter the transient key
+	ctx = metainfo.SetMetaInfoFromMap(ctx, map[string]string{metainfo.PrefixTransient + tk1: tv1})
+	return ctx, nil
 }
