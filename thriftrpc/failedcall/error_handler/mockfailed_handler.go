@@ -17,6 +17,7 @@ package error_handler
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
@@ -31,6 +32,7 @@ var (
 	grpcStatus    = status.Errorf(1900, "mock handler StatusError")
 	bizErr        = kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
 	panicStr      = "panic"
+	timeout       = "timeout"
 )
 
 // STServiceHandler .
@@ -54,6 +56,12 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 		return nil, bizErr
 	case panicStr:
 		panic("mock handler panic")
+	case timeout:
+		if d, e := time.ParseDuration(*req.MockCost); e != nil {
+			time.Sleep(time.Second)
+		} else {
+			time.Sleep(d)
+		}
 	}
 	return r, nil
 }
