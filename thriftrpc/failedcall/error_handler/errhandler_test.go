@@ -150,7 +150,6 @@ func TestFallback4Timeout(t *testing.T) {
 	fbFunc := func(ctx context.Context, req, resp interface{}, err error) (fbResp interface{}, fbErr error) {
 		test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
 		return &stability.STResponse{Str: fallbackStr}, nil
-		return
 	}
 	cli = getKitexClient(transport.TTHeader, client.WithFallback(fallback.ErrorFallback(fallback.UnwrapHelper(fbFunc))))
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
@@ -174,7 +173,6 @@ func TestFallback4TimeoutWithCallopt(t *testing.T) {
 	callOptFBFunc := func(ctx context.Context, req, resp interface{}, err error) (fbResp interface{}, fbErr error) {
 		test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
 		return &stability.STResponse{Str: callFallbackStr}, nil
-		return
 	}
 	cli = getKitexClient(transport.TTHeader,
 		client.WithRPCTimeout(20*time.Millisecond),
@@ -229,6 +227,47 @@ func TestFallbackEnableReportAsFallback(t *testing.T) {
 	test.Assert(t, stResp.Str == cliFallbackStr, stResp.Str)
 	test.Assert(t, errForReportIsNil)
 
+}
+
+func TestFallback4Resp(t *testing.T) {
+	cliFallbackStr := "client mock result"
+	fbFunc := func(ctx context.Context, req, resp interface{}, err error) (fbResp interface{}, fbErr error) {
+		test.Assert(t, err == nil)
+		test.Assert(t, resp.(*stability.STResponse).BaseResp.StatusCode == int32(bizStatusErrCode))
+		return &stability.STResponse{Str: cliFallbackStr}, nil
+	}
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stReq.Name = baseRespAsBizStatusErr
+
+	// case 1: return mock resp
+	cli = getKitexClient(transport.Framed,
+		client.WithFallback(fallback.NewFallbackPolicy(fallback.UnwrapHelper(fbFunc))))
+	stResp, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil)
+	test.Assert(t, stResp.Str == cliFallbackStr, stResp.Str)
+
+	// case 2: bad case - original error is nil but return error in fallback, won't report err even if EnableReportAsFallback
+	errForReportIsNil := false
+	mockErr := errors.New("mock")
+	tracerFinishFunc := func(ctx context.Context) {
+		if rpcinfo.GetRPCInfo(ctx).Stats().Error() == nil {
+			errForReportIsNil = true
+		} else {
+			errForReportIsNil = false
+		}
+	}
+	errFBFunc := func(ctx context.Context, req, resp interface{}, err error) (fbResp interface{}, fbErr error) {
+		test.Assert(t, err == nil)
+		test.Assert(t, resp.(*stability.STResponse).BaseResp.StatusCode == int32(bizStatusErrCode))
+		return nil, mockErr
+	}
+	cli = getKitexClient(transport.Framed,
+		client.WithFallback(fallback.NewFallbackPolicy(fallback.UnwrapHelper(errFBFunc)).EnableReportAsFallback()),
+		client.WithTracer(&mockTracer{startFunc: nil, finishFunc: tracerFinishFunc}))
+	stResp, err = cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == mockErr)
+	test.Assert(t, stResp == nil)
+	test.Assert(t, errForReportIsNil)
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
