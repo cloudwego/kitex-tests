@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/cloudwego/kitex/pkg/endpoint"
+	"github.com/cloudwego/kitex/pkg/kerrors"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
@@ -359,10 +361,9 @@ func TestRetryNotify(t *testing.T) {
 	rc.NotifyPolicyChange("circuitBreakTest", retry.BuildBackupRequest(retry.NewBackupPolicy(10)))
 
 	cli = getKitexClient(
-		transport.PurePayload,
+		transport.TTHeader,
 		client.WithRetryContainer(rc),
 		client.WithSpecifiedResultRetry(isResultRetry),
-		client.WithTransportProtocol(transport.TTHeader),
 		client.WithHostPorts(":9002"),
 	)
 
@@ -384,6 +385,30 @@ func TestRetryNotify(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	_, err = cli.CircuitBreakTest(ctx, stReq)
 	test.Assert(t, err == nil, err)
+
+	// modify the retry policy, but the result retry is still effective
+	rc.NotifyPolicyChange("*", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
+	rc.NotifyPolicyChange("testSTReq", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
+	rc.NotifyPolicyChange("testObjReq", retry.BuildFailurePolicy(retry.NewFailurePolicy()))
+	methodPolicy["testSTReq"] = false
+	methodPolicy["testObjReq"] = false
+	methodPolicy["testException"] = false
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testSTReq"], methodPolicy)
+
+	ctx, objReq = thriftrpc.CreateObjReq(context.Background())
+	_, err = cli.TestObjReq(ctx, objReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testObjReq"])
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestException(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, methodPolicy["testException"])
+
 }
 
 // TestRetryWithCallOpt setup the retry policy with callopt.
@@ -444,6 +469,59 @@ func TestRetryWithCallOpt(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	_, err = cli.CircuitBreakTest(ctx, stReq, callopt.WithRetryPolicy(retry.BuildBackupRequest(retry.NewBackupPolicy(10))))
 	test.Assert(t, err == nil, err)
+}
+
+func TestRetryForTimeout(t *testing.T) {
+	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
+		if ri.To().Method() == "testSTReq" {
+			if te, ok := errors.Unwrap(err).(*remote.TransError); ok && te.TypeID() == 1000 && te.Error() == "retry [biz error]" {
+				return true
+			}
+		}
+		return false
+	}
+	mockTimeoutMW := func(endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, req, resp interface{}) (err error) {
+			if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
+				time.Sleep(100 * time.Millisecond)
+			}
+			return
+		}
+	}
+	// case 1: timeout retry is effective by default
+	isResultRetry := &retry.ShouldResultRetry{ErrorRetry: isErrorRetry}
+	cli = getKitexClient(
+		transport.PurePayload,
+		client.WithMiddleware(mockTimeoutMW),
+		client.WithRPCTimeout(50*time.Millisecond),
+		client.WithFailureRetry(retry.NewFailurePolicyWithResultRetry(isResultRetry)),
+		client.WithHostPorts(":9002"),
+	)
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	_, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+
+	// case 2: timeout retry is not effective if set NotRetryForTimeout as true
+	// callopt will reset the client-level option
+	isResultRetry = &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, NotRetryForTimeout: true}
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestSTReq(ctx, stReq, callopt.WithRetryPolicy(retry.BuildFailurePolicy(retry.NewFailurePolicyWithResultRetry(isResultRetry))))
+	test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout), err)
+
+	// case 3: use client-level option, timeout retry is not effective if set NotRetryForTimeout as true
+	isResultRetry = &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, NotRetryForTimeout: true}
+	cli = getKitexClient(
+		transport.PurePayload,
+		client.WithMiddleware(mockTimeoutMW),
+		client.WithRPCTimeout(50*time.Millisecond),
+		client.WithFailureRetry(retry.NewFailurePolicyWithResultRetry(isResultRetry)),
+		client.WithHostPorts(":9002"),
+	)
+	isResultRetry = &retry.ShouldResultRetry{ErrorRetry: isErrorRetry, NotRetryForTimeout: true}
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestSTReq(ctx, stReq)
+	test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout), err)
+
 }
 
 func BenchmarkRetryNoCB(b *testing.B) {
