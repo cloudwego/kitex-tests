@@ -112,6 +112,11 @@ func CreateSTRequest(ctx context.Context) (context.Context, *stability.STRequest
 		utils.RandomString(100),
 	}
 	req.E = stability.TestEnum_FIRST
+	req.SubMsgs = map[int32]*instparam.SubMessage{
+		32: {
+			Id: thrift.Int64Ptr(32),
+		},
+	}
 
 	ctx = metainfo.WithValue(ctx, "TK", "TV")
 	ctx = metainfo.WithPersistentValue(ctx, "PK", "PV")

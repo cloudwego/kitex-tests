@@ -47,6 +47,7 @@ struct STRequest {
     14: required string flagMsg
     15: required string framework = "kitex",
     16: optional string mockCost,
+    17: map<i32, instparam.SubMessage> subMsgs,
 
     255: optional base.Base Base,
 }
