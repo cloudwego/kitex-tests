@@ -17,7 +17,9 @@ package error_handler
 import (
 	"context"
 	"errors"
+	"time"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/base"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex/pkg/kerrors"
@@ -26,11 +28,14 @@ import (
 )
 
 var (
-	normalErr     = errors.New("mock handler normal err")
-	kitexTransErr = remote.NewTransErrorWithMsg(1900, "mock handler TransError")
-	grpcStatus    = status.Errorf(1900, "mock handler StatusError")
-	bizErr        = kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
-	panicStr      = "panic"
+	normalErr              = errors.New("mock handler normal err")
+	kitexTransErr          = remote.NewTransErrorWithMsg(1900, "mock handler TransError")
+	grpcStatus             = status.Errorf(1900, "mock handler StatusError")
+	bizErr                 = kerrors.NewBizStatusErrorWithExtra(502, "bad gateway", map[string]string{"version": "v1.0.0"})
+	panicStr               = "panic"
+	timeout                = "timeout"
+	baseRespAsBizStatusErr = "biz status error"
+	bizStatusErrCode       = -100
 )
 
 // STServiceHandler .
@@ -54,6 +59,17 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 		return nil, bizErr
 	case panicStr:
 		panic("mock handler panic")
+	case timeout:
+		if d, e := time.ParseDuration(*req.MockCost); e != nil {
+			time.Sleep(time.Second)
+		} else {
+			time.Sleep(d)
+		}
+	case baseRespAsBizStatusErr:
+		return &stability.STResponse{BaseResp: &base.BaseResp{
+			StatusMessage: "biz error",
+			StatusCode:    int32(bizStatusErrCode),
+		}}, nil
 	}
 	return r, nil
 }

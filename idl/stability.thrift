@@ -17,6 +17,7 @@
 namespace go thrift.stability
 
 include "instparam.thrift"
+include "base.thrift"
 
 enum TestEnum {
     FIRST = 1,
@@ -46,12 +47,15 @@ struct STRequest {
     14: required string flagMsg
     15: required string framework = "kitex",
     16: optional string mockCost,
+
+    255: optional base.Base Base,
 }
 
 struct STResponse {
     1: string str,
     2: map<string, string> mp,
     3: required string flagMsg
+    255: optional base.BaseResp BaseResp,
 }
 
 service OnewayService {
