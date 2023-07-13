@@ -80,8 +80,13 @@ test -d kitex_gen && rm -rf kitex_gen
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
-kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/stability.proto
-kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/unknown_handler.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/stability.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
+test -d grpc_gen && rm -rf grpc_gen
+mkdir grpc_gen
+protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
+protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 
 # Init dependencies
