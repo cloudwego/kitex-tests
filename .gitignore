@@ -44,7 +44,6 @@ testdata/
 
 # Files produced by run.sh
 kitex_gen/
-grpc_gen/
 go.mod
 go.sum
 bin
