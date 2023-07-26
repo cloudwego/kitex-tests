@@ -22,7 +22,6 @@ import (
 	client_opt "github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
-	kitex_gzip "github.com/cloudwego/kitex/pkg/remote/codec/protobuf/encoding/gzip"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/server"
 	"google.golang.org/grpc"
@@ -70,16 +69,16 @@ func TestKitexCompressor(t *testing.T) {
 	time.Sleep(time.Second)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
-	resp, err := client.RunUnary(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	resp, err := client.RunUnary(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Kitex Hello!")
-	resp, err = client.RunClientStream(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	resp, err = client.RunClientStream(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "all message: kitex-0, kitex-1, kitex-2")
-	respArr, err := client.RunServerStream(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	respArr, err := client.RunServerStream(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "kitex-0" && respArr[1].Message == "kitex-1" && respArr[2].Message == "kitex-2")
-	respArr, err = client.RunBidiStream(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	respArr, err = client.RunBidiStream(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "kitex-0" && respArr[1].Message == "kitex-1" && respArr[2].Message == "kitex-2")
 }
@@ -138,16 +137,16 @@ func TestKitexCompressorWithGRPCServer(t *testing.T) {
 
 	client, err := GetClient(hostport, client_opt.WithMiddleware(ServiceNameMW))
 	test.Assert(t, err == nil, err)
-	resp, err := client.RunUnary(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	resp, err := client.RunUnary(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Kitex Hello!")
-	resp, err = client.RunClientStream(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	resp, err = client.RunClientStream(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, t)
 	test.Assert(t, resp != nil && resp.Message == "all message: kitex-0, kitex-1, kitex-2")
-	respArr, err := client.RunServerStream(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	respArr, err := client.RunServerStream(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "kitex-0" && respArr[1].Message == "kitex-1" && respArr[2].Message == "kitex-2")
-	respArr, err = client.RunBidiStream(callopt.WithGRPCCompressor(kitex_gzip.Name))
+	respArr, err = client.RunBidiStream(callopt.WithGRPCCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "kitex-0" && respArr[1].Message == "kitex-1" && respArr[2].Message == "kitex-2")
 }
