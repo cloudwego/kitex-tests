@@ -62,11 +62,6 @@ go_install() {
 
 which protoc || install_protoc
 
-# install protoc-gen-go and protoc-gen-go-grpc
-which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-# install protoc-gen-go and protoc-gen-go-grpc
-which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-
 # Install thriftgo
 which thriftgo || go_install github.com/cloudwego/thriftgo@latest
 
