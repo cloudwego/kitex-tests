@@ -43,7 +43,4 @@ output/*
 testdata/
 
 # Files produced by run.sh
-kitex_gen/
-go.mod
-go.sum
 bin

@@ -78,13 +78,18 @@ type STServiceHandler struct{}
 
 // TestSTReq .
 func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
-	resp := &stability.STResponse{
-		Str:     req.Str,
-		Mp:      req.StringMap,
-		FlagMsg: req.FlagMsg,
+	nreq := &stability.STRequest{}
+	err = nreq.DeepCopy(req)
+	if err != nil {
+		return nil, err
 	}
-	if req.MockCost != nil {
-		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+	resp := &stability.STResponse{
+		Str:     nreq.Str,
+		Mp:      nreq.StringMap,
+		FlagMsg: nreq.FlagMsg,
+	}
+	if nreq.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*nreq.MockCost); err != nil {
 			return nil, err
 		} else {
 			time.Sleep(mockSleep)
