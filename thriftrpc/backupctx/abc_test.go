@@ -34,6 +34,7 @@ import (
 
 const (
 	transientKV  = "aservice_transient"
+	transientKV2  = "aservice_transient2"
 	persistentKV = "aservice_persist"
 )
 
@@ -66,6 +67,7 @@ func TestTransientKV(t *testing.T) {
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx = metainfo.WithPersistentValue(ctx, persistentKV, persistentKV)
+	ctx = metainfo.WithValue(ctx, transientKV, transientKV)
 
 	// a -> b
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -102,10 +104,14 @@ func (h *stServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		if !ok || val != persistentKV {
 			return nil, fmt.Errorf("persist info[%s] is not right, expect=%s, actual=%s", persistentKV, persistentKV, val)
 		}
+		val, ok = metainfo.GetValue(ctx, transientKV)
+		if !ok || val != transientKV {
+			return nil, fmt.Errorf("transit info[%s] is not right, expect=%s, actual=%s", transientKV, transientKV, val)
+		}
 		// Case 1: intentionally miss context here, without OriginalKey
 		ctx = context.Background()
 		// Case 2: set transient kv meanwhile
-		ctx = metainfo.WithValue(ctx, transientKV, transientKV)
+		ctx = metainfo.WithValue(ctx, transientKV2, transientKV2)
 		return h.cli.TestSTReq(ctx, req)
 	} else { // b -> c
 		// it is service c, both has  persist key from a and transient key from b
@@ -114,7 +120,11 @@ func (h *stServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 			return nil, fmt.Errorf("persist info[%s] is not right, expect=%s, actual=%s", persistentKV, persistentKV, val)
 		}
 		val, ok = metainfo.GetValue(ctx, transientKV)
-		if !ok || val != transientKV {
+		if ok {
+			return nil, fmt.Errorf("transit info[%s] is not right, expect=%s, actual=%s", transientKV, "", val)
+		}
+		val, ok = metainfo.GetValue(ctx, transientKV2)
+		if !ok || val != transientKV2 {
 			return nil, fmt.Errorf("transit info[%s] is not right, expect=%s, actual=%s", transientKV, transientKV, val)
 		}
 	}
