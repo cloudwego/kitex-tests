@@ -108,11 +108,19 @@ func (h *stServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		if !ok || val != transientKV {
 			return nil, fmt.Errorf("transit info[%s] is not right, expect=%s, actual=%s", transientKV, transientKV, val)
 		}
-		// Case 1: intentionally miss context here, without OriginalKey
-		ctx = context.Background()
-		// Case 2: set transient kv meanwhile
-		ctx = metainfo.WithValue(ctx, transientKV2, transientKV2)
-		return h.cli.TestSTReq(ctx, req)
+		// Case 3: transmit async
+		sig := make(chan struct{})
+		go func() {
+			// Case 1: intentionally miss context here, without OriginalKey
+			ctx = context.Background()
+			// Case 2: set transient kv meanwhile
+			ctx = metainfo.WithValue(ctx, transientKV2, transientKV2)
+			
+			r, err = h.cli.TestSTReq(ctx, req)
+			sig <- struct{}{}
+		}()
+		<- sig
+		return
 	} else { // b -> c
 		// it is service c, both has  persist key from a and transient key from b
 		val, ok := metainfo.GetPersistentValue(ctx, persistentKV)
