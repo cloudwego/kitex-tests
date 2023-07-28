@@ -122,7 +122,7 @@ func TestHandlerPanic(t *testing.T) {
 	de := err.(*kerrors.DetailedError)
 	// wrap error is kerrors.ErrRemoteOrNetwork
 	test.Assert(t, de.ErrorType() == kerrors.ErrRemoteOrNetwork)
-	test.Assert(t, strings.Contains(err.Error(), "remote or network error[remote]: panic: [happened in biz handler] mock handler panic"), err.Error())
+	test.Assert(t, strings.Contains(err.Error(), "remote or network error[remote]: panic: [happened in biz handler, method=testSTReq] mock handler panic"), err.Error())
 	// internal is *remote.TransError
 	te := de.Unwrap().(*remote.TransError)
 	test.Assert(t, te.TypeID() == remote.InternalError)
