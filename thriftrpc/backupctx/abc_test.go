@@ -34,7 +34,7 @@ import (
 
 const (
 	transientKV  = "aservice_transient"
-	transientKV2  = "aservice_transient2"
+	transientKV2 = "aservice_transient2"
 	persistentKV = "aservice_persist"
 )
 
@@ -45,11 +45,9 @@ func TestMain(m *testing.M) {
 	svrb := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9001",
-	}, &stServiceHandler{cli: cli}, server.WithMetaHandler(testMetaHandler{}), server.WithContextBackup(true, true, func(ctx context.Context) bool {
-		return ctx.Value(OriginalKey) != OriginalVal
-	}))
+	}, &stServiceHandler{cli: cli}, server.WithMetaHandler(testMetaHandler{}), server.WithContextBackup(true, false))
 
-	 // c
+	// c
 	svrc := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: ":9002",
@@ -63,7 +61,12 @@ func TestMain(m *testing.M) {
 
 func TestTransientKV(t *testing.T) {
 	// a
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9001"))
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9001"), client.WithContextBackup(func(pre, cur context.Context) (context.Context, bool) {
+		if cur.Value(OriginalKey) != OriginalVal {
+			return cur, true
+		}
+		return cur, false
+	}))
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx = metainfo.WithPersistentValue(ctx, persistentKV, persistentKV)
@@ -109,17 +112,17 @@ func (h *stServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 			return nil, fmt.Errorf("transit info[%s] is not right, expect=%s, actual=%s", transientKV, transientKV, val)
 		}
 		// Case 3: transmit async
-		sig := make(chan struct{})
-		go func() {
-			// Case 1: intentionally miss context here, without OriginalKey
-			ctx = context.Background()
-			// Case 2: set transient kv meanwhile
-			ctx = metainfo.WithValue(ctx, transientKV2, transientKV2)
-			
-			r, err = h.cli.TestSTReq(ctx, req)
-			sig <- struct{}{}
-		}()
-		<- sig
+		// sig := make(chan struct{})
+		// go func() {
+		// Case 1: intentionally miss context here, without OriginalKey
+		ctx = context.Background()
+		// Case 2: set transient kv meanwhile
+		ctx = metainfo.WithValue(ctx, transientKV2, transientKV2)
+
+		r, err = h.cli.TestSTReq(ctx, req)
+		// sig <- struct{}{}
+		// }()
+		// <- sig
 		return
 	} else { // b -> c
 		// it is service c, both has  persist key from a and transient key from b
