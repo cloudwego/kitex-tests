@@ -39,7 +39,12 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9002"))
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9002"), client.WithContextBackup(func(pre, cur context.Context) (context.Context, bool) {
+		if cur.Value(OriginalKey) != OriginalVal {
+			return cur, true
+		}
+		return cur, false
+	}))
 
 	// b
 	svrb := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
@@ -61,12 +66,7 @@ func TestMain(m *testing.M) {
 
 func TestTransientKV(t *testing.T) {
 	// a
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9001"), client.WithContextBackup(func(pre, cur context.Context) (context.Context, bool) {
-		if cur.Value(OriginalKey) != OriginalVal {
-			return cur, true
-		}
-		return cur, false
-	}))
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9001"))
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx = metainfo.WithPersistentValue(ctx, persistentKV, persistentKV)
