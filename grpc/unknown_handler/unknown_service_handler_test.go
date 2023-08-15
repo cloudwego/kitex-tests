@@ -21,15 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/streaming"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler/serviceb"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/streaming"
-	"github.com/cloudwego/kitex/transport"
-
-	"github.com/cloudwego/kitex/server"
 )
 
 type ServiceAImpl struct{}
