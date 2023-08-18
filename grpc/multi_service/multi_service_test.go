@@ -43,7 +43,7 @@ func (s *ServiceAImpl) EchoA(stream multi_service.ServiceA_EchoAServer) error {
 			}
 			return err
 		}
-		resp := &multi_service.Reply{}
+		resp := &multi_service.ReplyA{}
 		resp.Message = recv.Name
 		err = stream.Send(resp)
 		if err != nil {
@@ -64,7 +64,7 @@ func (s *ServiceBImpl) EchoB(stream multi_service.ServiceB_EchoBServer) error {
 			}
 			return err
 		}
-		resp := &multi_service.Reply{}
+		resp := &multi_service.ReplyB{}
 		resp.Message = recv.Name
 		err = stream.Send(resp)
 		if err != nil {
