@@ -89,6 +89,7 @@ kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/stability.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.proto
 test -d grpc_gen && rm -rf grpc_gen
 mkdir grpc_gen
 protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
