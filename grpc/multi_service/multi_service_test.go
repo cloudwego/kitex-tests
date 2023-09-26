@@ -82,7 +82,7 @@ func GetServer(hostport string) server.Server {
 	svcb := serviceb.BuildServiceBService(new(ServiceBImpl))
 	svcs = append(svcs, svca, svcb)
 
-	return multi_service.NewServerWithMultiServices(svcs, server.WithServiceAddr(addr))
+	return server.NewServerWithMultiServices(svcs, server.WithServiceAddr(addr))
 }
 
 func TestMultiService(t *testing.T) {
