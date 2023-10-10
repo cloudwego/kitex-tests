@@ -27,6 +27,14 @@ struct MyResp{
     2:required base.BaseResp baseResp
 }
 
+exception SomeException {
+	1: string message
+}
+
 service greet {
-	MyResp Hello(1:required MyReq req)
+	MyResp HelloA(1:required MyReq req)
+	MyResp HelloB(1:required MyReq req) throws(1:SomeException o1)
+	void HelloC(1:required MyReq req)
+	void HelloD(1:required MyReq req) throws(1:SomeException o1)
+	oneway void HelloE(1:required MyReq req)
 }
