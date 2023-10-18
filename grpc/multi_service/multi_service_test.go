@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/serviceinfo"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
@@ -77,12 +76,11 @@ func (s *ServiceBImpl) EchoB(stream multi_service.ServiceB_EchoBServer) error {
 func GetServer(hostport string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 
-	var svcs []serviceinfo.Service
-	svca := servicea.BuildServiceAService(new(ServiceAImpl))
-	svcb := serviceb.BuildServiceBService(new(ServiceBImpl))
-	svcs = append(svcs, svca, svcb)
+	svr := server.NewServer(server.WithServiceAddr(addr))
+	svr.RegisterService(servicea.NewServiceInfo(), new(ServiceAImpl))
+	svr.RegisterService(serviceb.NewServiceInfo(), new(ServiceBImpl))
 
-	return server.NewServerWithMultiServices(svcs, server.WithServiceAddr(addr))
+	return svr
 }
 
 func TestMultiService(t *testing.T) {
