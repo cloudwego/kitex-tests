@@ -72,7 +72,7 @@ func TestUnknownServiceError(t *testing.T) {
 	req := &unknown_handler.Request{Name: "kitex"}
 	_, err = client.Echo(context.Background(), req)
 	test.Assert(t, err != nil, err)
-	test.Assert(t, strings.Contains(err.Error(), "remote or network error: rpc error: code = 11 desc = unknown service ServiceA"), err)
+	test.Assert(t, strings.Contains(err.Error(), "remote or network error: rpc error: code = 20 desc = unknown service ServiceA"), err)
 }
 
 // TestUnknownServiceHandler test if handler works when there is no matching method on server.
