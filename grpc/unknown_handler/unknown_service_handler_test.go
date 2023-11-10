@@ -21,15 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/streaming"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler/serviceb"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/streaming"
-	"github.com/cloudwego/kitex/transport"
-
-	"github.com/cloudwego/kitex/server"
 )
 
 type ServiceAImpl struct{}
@@ -72,7 +72,7 @@ func TestUnknownServiceError(t *testing.T) {
 	req := &unknown_handler.Request{Name: "kitex"}
 	_, err = client.Echo(context.Background(), req)
 	test.Assert(t, err != nil, err)
-	test.Assert(t, strings.Contains(err.Error(), "remote or network error: rpc error: code = 1 desc = unknown method Echo"), err)
+	test.Assert(t, strings.Contains(err.Error(), "remote or network error: rpc error: code = 20 desc = unknown service ServiceA"), err)
 }
 
 // TestUnknownServiceHandler test if handler works when there is no matching method on server.
