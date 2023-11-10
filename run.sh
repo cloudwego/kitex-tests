@@ -78,7 +78,7 @@ if [[ -n $LOCAL_REPO ]]; then
     go_install ${LOCAL_REPO}/tool/cmd/kitex
     cd -
 else
-    go_install github.com/cloudwego/kitex/tool/cmd/kitex@feat/grpc_multi_service
+    go_install github.com/cloudwego/kitex/tool/cmd/kitex@latest
 fi
 
 test -d kitex_gen && rm -rf kitex_gen
@@ -98,7 +98,7 @@ protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
-GOPROXY=direct go get github.com/cloudwego/kitex@feat/grpc_multi_service
+go get github.com/cloudwego/kitex@develop
 
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
