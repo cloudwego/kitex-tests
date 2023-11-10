@@ -57,7 +57,7 @@ install_protoc() {
 }
 
 go_install() {
-    GOPROXY=direct go install $@ || GOPROXY=direct go get $@
+    go install $@ || go get $@
 }
 
 which protoc || install_protoc
