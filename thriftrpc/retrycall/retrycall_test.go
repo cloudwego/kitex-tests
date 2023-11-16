@@ -19,6 +19,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -40,8 +41,11 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
-var cli stservice.Client
-var retryChainStopStr = "chain stop retry"
+var (
+	mutex             sync.Mutex
+	cli               stservice.Client
+	retryChainStopStr = "chain stop retry"
+)
 
 func TestMain(m *testing.M) {
 	svr1 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
@@ -79,6 +83,8 @@ func genCBKey(ri rpcinfo.RPCInfo) string {
 }
 
 func TestRetryCB(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	atomic.StoreInt32(&testSTReqCount, -1)
 	// retry config
 	fp := retry.NewFailurePolicy()
@@ -105,6 +111,8 @@ func TestRetryCB(t *testing.T) {
 }
 
 func TestNoCB(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	atomic.StoreInt32(&testSTReqCount, -1)
 	// retry config
 	fp := retry.NewFailurePolicy()
@@ -125,6 +133,8 @@ func TestNoCB(t *testing.T) {
 }
 
 func TestNoRetry(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	atomic.StoreInt32(&testSTReqCount, -1)
 	// retry config
 	fp := retry.NewFailurePolicy()
@@ -152,6 +162,8 @@ func TestNoRetry(t *testing.T) {
 }
 
 func TestBackupRequest(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	atomic.StoreInt32(&testSTReqCount, -1)
 	// retry config
 	bp := retry.NewBackupPolicy(5)
@@ -171,6 +183,8 @@ func TestBackupRequest(t *testing.T) {
 }
 
 func TestServiceCB(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	atomic.StoreInt32(&circuitBreakTestCount, -1)
 	// retry config
 	fp := retry.NewFailurePolicy()
@@ -196,6 +210,8 @@ func TestServiceCB(t *testing.T) {
 }
 
 func TestRetryWithSpecifiedResultRetry(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	methodPolicy := make(map[string]bool)
 	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testObjReq" {
@@ -261,6 +277,8 @@ func TestRetryWithSpecifiedResultRetry(t *testing.T) {
 
 // TestFailureRetryWithSpecifiedResult setup the SpecifiedResultRetry with option `NewFailurePolicyWithResultRetry`
 func TestFailureRetryWithSpecifiedResultRetry(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	methodPolicy := make(map[string]bool)
 	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testObjReq" {
@@ -324,6 +342,8 @@ func TestFailureRetryWithSpecifiedResultRetry(t *testing.T) {
 }
 
 func TestRetryNotify(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	methodPolicy := make(map[string]bool)
 	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testObjReq" {
@@ -408,11 +428,12 @@ func TestRetryNotify(t *testing.T) {
 	_, err = cli.TestException(ctx, stReq)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, methodPolicy["testException"])
-
 }
 
 // TestRetryWithCallOpt setup the retry policy with callopt.
 func TestRetryWithCallOpt(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	methodPolicy := make(map[string]bool)
 	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testObjReq" {
@@ -472,6 +493,8 @@ func TestRetryWithCallOpt(t *testing.T) {
 }
 
 func TestRetryForTimeout(t *testing.T) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	isErrorRetry := func(err error, ri rpcinfo.RPCInfo) bool {
 		if ri.To().Method() == "testSTReq" {
 			if te, ok := errors.Unwrap(err).(*remote.TransError); ok && te.TypeID() == 1000 && te.Error() == "retry [biz error]" {
@@ -521,7 +544,6 @@ func TestRetryForTimeout(t *testing.T) {
 	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
 	_, err = cli.TestSTReq(ctx, stReq)
 	test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout), err)
-
 }
 
 func BenchmarkRetryNoCB(b *testing.B) {
