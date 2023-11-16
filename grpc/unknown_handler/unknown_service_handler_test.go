@@ -60,7 +60,7 @@ func GetServer(ip string, hasHandler bool) server.Server {
 
 // TestUnknownServiceError test if the server send unknown method err when there is no matching method.
 func TestUnknownServiceError(t *testing.T) {
-	ip := "localhost:9898"
+	ip := "localhost:9899" // avoid conflict with other tests
 	svr := GetServer(ip, false)
 	go svr.Run()
 	defer svr.Stop()
