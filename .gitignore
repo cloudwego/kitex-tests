@@ -45,6 +45,7 @@ testdata/
 # Files produced by run.sh
 kitex_gen/
 kitex_gen_slim/
+old_gen/
 grpc_gen/
 go.mod
 go.sum
