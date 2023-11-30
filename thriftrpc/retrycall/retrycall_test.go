@@ -24,9 +24,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex/pkg/endpoint"
-	"github.com/cloudwego/kitex/pkg/kerrors"
-
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
@@ -34,6 +31,8 @@ import (
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
+	"github.com/cloudwego/kitex/pkg/endpoint"
+	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
@@ -79,29 +78,67 @@ func genCBKey(ri rpcinfo.RPCInfo) string {
 }
 
 func TestRetryCB(t *testing.T) {
-	atomic.StoreInt32(&testSTReqCount, -1)
-	// retry config
-	fp := retry.NewFailurePolicy()
-
+	reqCount := int32(0)
 	cli = getKitexClient(
-		transport.PurePayload,
-		client.WithFailureRetry(fp),
+		transport.TTHeader,
+		client.WithRetryContainer(retry.NewRetryContainer()), // use default circuit breaker
+		client.WithFailureRetry(retry.NewFailurePolicy()),
 		client.WithRPCTimeout(20*time.Millisecond),
+		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				count := atomic.AddInt32(&reqCount, 1)
+				if count%10 == 0 {
+					time.Sleep(50 * time.Millisecond)
+				}
+				return nil // no need to send the real request
+			}
+		}),
 	)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	cbCount := 0
 	for i := 0; i < 300; i++ {
-		stResp, err := cli.TestSTReq(ctx, stReq)
-		if err != nil {
-			test.Assert(t, strings.Contains(err.Error(), "retry circuit break"), err, i)
+		_, err := cli.TestSTReq(ctx, stReq)
+		if err != nil && strings.Contains(err.Error(), "retry circuit break") {
 			cbCount++
-		} else {
-			test.Assert(t, err == nil, err, i)
-			test.Assert(t, stReq.Str == stResp.Str)
 		}
 	}
+	test.Assert(t, reqCount == 300, reqCount)
 	test.Assert(t, cbCount == 30, cbCount)
+}
+
+func TestRetryCBPercentageLimit(t *testing.T) {
+	reqCount := int32(0)
+	cli := getKitexClient(
+		transport.TTHeaderFramed,
+		client.WithRetryContainer(retry.NewRetryContainerWithPercentageLimit()),
+		client.WithFailureRetry(retry.NewFailurePolicy()), // cb threshold = 10%
+		client.WithRPCTimeout(20*time.Millisecond),
+		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				atomic.AddInt32(&reqCount, 1)
+				if tm := getSleepTimeMS(ctx); tm > 0 {
+					time.Sleep(tm)
+				}
+				return nil // no need to send a real request
+			}
+		}),
+	)
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	ctx = setSkipCounterSleep(ctx)
+	cbCount := 0
+	for i := 0; i < 300; i++ {
+		reqCtx := ctx
+		if i%5 == 0 {
+			reqCtx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "50")
+		}
+		_, err := cli.TestSTReq(reqCtx, stReq)
+		if err != nil && strings.Contains(err.Error(), "retry circuit break") {
+			cbCount++
+		}
+	}
+	test.Assert(t, reqCount == 333, reqCount)
+	test.Assert(t, cbCount == 58, cbCount)
 }
 
 func TestNoCB(t *testing.T) {

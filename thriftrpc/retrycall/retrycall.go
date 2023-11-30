@@ -42,8 +42,13 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,
 	}
-	if v := atomic.AddInt32(&testSTReqCount, 1); v%10 == 0 {
-		time.Sleep(50 * time.Millisecond)
+	if !skipCounterSleep(ctx) { // better not rely on this since it's a global variable
+		if v := atomic.AddInt32(&testSTReqCount, 1); v%10 == 0 {
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
+		time.Sleep(sleepTime)
 	}
 	return resp, nil
 }
