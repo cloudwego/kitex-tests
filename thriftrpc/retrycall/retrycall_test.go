@@ -17,6 +17,7 @@ package retrycall
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -139,6 +140,44 @@ func TestRetryCBPercentageLimit(t *testing.T) {
 	}
 	test.Assert(t, reqCount == 333, reqCount)
 	test.Assert(t, cbCount == 58, cbCount)
+}
+
+// TestRetryRespOpIsolation fixed in https://github.com/cloudwego/kitex/pull/1194
+func TestRetryRespOpIsolation(t *testing.T) {
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	ctx = setSkipCounterSleep(ctx)
+
+	innerCli := getKitexClient(transport.TTHeaderFramed)
+	cli := getKitexClient(
+		transport.TTHeaderFramed,
+		client.WithRetryContainer(retry.NewRetryContainerWithPercentageLimit()),
+		client.WithBackupRequest(retry.NewBackupPolicy(20)),
+		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				ctx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "0")
+				_, err = innerCli.TestSTReq(ctx, stReq)
+				if err != nil {
+					t.Errorf("mw resp err: %v", err)
+				}
+				return next(ctx, req, resp)
+			}
+		}),
+	)
+
+	timer := time.NewTimer(100 * time.Millisecond)
+	result := make(chan error, 1)
+	go func() {
+		ctx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "50")
+		_, err := cli.TestSTReq(ctx, stReq)
+		fmt.Printf("err: %v\n", err)
+		result <- err
+	}()
+	select {
+	case <-timer.C:
+		t.Errorf("timeout")
+	case err := <-result:
+		test.Assert(t, err == nil, err)
+	}
 }
 
 func TestNoCB(t *testing.T) {
