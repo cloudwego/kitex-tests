@@ -27,9 +27,38 @@ import (
 )
 
 const (
-	retryMsg       = "retry"
-	sleepTimeMsKey = "TIME_SLEEP_TIME_MS"
+	retryMsg            = "retry"
+	sleepTimeMsKey      = "TIME_SLEEP_TIME_MS"
+	skipCounterSleepKey = "TIME_SKIP_COUNTER_SLEEP"
 )
+
+func setSkipCounterSleep(ctx context.Context) context.Context {
+	return metainfo.WithPersistentValue(ctx, skipCounterSleepKey, "1")
+}
+
+func skipCounterSleep(ctx context.Context) bool {
+	if _, exist := metainfo.GetValue(ctx, skipCounterSleepKey); exist {
+		return true
+	}
+	if _, exist := metainfo.GetPersistentValue(ctx, skipCounterSleepKey); exist {
+		return true
+	}
+	return false
+}
+
+func getSleepTimeMS(ctx context.Context) time.Duration {
+	if value, exist := metainfo.GetPersistentValue(ctx, sleepTimeMsKey); exist {
+		if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
+			return time.Duration(sleepTimeMS) * time.Millisecond
+		}
+	}
+	if value, exist := metainfo.GetValue(ctx, sleepTimeMsKey); exist {
+		if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
+			return time.Duration(sleepTimeMS) * time.Millisecond
+		}
+	}
+	return 0
+}
 
 var _ stability.STService = &STServiceMockResultHandler{}
 
@@ -91,10 +120,8 @@ func (h *STServiceMockResultHandler) CircuitBreakTest(ctx context.Context, req *
 	// use ttheader
 	if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
 		sleepTime := 200 * time.Millisecond
-		if value, exist := metainfo.GetPersistentValue(ctx, sleepTimeMsKey); exist {
-			if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
-				sleepTime = time.Duration(sleepTimeMS) * time.Millisecond
-			}
+		if v := getSleepTimeMS(ctx); v > 0 {
+			sleepTime = v
 		}
 		time.Sleep(sleepTime)
 	}
