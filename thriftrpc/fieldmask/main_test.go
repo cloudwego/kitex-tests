@@ -95,10 +95,10 @@ func TestFieldMask(t *testing.T) {
 	}
 	fmt.Printf("%#v\n", resp)
 
-	if resp.A == "" { // resp.A must not in mask
+	if resp.A == "" { // resp.A in mask
 		t.Fatal()
 	}
-	if resp.B != "" { // resp.A must in mask
+	if resp.B != "" { // resp.B not in mask
 		t.Fail()
 	}
 

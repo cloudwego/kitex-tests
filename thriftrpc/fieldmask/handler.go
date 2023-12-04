@@ -17,7 +17,7 @@ func (s *BizServiceImpl) BizMethod1(ctx context.Context, req *fieldmask0.BizRequ
 	if req.A != "" { // req.A not in mask
 		return nil, errors.New("request must mask BizRequest.A!")
 	}
-	if req.B == "" {
+	if req.B == "" { // req.B in mask
 		return nil, errors.New("request must not mask BizRequest.B!")
 	}
 
