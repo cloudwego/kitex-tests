@@ -67,9 +67,6 @@ which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@l
 # install protoc-gen-go and protoc-gen-go-kitexgrpc
 which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
-# Install thriftgo
-which thriftgo || go_install github.com/cloudwego/thriftgo@latest
-
 # Install kitex and generate codes
 LOCAL_REPO=$1
 
@@ -78,10 +75,22 @@ if [[ -n $LOCAL_REPO ]]; then
     go_install ${LOCAL_REPO}/tool/cmd/kitex
     cd -
 else
-    go_install github.com/cloudwego/kitex/tool/cmd/kitex@latest
+    which kitex || go_install github.com/cloudwego/kitex/tool/cmd/kitex@latest
+fi
+
+# Install thriftgo
+THRIFTGO_REPO=$2
+
+if [[ -n $THRIFTGO_REPO ]]; then
+    cd ${THRIFTGO_REPO}
+    go_install ${THRIFTGO_REPO}
+    cd -
+else
+    which thriftgo || go_install github.com/cloudwego/thriftgo@latest
 fi
 
 test -d kitex_gen && rm -rf kitex_gen
+kitex -module kitex -module github.com/cloudwego/kitex-tests -thrift with_field_mask -thrift with_reflection ./idl/fieldmask.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
@@ -104,13 +113,16 @@ mkdir grpc_gen
 protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
 protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
-
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
 go get github.com/cloudwego/kitex@develop
 
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
+fi
+
+if [[ -n $THRIFTGO_REPO ]]; then
+    go mod edit -replace github.com/cloudwego/thriftgo=${THRIFTGO_REPO}
 fi
 
 go mod tidy
@@ -122,6 +134,7 @@ go vet -stdmethods=false $(go list ./...)
 
 # run tests
 packages=(
+./thriftrpc/fieldmask/...
 ./thriftrpc/normalcall/...
 ./thriftrpc/muxcall/...
 ./thriftrpc/retrycall/...
