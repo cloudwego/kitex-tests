@@ -16,6 +16,9 @@
 
 kitex -module test -gen-path old_gen test_fieldmask.thrift 
 kitex -module test -thrift with_field_mask -thrift with_reflection test_fieldmask.thrift
-go get github.com/cloudwego/thriftgo@main
+cat test_fieldmask.thrift > test_fieldmask2.thrift
+kitex -module test -thrift with_field_mask -thrift field_mask_halfway -thrift with_reflection -gen-path halfway_gen test_fieldmask2.thrift
+kitex -module test -thrift with_field_mask -thrift with_reflection baseline.thrift
+go get github.com/cloudwego/thriftgo@9e8d1cafba62a37789c431270a816ad35a6c46e0
 go mod tidy
 go test ./...

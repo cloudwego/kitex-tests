@@ -46,6 +46,7 @@ testdata/
 kitex_gen/
 kitex_gen_slim/
 old_gen/
+halfway_gen/
 grpc_gen/
 go.mod
 go.sum

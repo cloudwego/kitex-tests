@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"test/test_gen/baseline"
+	"test/kitex_gen/baseline"
 
 	"github.com/cloudwego/thriftgo/fieldmask"
 )
@@ -107,7 +107,7 @@ func BenchmarkFastWriteSimple(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		obj.SetFieldMask(fm)
+		obj.Set_FieldMask(fm)
 		data := make([]byte, obj.BLength())
 		ret := obj.FastWriteNocopy(data, nil)
 		if ret != len(data) {
@@ -115,7 +115,7 @@ func BenchmarkFastWriteSimple(b *testing.B) {
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			obj.SetFieldMask(fm)
+			obj.Set_FieldMask(fm)
 			_ = obj.BLength()
 			_ = obj.FastWriteNocopy(data, nil)
 		}
@@ -153,14 +153,14 @@ func BenchmarkFastReadSimple(b *testing.B) {
 			b.Fatal(ret)
 		}
 		obj = baseline.NewSimple()
-		obj.SetFieldMask(fm)
+		obj.Set_FieldMask(fm)
 		n, err := obj.FastRead(data)
 		if n != len(data) {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			obj.SetFieldMask(fm)
+			obj.Set_FieldMask(fm)
 			_, _ = obj.FastRead(data)
 		}
 	})
@@ -198,7 +198,7 @@ func BenchmarkFastWriteNesting(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-		obj.SetFieldMask(fm)
+		obj.Set_FieldMask(fm)
 		data := make([]byte, obj.BLength())
 		ret := obj.FastWriteNocopy(data, nil)
 		if ret != len(data) {
@@ -207,7 +207,7 @@ func BenchmarkFastWriteNesting(b *testing.B) {
 		// println("half data size: ", len(data))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			obj.SetFieldMask(fm)
+			obj.Set_FieldMask(fm)
 			_ = obj.BLength()
 			_ = obj.FastWriteNocopy(data, nil)
 		}
@@ -255,14 +255,14 @@ func BenchmarkFastReadNesting(b *testing.B) {
 			b.Fatal(ret)
 		}
 		obj = baseline.NewNesting()
-		obj.SetFieldMask(fm)
+		obj.Set_FieldMask(fm)
 		n, err := obj.FastRead(data)
 		if n != len(data) {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			obj.SetFieldMask(fm)
+			obj.Set_FieldMask(fm)
 			_, _ = obj.FastRead(data)
 		}
 	})

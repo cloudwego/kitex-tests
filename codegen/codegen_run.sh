@@ -76,7 +76,7 @@ function run_test {
   #run fieldmask tests...
   cd fieldmask
   sh run.sh
-  if test $? -nq 0  
+  if test $? != 0  
   then
     echo "run fieldmask test failed"
     exit 3

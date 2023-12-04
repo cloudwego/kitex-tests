@@ -15,8 +15,10 @@
 package test
 
 import (
+	"fmt"
 	"runtime"
-	"test/kitex_gen/base"
+	hbase "test/halfway_gen/base"
+	nbase "test/kitex_gen/base"
 	obase "test/old_gen/base"
 	"testing"
 
@@ -24,34 +26,41 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func SampleNewBase() *base.Base {
-	obj := base.NewBase()
+func SampleNewBase() *nbase.Base {
+	obj := nbase.NewBase()
 	obj.Addr = "abcd"
 	obj.Caller = "abcd"
 	obj.LogID = "abcd"
-	obj.Meta = base.NewMetaInfo()
-	obj.Meta.StrMap = map[string]*base.Val{
-		"abcd": base.NewVal(),
-		"1234": base.NewVal(),
+	obj.Meta = nbase.NewMetaInfo()
+	obj.Meta.StrMap = map[string]*nbase.Val{
+		"abcd": nbase.NewVal(),
+		"1234": nbase.NewVal(),
 	}
-	obj.Meta.IntMap = map[int64]*base.Val{
-		1: base.NewVal(),
-		2: base.NewVal(),
+	obj.Meta.IntMap = map[int64]*nbase.Val{
+		1: nbase.NewVal(),
+		2: nbase.NewVal(),
 	}
-	v0 := base.NewVal()
+	v0 := nbase.NewVal()
 	v0.Id = "a"
 	v0.Name = "a"
-	v1 := base.NewVal()
+	v1 := nbase.NewVal()
 	v1.Id = "b"
 	v1.Name = "b"
-	obj.Meta.List = []*base.Val{v0, v1}
-	obj.Meta.Set = []*base.Val{v0, v1}
-	obj.Extra = base.NewExtraInfo()
-	obj.TrafficEnv = base.NewTrafficEnv()
+	obj.Meta.List = []*nbase.Val{v0, v1}
+	// v0 = nbase.NewVal()
+	// v0.ID = "a"
+	// v0.Name = "a"
+	// v1 = nbase.NewVal()
+	// v1.ID = "b"
+	// v1.Name = "b"
+	obj.Meta.Set = []*nbase.Val{v0, v1}
+	// obj.Extra = nbase.NewExtraInfo()
+	obj.TrafficEnv = nbase.NewTrafficEnv()
 	obj.TrafficEnv.Code = 1
 	obj.TrafficEnv.Env = "abcd"
 	obj.TrafficEnv.Name = "abcd"
 	obj.TrafficEnv.Open = true
+	obj.Meta.Base = nbase.NewBase()
 	return obj
 }
 
@@ -77,12 +86,13 @@ func SampleOldBase() *obase.Base {
 	v1.Name = "b"
 	obj.Meta.List = []*obase.Val{v0, v1}
 	obj.Meta.Set = []*obase.Val{v0, v1}
-	obj.Extra = obase.NewExtraInfo()
+	// obj.Extra = obase.NewExtraInfo()
 	obj.TrafficEnv = obase.NewTrafficEnv()
 	obj.TrafficEnv.Code = 1
 	obj.TrafficEnv.Env = "abcd"
 	obj.TrafficEnv.Name = "abcd"
 	obj.TrafficEnv.Open = true
+	obj.Meta.Base = obase.NewBase()
 	return obj
 }
 
@@ -100,10 +110,11 @@ func TestFastWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj.SetFieldMask(fm)
+	obj.Set_FieldMask(fm)
 	out := make([]byte, obj.BLength())
+	// out := make([]byte, 24000000)
 	e := obj.FastWriteNocopy(out, nil)
-	var obj2 = base.NewBase()
+	var obj2 = nbase.NewBase()
 	n, err := obj2.FastRead(out)
 	if err != nil {
 		t.Fatal(err)
@@ -122,10 +133,10 @@ func TestFastWrite(t *testing.T) {
 	require.Equal(t, "", obj2.Meta.IntMap[2].Id)
 	require.Equal(t, obj.Meta.IntMap[2].Name, obj2.Meta.IntMap[2].Name)
 	require.Equal(t, obj.Meta.StrMap["1234"].Id, obj2.Meta.StrMap["1234"].Id)
-	require.Equal(t, (*base.Val)(nil), obj2.Meta.StrMap["abcd"])
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.StrMap["abcd"])
+	require.Equal(t, 1, len(obj2.Meta.List))
 	require.Equal(t, obj.Meta.List[1].Id, obj2.Meta.List[0].Id)
 	require.Equal(t, obj.Meta.List[1].Name, obj2.Meta.List[0].Name)
-	require.Equal(t, 1, len(obj2.Meta.List))
 	require.Equal(t, 2, len(obj2.Meta.Set))
 	require.Equal(t, obj.Meta.Set[0].Id, obj2.Meta.Set[0].Id)
 	require.Equal(t, "", obj2.Meta.Set[0].Name)
@@ -137,7 +148,7 @@ func TestFastRead(t *testing.T) {
 	obj := SampleNewBase()
 	buf := make([]byte, obj.BLength())
 	e := obj.FastWriteNocopy(buf, nil)
-	obj2 := base.NewBase()
+	obj2 := nbase.NewBase()
 	fm, err := fieldmask.NewFieldMask(obj2.GetTypeDescriptor(), "$.Addr",
 		"$.LogID",
 		"$.TrafficEnv.Code",
@@ -150,7 +161,7 @@ func TestFastRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	obj2.SetFieldMask(fm)
+	obj2.Set_FieldMask(fm)
 	n, err := obj2.FastRead(buf)
 	if err != nil {
 		t.Fatal(err)
@@ -171,7 +182,7 @@ func TestFastRead(t *testing.T) {
 	require.Equal(t, "", obj2.Meta.IntMap[2].Id)
 	require.Equal(t, obj.Meta.IntMap[2].Name, obj2.Meta.IntMap[2].Name)
 	require.Equal(t, obj.Meta.StrMap["1234"].Id, obj2.Meta.StrMap["1234"].Id)
-	require.Equal(t, (*base.Val)(nil), obj2.Meta.StrMap["abcd"])
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.StrMap["abcd"])
 	require.Equal(t, obj.Meta.List[1].Id, obj2.Meta.List[0].Id)
 	require.Equal(t, obj.Meta.List[1].Name, obj2.Meta.List[0].Name)
 	require.Equal(t, 1, len(obj2.Meta.List))
@@ -180,6 +191,94 @@ func TestFastRead(t *testing.T) {
 	require.Equal(t, "", obj2.Meta.Set[0].Name)
 	require.Equal(t, "", obj2.Meta.Set[1].Id)
 	require.Equal(t, obj.Meta.Set[1].Name, obj2.Meta.Set[1].Name)
+}
+
+func TestMaskRequired(t *testing.T) {
+	fm, err := fieldmask.NewFieldMask(nbase.NewBaseResp().GetTypeDescriptor(), "$.F1", "$.F8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	j, err := fm.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	println(string(j))
+	nf, ex := fm.Field(111)
+	if !ex {
+		t.Fatal(nf)
+	}
+
+	t.Run("read", func(t *testing.T) {
+		obj := nbase.NewBaseResp()
+		obj.F1 = map[nbase.Str]nbase.Str{"a": "b"}
+		obj.F8 = map[float64][]nbase.Str{1.0: []nbase.Str{"a"}}
+		buf := make([]byte, obj.BLength())
+		if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
+			t.Fatal(err)
+		}
+		obj2 := nbase.NewBaseResp()
+		obj2.Set_FieldMask(fm)
+		if _, err := obj2.FastRead(buf); err != nil {
+			t.Fatal(err)
+		}
+		require.Equal(t, obj.F1, obj2.F1)
+		require.Equal(t, obj.F8, obj2.F8)
+	})
+
+	t.Run("write", func(t *testing.T) {
+		obj := nbase.NewBaseResp()
+		obj.F1 = map[nbase.Str]nbase.Str{"a": "b"}
+		obj.F8 = map[float64][]nbase.Str{1.0: []nbase.Str{"a"}}
+		obj.Set_FieldMask(fm)
+		buf := make([]byte, obj.BLength())
+		if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
+			t.Fatal(err)
+		}
+		obj2 := nbase.NewBaseResp()
+		if _, err := obj2.FastRead(buf); err != nil {
+			t.Fatal(err)
+		}
+		fmt.Printf("%#v\n", obj2)
+	})
+}
+
+func TestSetMaskHalfway(t *testing.T) {
+	obj := hbase.NewBase()
+	obj.Extra = hbase.NewExtraInfo()
+	obj.Extra.F1 = map[string]string{"a": "b"}
+	obj.Extra.F8 = map[int64][]*hbase.Key{1: []*hbase.Key{hbase.NewKey()}}
+
+	fm, err := fieldmask.NewFieldMask(obj.Extra.GetTypeDescriptor(), "$.F1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	obj.Extra.Set_FieldMask(fm)
+	buf := make([]byte, obj.BLength())
+	if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
+		t.Fatal(err)
+	}
+	obj2 := hbase.NewBase()
+	if _, err := obj2.FastRead(buf); err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, obj.Extra.F1, obj2.Extra.F1)
+	require.Equal(t, map[int64][]*hbase.Key(nil), obj2.Extra.F8)
+
+	fm, err = fieldmask.NewFieldMask(obj.Extra.GetTypeDescriptor(), "$.F8")
+	if err != nil {
+		t.Fatal(err)
+	}
+	obj.Extra.Set_FieldMask(fm)
+	buf = make([]byte, obj.BLength())
+	if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
+		t.Fatal(err)
+	}
+	obj2 = hbase.NewBase()
+	if _, err := obj2.FastRead(buf); err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, map[string]string(nil), obj2.Extra.F1)
+	require.Equal(t, obj.Extra.F8, obj2.Extra.F8)
 }
 
 func BenchmarkFastWriteWithFieldMask(b *testing.B) {
@@ -214,13 +313,13 @@ func BenchmarkFastWriteWithFieldMask(b *testing.B) {
 	b.Run("new-mask-half", func(b *testing.B) {
 		obj := SampleNewBase()
 		buf := make([]byte, obj.BLength())
-		fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(), "$.Addr", "$.LogID", "$.TrafficEnv.Code", "$.Meta.IntMap{1}", "$.Meta.StrMap{\"1234\"}", "$.Meta.List[1]", "$.Meta.Set[1]")
+		fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(), "$.Addr", "$.LogID", "$.TrafficEnv.Code", "$.Meta.IntMap", "$.Meta.List")
 		if err != nil {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			obj.SetFieldMask(fm)
+			obj.Set_FieldMask(fm)
 			buf := buf[:obj.BLength()]
 			if err := obj.FastWriteNocopy(buf, nil); err == 0 {
 				b.Fatal(err)
@@ -253,7 +352,7 @@ func BenchmarkFastReadWithFieldMask(b *testing.B) {
 		if err := obj.FastWriteNocopy(buf, nil); err == 0 {
 			b.Fatal(err)
 		}
-		obj = base.NewBase()
+		obj = nbase.NewBase()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			if _, err := obj.FastRead(buf); err != nil {
@@ -270,15 +369,15 @@ func BenchmarkFastReadWithFieldMask(b *testing.B) {
 		if err := obj.FastWriteNocopy(buf, nil); err == 0 {
 			b.Fatal(err)
 		}
-		obj = base.NewBase()
+		obj = nbase.NewBase()
 
-		fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(), "$.Addr", "$.LogID", "$.TrafficEnv.Code", "$.Meta.IntMap{1}", "$.Meta.StrMap{\"1234\"}", "$.Meta.List[1]", "$.Meta.Set[1]")
+		fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(), "$.Addr", "$.LogID", "$.TrafficEnv.Code", "$.Meta.IntMap", "$.Meta.List")
 		if err != nil {
 			b.Fatal(err)
 		}
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			obj.SetFieldMask(fm)
+			obj.Set_FieldMask(fm)
 			if _, err := obj.FastRead(buf); err != nil {
 				b.Fatal(err)
 			}
