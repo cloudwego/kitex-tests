@@ -229,6 +229,7 @@ func TestMaskRequired(t *testing.T) {
 		obj := nbase.NewBaseResp()
 		obj.F1 = map[nbase.Str]nbase.Str{"a": "b"}
 		obj.F8 = map[float64][]nbase.Str{1.0: []nbase.Str{"a"}}
+		obj.R12 = nbase.NewTrafficEnv()
 		obj.Set_FieldMask(fm)
 		buf := make([]byte, obj.BLength())
 		if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
