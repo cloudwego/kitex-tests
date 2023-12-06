@@ -10,6 +10,7 @@ struct BizRequest {
 struct BizResponse {
     1: string A 
     2: required string B
+    3: string C
 }
 
 service BizService {

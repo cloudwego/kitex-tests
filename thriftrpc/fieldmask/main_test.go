@@ -98,8 +98,10 @@ func TestFieldMask(t *testing.T) {
 	if resp.A == "" { // resp.A in mask
 		t.Fatal()
 	}
-	if resp.B != "" { // resp.B not in mask
+	if resp.B == "" { // resp.B not in mask, but it's required, so still written
 		t.Fail()
 	}
-
+	if resp.C != "" { // resp.C not in mask
+		t.Fail()
+	}
 }

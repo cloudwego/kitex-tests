@@ -36,5 +36,6 @@ func (s *BizServiceImpl) BizMethod1(ctx context.Context, req *fieldmask0.BizRequ
 
 	resp.A = "A"
 	resp.B = "B"
+	resp.C = "C"
 	return
 }
