@@ -29,6 +29,7 @@ import (
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/connpool"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/transport"
 )
@@ -136,6 +137,18 @@ func TestVisitOneway(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 	test.Assert(t, atomic.LoadInt32(&thriftrpc.CheckNum) == int32(3))
+}
+
+func TestOnewayPingPongByTurns(t *testing.T) {
+	cli := getKitexClient(transport.TTHeaderFramed, client.WithLongConnection(connpool.IdleConfig{MaxIdlePerAddress: 10, MaxIdleGlobal: 1000, MaxIdleTimeout: time.Second * 3}))
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stReq.MockCost = &(&struct{ x string }{x: "300ms"}).x
+	err := cli.VisitOneway(ctx, stReq)
+	test.Assert(t, err == nil, err)
+
+	ctx, stReq = thriftrpc.CreateSTRequest(context.Background())
+	_, err = cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(time.Millisecond*300))
+	test.Assert(t, err == nil, err)
 }
 
 func TestRPCTimeoutPriority(t *testing.T) {
