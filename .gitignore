@@ -43,11 +43,8 @@ output/*
 testdata/
 
 # Files produced by run.sh
-kitex_gen/
 kitex_gen_slim/
-old_gen/
-halfway_gen/
-grpc_gen/
+*_gen/
 go.mod
 go.sum
 bin

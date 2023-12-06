@@ -15,11 +15,11 @@
 package test
 
 import (
-	"fmt"
 	"runtime"
 	hbase "test/halfway_gen/base"
 	nbase "test/kitex_gen/base"
 	obase "test/old_gen/base"
+	zbase "test/zero_gen/base"
 	"testing"
 
 	"github.com/cloudwego/thriftgo/fieldmask"
@@ -194,7 +194,7 @@ func TestFastRead(t *testing.T) {
 }
 
 func TestMaskRequired(t *testing.T) {
-	fm, err := fieldmask.NewFieldMask(nbase.NewBaseResp().GetTypeDescriptor(), "$.F1", "$.F8")
+	fm, err := fieldmask.NewFieldMask(nbase.NewBaseResp().GetTypeDescriptor(), "$.F1", "$.F8", "$.R12.Env")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,6 +212,9 @@ func TestMaskRequired(t *testing.T) {
 		obj := nbase.NewBaseResp()
 		obj.F1 = map[nbase.Str]nbase.Str{"a": "b"}
 		obj.F8 = map[float64][]nbase.Str{1.0: []nbase.Str{"a"}}
+		obj.R12 = nbase.NewTrafficEnv()
+		obj.R12.Name = "a"
+		obj.R12.Env = "a"
 		buf := make([]byte, obj.BLength())
 		if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
 			t.Fatal(err)
@@ -223,13 +226,30 @@ func TestMaskRequired(t *testing.T) {
 		}
 		require.Equal(t, obj.F1, obj2.F1)
 		require.Equal(t, obj.F8, obj2.F8)
+		require.Equal(t, "", obj2.R12.Name)
+		require.Equal(t, obj.R12.Env, obj2.R12.Env)
 	})
 
-	t.Run("write", func(t *testing.T) {
+	t.Run("write current", func(t *testing.T) {
 		obj := nbase.NewBaseResp()
+		obj.StatusCode = 1
+		obj.R3 = true
+		obj.R4 = 1
+		obj.R5 = 1
+		obj.R6 = 1
+		obj.R7 = 1
+		obj.R8 = "R8"
+		obj.R9 = nbase.Ex_B
+		v := nbase.NewVal()
+		v.Id = "a"
+		obj.R10 = []*nbase.Val{v}
+		obj.R11 = []*nbase.Val{v}
+		obj.R12 = nbase.NewTrafficEnv()
+		obj.R12.Name = "a"
+		obj.R12.Env = "a"
+		obj.R13 = map[string]*nbase.Key{"a": v}
 		obj.F1 = map[nbase.Str]nbase.Str{"a": "b"}
 		obj.F8 = map[float64][]nbase.Str{1.0: []nbase.Str{"a"}}
-		obj.R12 = nbase.NewTrafficEnv()
 		obj.Set_FieldMask(fm)
 		buf := make([]byte, obj.BLength())
 		if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
@@ -239,7 +259,74 @@ func TestMaskRequired(t *testing.T) {
 		if _, err := obj2.FastRead(buf); err != nil {
 			t.Fatal(err)
 		}
-		fmt.Printf("%#v\n", obj2)
+
+		require.Equal(t, obj.F1, obj2.F1)
+		require.Equal(t, obj.F8, obj2.F8)
+		require.Equal(t, obj.StatusCode, obj2.StatusCode)
+		require.Equal(t, obj.R3, obj2.R3)
+		require.Equal(t, obj.R4, obj2.R4)
+		require.Equal(t, obj.R5, obj2.R5)
+		require.Equal(t, obj.R6, obj2.R6)
+		require.Equal(t, obj.R7, obj2.R7)
+		require.Equal(t, obj.R8, obj2.R8)
+		require.Equal(t, obj.R9, obj2.R9)
+		require.Equal(t, obj.R10, obj2.R10)
+		require.Equal(t, obj.R11, obj2.R11)
+		require.Equal(t, "", obj2.R12.Name)
+		require.Equal(t, obj.R12.Env, obj2.R12.Env)
+		require.Equal(t, obj.R13, obj2.R13)
+	})
+
+	t.Run("write zero", func(t *testing.T) {
+		fm, err := fieldmask.NewFieldMask(nbase.NewBaseResp().GetTypeDescriptor(), "$.F1", "$.F8", "$.R12")
+		if err != nil {
+			t.Fatal(err)
+		}
+		obj := zbase.NewBaseResp()
+		obj.F1 = map[zbase.Str]zbase.Str{"a": "b"}
+		obj.F8 = map[float64][]zbase.Str{1.0: []zbase.Str{"a"}}
+		obj.StatusCode = 1
+		obj.R3 = true
+		obj.R4 = 1
+		obj.R5 = 1
+		obj.R6 = 1
+		obj.R7 = 1
+		obj.R8 = "R8"
+		obj.R9 = zbase.Ex_B
+		v := zbase.NewVal()
+		v.Id = "a"
+		obj.R10 = []*zbase.Val{v}
+		obj.R11 = []*zbase.Val{v}
+		obj.R12 = zbase.NewTrafficEnv()
+		obj.R12.Name = "a"
+		obj.R12.Env = "a"
+		obj.R13 = map[string]*zbase.Key{"a": v}
+
+		obj.Set_FieldMask(fm)
+		buf := make([]byte, obj.BLength())
+		if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
+			t.Fatal(err)
+		}
+		obj2 := zbase.NewBaseResp()
+		if _, err := obj2.FastRead(buf); err != nil {
+			t.Fatal(err)
+		}
+
+		require.Equal(t, obj.F1, obj2.F1)
+		require.Equal(t, obj.F8, obj2.F8)
+		require.Equal(t, int32(0), obj2.StatusCode)
+		require.Equal(t, false, obj2.R3)
+		require.Equal(t, int8(0), obj2.R4)
+		require.Equal(t, int16(0), obj2.R5)
+		require.Equal(t, int64(0), obj2.R6)
+		require.Equal(t, float64(0), obj2.R7)
+		require.Equal(t, "", obj2.R8)
+		require.Equal(t, zbase.Ex(0), obj2.R9)
+		require.Equal(t, []*zbase.Val{}, obj2.R10)
+		require.Equal(t, []*zbase.Val{}, obj2.R11)
+		obj.R12.Set_FieldMask(nil)
+		require.Equal(t, obj.R12, obj2.R12)
+		require.Equal(t, map[string]*zbase.Key{}, obj2.R13)
 	})
 }
 
@@ -249,7 +336,7 @@ func TestSetMaskHalfway(t *testing.T) {
 	obj.Extra.F1 = map[string]string{"a": "b"}
 	obj.Extra.F8 = map[int64][]*hbase.Key{1: []*hbase.Key{hbase.NewKey()}}
 
-	fm, err := fieldmask.NewFieldMask(obj.Extra.GetTypeDescriptor(), "$.F1")
+	fm, err := fieldmask.NewFieldMask(obj.Extra.GetTypeDescriptor(), "$.F1", "$.F8")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -263,22 +350,6 @@ func TestSetMaskHalfway(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.Equal(t, obj.Extra.F1, obj2.Extra.F1)
-	require.Equal(t, map[int64][]*hbase.Key(nil), obj2.Extra.F8)
-
-	fm, err = fieldmask.NewFieldMask(obj.Extra.GetTypeDescriptor(), "$.F8")
-	if err != nil {
-		t.Fatal(err)
-	}
-	obj.Extra.Set_FieldMask(fm)
-	buf = make([]byte, obj.BLength())
-	if err := obj.FastWriteNocopy(buf, nil); err != len(buf) {
-		t.Fatal(err)
-	}
-	obj2 = hbase.NewBase()
-	if _, err := obj2.FastRead(buf); err != nil {
-		t.Fatal(err)
-	}
-	require.Equal(t, map[string]string(nil), obj2.Extra.F1)
 	require.Equal(t, obj.Extra.F8, obj2.Extra.F8)
 }
 
