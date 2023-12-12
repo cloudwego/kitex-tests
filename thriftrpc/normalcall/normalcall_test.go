@@ -17,6 +17,7 @@ package normalcall
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -29,7 +30,11 @@ import (
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/pkg/utils"
+	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
 
@@ -148,6 +153,86 @@ func TestRPCTimeoutPriority(t *testing.T) {
 	test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
 	test.Assert(t, strings.Contains(err.Error(), "timeout=200ms"))
 	test.Assert(t, stResp == nil)
+}
+
+func TestDisablePoolForRPCInfo(t *testing.T) {
+	backupState := rpcinfo.PoolEnabled()
+	defer rpcinfo.EnablePool(backupState)
+
+	t.Run("client", func(t *testing.T) {
+		var ri rpcinfo.RPCInfo
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		cli = getKitexClient(transport.TTHeaderFramed, client.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				ri = rpcinfo.GetRPCInfo(ctx)
+				return nil // no need to send the real request
+			}
+		}))
+
+		t.Run("enable", func(t *testing.T) {
+			rpcinfo.EnablePool(true)
+			_, _ = cli.TestSTReq(ctx, stReq)
+			test.Assert(t, ri.From() == nil, ri.From()) // zeroed
+		})
+
+		t.Run("disable", func(t *testing.T) {
+			rpcinfo.EnablePool(false)
+			_, _ = cli.TestSTReq(ctx, stReq)
+			test.Assert(t, ri.From() != nil, ri.From()) // should not be zeroed
+		})
+	})
+
+	t.Run("server", func(t *testing.T) {
+		var ri1, ri2 rpcinfo.RPCInfo
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: ":9002"}, nil,
+			server.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
+				return func(ctx context.Context, req, resp interface{}) (err error) {
+					err = endpoint(ctx, req, resp)
+					request := req.(utils.KitexArgs).GetFirstArgument().(*stability.STRequest)
+					if request.Name == "1" {
+						ri1 = rpcinfo.GetRPCInfo(ctx)
+					} else {
+						ri2 = rpcinfo.GetRPCInfo(ctx)
+					}
+					return err
+				}
+			}))
+		time.Sleep(time.Second)
+		defer svr.Stop()
+
+		cli = getKitexClient(transport.TTHeaderFramed)
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+
+		t.Run("enable", func(t *testing.T) {
+			rpcinfo.EnablePool(true)
+
+			stReq.Name = "1"
+			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			test.Assert(t, err == nil, err)
+
+			stReq.Name = "2"
+			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			test.Assert(t, err == nil, err)
+
+			addr1, addr2 := reflect.ValueOf(ri1).Pointer(), reflect.ValueOf(ri2).Pointer()
+			test.Assertf(t, addr1 == addr2, "addr1: %v, addr2: %v", addr1, addr2)
+		})
+
+		t.Run("disable", func(t *testing.T) {
+			rpcinfo.EnablePool(false)
+			stReq.Name = "1"
+			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			test.Assert(t, err == nil, err)
+
+			stReq.Name = "2"
+			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			test.Assert(t, err == nil, err)
+
+			addr1, addr2 := reflect.ValueOf(ri1).Pointer(), reflect.ValueOf(ri2).Pointer()
+			test.Assertf(t, addr1 != addr2, "addr1: %v, addr2: %v", addr1, addr2)
+		})
+
+	})
 }
 
 func BenchmarkThriftCall(b *testing.B) {

@@ -20,10 +20,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/endpoint"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
 )
 
 var cli stservice.Client
@@ -39,12 +46,12 @@ func TestMain(m *testing.M) {
 	svr.Stop()
 }
 
-func getKitexMuxClient() stservice.Client {
+func getKitexMuxClient(opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
 		HostPorts:         []string{":9002"},
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
-	})
+	}, opts...)
 }
 
 func TestStTReq(t *testing.T) {
@@ -83,6 +90,41 @@ func TestVisitOneway(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
+}
+
+func TestDisableRPCInfoReuse(t *testing.T) {
+	backupState := rpcinfo.PoolEnabled()
+	defer rpcinfo.EnablePool(backupState)
+
+	var ri rpcinfo.RPCInfo
+	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network:  "tcp",
+		Address:  ":9003",
+		ConnMode: thriftrpc.ConnectionMultiplexed,
+	}, nil, server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, req, resp interface{}) error {
+			ri = rpcinfo.GetRPCInfo(ctx)
+			return next(ctx, req, resp)
+		}
+	}))
+	time.Sleep(time.Second)
+	defer svr.Stop()
+
+	cli = getKitexMuxClient(client.WithTransportProtocol(transport.TTHeaderFramed))
+	ctx, stReq := thriftrpc.CreateSTRequest(metainfo.WithBackwardValues(context.Background()))
+
+	t.Run("reuse", func(t *testing.T) {
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9003"))
+		test.Assert(t, err == nil, err)
+		test.Assert(t, ri.Invocation().MethodName() == "", ri.Invocation().MethodName()) // zeroed
+	})
+
+	t.Run("disable reuse", func(t *testing.T) {
+		rpcinfo.EnablePool(false)
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9003"))
+		test.Assert(t, err == nil, err)
+		test.Assert(t, ri.Invocation().MethodName() != "", ri.Invocation().MethodName())
+	})
 }
 
 func BenchmarkMuxCall(b *testing.B) {
