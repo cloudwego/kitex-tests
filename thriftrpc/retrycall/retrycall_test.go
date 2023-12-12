@@ -215,8 +215,14 @@ func TestNoRetry(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	// add a mark to avoid retry
 	ctx = metainfo.WithPersistentValue(ctx, retry.TransitKey, strconv.Itoa(1))
+	ctx = metainfo.WithValue(ctx, skipCounterSleepKey, "1") // do not sleep by global variable
+
 	for i := 0; i < 250; i++ {
-		stResp, err := cli.TestSTReq(ctx, stReq)
+		reqCtx := ctx
+		if i%10 == 0 {
+			reqCtx = metainfo.WithValue(ctx, sleepTimeMsKey, "100")
+		}
+		stResp, err := cli.TestSTReq(reqCtx, stReq)
 		if i%10 == 0 {
 			test.Assert(t, err != nil)
 			test.Assert(t, strings.Contains(err.Error(), retryChainStopStr), err)

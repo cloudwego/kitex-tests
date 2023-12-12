@@ -125,10 +125,14 @@ packages=(
 ./generic/http/...
 ./generic/map/...
 ./grpc/...
+./thrift_streaming/...
 )
 
 for pkg in ${packages[@]}
 do
+    if [ "$pkg" == "./thrift_streaming/..." ]; then
+        ./thrift_streaming/generate.sh
+    fi
     if [[ -n $LOCAL_REPO ]]; then
         go test -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt.tmp -coverpkg=github.com/cloudwego/kitex/... $pkg
         if [[ "$OSTYPE" =~ ^darwin ]];

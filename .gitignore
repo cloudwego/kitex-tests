@@ -48,3 +48,4 @@ grpc_gen/
 go.mod
 go.sum
 bin
+thrift_streaming/binaries
