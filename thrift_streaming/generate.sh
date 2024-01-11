@@ -21,6 +21,7 @@ cd `dirname $0`
 ROOT=`pwd`
 
 set -e
+set -x
 
 # Old binaries: kitex <= v0.8.0 && thriftgo <= v0.3.4
 OLD=$ROOT/binaries/github-old
@@ -66,8 +67,7 @@ function generate_new() {
         cd $LOCAL_REPO/tool/cmd/kitex && go build && cp kitex $dir
         cd $SAVE_DIR
     else
-        echo -e "[ERROR] Please set local kitex directory in the environment variable $LOCAL_REPO\n"
-        exit 1
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@develop
     fi
     GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
 
