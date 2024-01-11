@@ -200,81 +200,83 @@ func TestNoCB(t *testing.T) {
 	}
 }
 
-func TestNoRetry(t *testing.T) {
-	atomic.StoreInt32(&testSTReqCount, -1)
-	// retry config
-	fp := retry.NewFailurePolicy()
-	fp.StopPolicy.CBPolicy.ErrorRate = 0.3
-	var opts []client.Option
-	opts = append(opts,
-		client.WithFailureRetry(fp),
-		client.WithRPCTimeout(20*time.Millisecond),
-	)
-	cli = getKitexClient(transport.Framed, opts...)
+func TestRetry(t *testing.T) {
+	t.Run("TestNoRetry", func(t *testing.T) {
+		atomic.StoreInt32(&testSTReqCount, -1)
+		// retry config
+		fp := retry.NewFailurePolicy()
+		fp.StopPolicy.CBPolicy.ErrorRate = 0.3
+		var opts []client.Option
+		opts = append(opts,
+			client.WithFailureRetry(fp),
+			client.WithRPCTimeout(20*time.Millisecond),
+		)
+		cli = getKitexClient(transport.Framed, opts...)
 
-	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	// add a mark to avoid retry
-	ctx = metainfo.WithPersistentValue(ctx, retry.TransitKey, strconv.Itoa(1))
-	ctx = metainfo.WithValue(ctx, skipCounterSleepKey, "1") // do not sleep by global variable
-
-	for i := 0; i < 250; i++ {
-		reqCtx := ctx
-		if i%10 == 0 {
-			reqCtx = metainfo.WithValue(ctx, sleepTimeMsKey, "100")
-		}
-		stResp, err := cli.TestSTReq(reqCtx, stReq)
-		if i%10 == 0 {
-			test.Assert(t, err != nil)
-			test.Assert(t, strings.Contains(err.Error(), retryChainStopStr), err)
-		} else {
-			test.Assert(t, err == nil, err, i)
-			test.Assert(t, stReq.Str == stResp.Str)
-		}
-	}
-}
-
-func TestBackupRequest(t *testing.T) {
-	atomic.StoreInt32(&testSTReqCount, -1)
-	// retry config
-	bp := retry.NewBackupPolicy(5)
-	var opts []client.Option
-	opts = append(opts,
-		client.WithBackupRequest(bp),
-		client.WithRPCTimeout(40*time.Millisecond),
-	)
-	cli = getKitexClient(transport.Framed, opts...)
-	for i := 0; i < 300; i++ {
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-		stReq.Int64 = int64(i)
-		stResp, err := cli.TestSTReq(ctx, stReq)
-		test.Assert(t, err == nil, err, i, testSTReqCount)
-		test.Assert(t, stReq.Str == stResp.Str)
-	}
-}
+		// add a mark to avoid retry
+		ctx = metainfo.WithPersistentValue(ctx, retry.TransitKey, strconv.Itoa(1))
+		ctx = metainfo.WithValue(ctx, skipCounterSleepKey, "1") // do not sleep by global variable
 
-func TestServiceCB(t *testing.T) {
-	atomic.StoreInt32(&circuitBreakTestCount, -1)
-	// retry config
-	fp := retry.NewFailurePolicy()
-	var opts []client.Option
-	opts = append(opts, client.WithFailureRetry(fp))
-	opts = append(opts, client.WithRPCTimeout(50*time.Millisecond))
-	opts = append(opts, client.WithCircuitBreaker(circuitbreak.NewCBSuite(genCBKey)))
-	cli = getKitexClient(transport.TTHeader, opts...)
+		for i := 0; i < 250; i++ {
+			reqCtx := ctx
+			if i%10 == 0 {
+				reqCtx = metainfo.WithValue(ctx, sleepTimeMsKey, "100")
+			}
+			stResp, err := cli.TestSTReq(reqCtx, stReq)
+			if i%10 == 0 {
+				test.Assert(t, err != nil)
+				test.Assert(t, strings.Contains(err.Error(), retryChainStopStr), err)
+			} else {
+				test.Assert(t, err == nil, err, i)
+				test.Assert(t, stReq.Str == stResp.Str)
+			}
+		}
+	})
 
-	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	cbCount := 0
-	for i := 0; i < 300; i++ {
-		stResp, err := cli.CircuitBreakTest(ctx, stReq)
-		if err != nil {
-			test.Assert(t, strings.Contains(err.Error(), "retry circuit break") ||
-				strings.Contains(err.Error(), "service circuitbreak"), err, i)
-			cbCount++
-		} else {
+	t.Run("TestBackupRequest", func(t *testing.T) {
+		atomic.StoreInt32(&testSTReqCount, -1)
+		// retry config
+		bp := retry.NewBackupPolicy(5)
+		var opts []client.Option
+		opts = append(opts,
+			client.WithBackupRequest(bp),
+			client.WithRPCTimeout(40*time.Millisecond),
+		)
+		cli = getKitexClient(transport.Framed, opts...)
+		for i := 0; i < 300; i++ {
+			ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+			stReq.Int64 = int64(i)
+			stResp, err := cli.TestSTReq(ctx, stReq)
+			test.Assert(t, err == nil, err, i, testSTReqCount)
 			test.Assert(t, stReq.Str == stResp.Str)
 		}
-	}
-	test.Assert(t, cbCount == 200, cbCount)
+	})
+
+	t.Run("TestServiceCB", func(t *testing.T) {
+		atomic.StoreInt32(&circuitBreakTestCount, -1)
+		// retry config
+		fp := retry.NewFailurePolicy()
+		var opts []client.Option
+		opts = append(opts, client.WithFailureRetry(fp))
+		opts = append(opts, client.WithRPCTimeout(50*time.Millisecond))
+		opts = append(opts, client.WithCircuitBreaker(circuitbreak.NewCBSuite(genCBKey)))
+		cli = getKitexClient(transport.TTHeader, opts...)
+
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		cbCount := 0
+		for i := 0; i < 300; i++ {
+			stResp, err := cli.CircuitBreakTest(ctx, stReq)
+			if err != nil {
+				test.Assert(t, strings.Contains(err.Error(), "retry circuit break") ||
+					strings.Contains(err.Error(), "service circuitbreak"), err, i)
+				cbCount++
+			} else {
+				test.Assert(t, stReq.Str == stResp.Str)
+			}
+		}
+		test.Assert(t, cbCount == 200, cbCount)
+	})
 }
 
 func TestRetryWithSpecifiedResultRetry(t *testing.T) {
