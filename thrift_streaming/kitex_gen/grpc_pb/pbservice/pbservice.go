@@ -15,8 +15,6 @@ import (
 
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
 
-var _ = streaming.KitexUnusedProtection
-
 var serviceMethods = map[string]kitex.MethodInfo{
 	"Echo": kitex.NewMethodInfo(
 		echoHandler,
