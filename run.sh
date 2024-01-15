@@ -85,11 +85,13 @@ test -d kitex_gen && rm -rf kitex_gen
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
+kitex -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service.thrift
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/stability.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
-kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service.proto
-kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_multi_service.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_multi_service_2.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/pb_multi_service.proto
 
 test -d kitex_gen_slim && rm -rf kitex_gen_slim
 kitex -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift

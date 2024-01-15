@@ -16,7 +16,7 @@
 
 syntax = "proto3";
 
-option go_package = "protobuf/multi_service";
+option go_package = "protobuf/grpc_multi_service";
 
 package multi_service;
 
