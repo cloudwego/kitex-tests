@@ -36,8 +36,8 @@ type ServiceAImpl struct{}
 
 // Echo1 implements the Echo1 interface.
 func (s *ServiceAImpl) Echo1(ctx context.Context, req *multi_service.Request) (resp *multi_service.Response, err error) {
-	println(req.Message)
-	return &multi_service.Response{Message: "servicea echo1 called"}, nil
+	println("servicea Echo1 called, req:", req.Message)
+	return &multi_service.Response{Message: "servicea Echo1"}, nil
 }
 
 // ServiceBImpl implements the last serviceb interface defined in the IDL.
@@ -45,8 +45,8 @@ type ServiceBImpl struct{}
 
 // Echo2 implements the Echo2 interface.
 func (s *ServiceBImpl) Echo2(ctx context.Context, req *multi_service.Request) (resp *multi_service.Response, err error) {
-	println(req.Message)
-	return &multi_service.Response{Message: "echo2 called"}, nil
+	println("serviceb Echo2 called, req:", req.Message)
+	return &multi_service.Response{Message: "serviceb Echo2"}, nil
 }
 
 // ServiceCImpl implements the last servicec interface defined in the IDL.
@@ -54,8 +54,8 @@ type ServiceCImpl struct{}
 
 // Echo1 implements the Echo1 interface.
 func (s *ServiceCImpl) Echo1(ctx context.Context, req *multi_service.Request) (resp *multi_service.Response, err error) {
-	println(req.Message)
-	return &multi_service.Response{Message: "servicec echo1 called"}, nil
+	println("servicec Echo1 called, req:", req.Message)
+	return &multi_service.Response{Message: "servicec Echo1"}, nil
 }
 
 func GetServer(hostport string) server.Server {
@@ -111,35 +111,35 @@ func TestMultiService(t *testing.T) {
 	test.Assert(t, err == nil, err)
 	resp, err := clientA.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp.Message == "servicec echo1 called")
+	test.Assert(t, resp.Message == "servicec Echo1")
 
 	clientAWithTTHeader, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientAWithTTHeader.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp.Message == "servicea echo1 called")
+	test.Assert(t, resp.Message == "servicea Echo1")
 
 	clientB, err := serviceb.NewClient("ServiceB", client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientB.Echo2(context.Background(), req)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp.Message == "echo2 called")
+	test.Assert(t, resp.Message == "serviceb Echo2")
 
 	clientBWithTTHeader, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientBWithTTHeader.Echo2(context.Background(), req)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp.Message == "echo2 called")
+	test.Assert(t, resp.Message == "serviceb Echo2")
 
 	clientC, err := servicec.NewClient("ServiceC", client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientC.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp.Message == "servicec echo1 called")
+	test.Assert(t, resp.Message == "servicec Echo1")
 
 	clientCWithTTHeader, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientCWithTTHeader.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp.Message == "servicec echo1 called")
+	test.Assert(t, resp.Message == "servicec Echo1")
 }
