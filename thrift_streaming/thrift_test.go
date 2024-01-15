@@ -677,6 +677,8 @@ func TestThriftStreamingMetaData(t *testing.T) {
 			"Foo_Bar":     false,
 			"hello":       false,
 			"hello_world": false,
+			// keys with hyphen will be ignored
+			"HELLO-WORLD": false,
 		}
 
 		metadataKeys := []string{

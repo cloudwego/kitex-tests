@@ -49,3 +49,4 @@ go.mod
 go.sum
 bin
 thrift_streaming/binaries
+thrift_streaming/exitserver/exitserver
