@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/streamclient"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -858,6 +860,27 @@ func TestThriftStreamingMetaData(t *testing.T) {
 		receivedTrailers := stream.Trailer()
 		klog.Infof("receivedTrailers: %v, err = %v", receivedTrailers, err)
 		test.Assertf(t, len(receivedTrailers) == 0, "receivedTrailers = %v", receivedTrailers)
+	})
+}
+
+func TestCombineService(t *testing.T) {
+	t.Run("combine-foo", func(t *testing.T) {
+		cli := combineservice.MustNewClient("combineservice", client.WithHostPorts(combineAddr))
+		rsp, err := cli.Foo(context.Background(), &combine.Req{Message: "hello"})
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "hello", rsp.Message)
+	})
+	t.Run("combine-bar", func(t *testing.T) {
+		streamCli := combineservice.MustNewStreamClient("combineservice", streamclient.WithHostPorts(combineAddr))
+		stream, err := streamCli.Bar(context.Background())
+		test.Assert(t, err == nil, err)
+		err = stream.Send(&combine.Req{Message: "hello"})
+		test.Assert(t, err == nil, err)
+		rsp, err := stream.Recv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "hello", rsp.Message)
+		err = stream.Close()
+		test.Assert(t, err == nil, err)
 	})
 }
 

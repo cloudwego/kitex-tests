@@ -80,9 +80,11 @@ function generate_new() {
 
     # Thrift
     kitex $module $idl
+    kitex $module --combine-service idl/combine.thrift
 
     # Thrift Slim
     kitex -thrift template=slim -gen-path kitex_gen_slim $module $idl
+    kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine.thrift
 
     # KitexPB
     kitex $module idl/api.proto
