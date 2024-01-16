@@ -39,3 +39,13 @@ service EchoService {
     void EchoOneway(1: EchoRequest req1),
     void Ping(),
 }
+
+// for checking whether the generated code is ok
+service PingPongOnlyService {
+    EchoResponse EchoPingPong (1: EchoRequest req1),
+}
+
+// for checking whether the generated code is ok
+service StreamOnlyService {
+    EchoResponse EchoBidirectional (1: EchoRequest req1) (streaming.mode="bidirectional"),
+}

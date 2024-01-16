@@ -534,3 +534,155 @@ func (p *EchoServicePingResult) String() string {
 func (p *EchoServicePingResult) GetResult() interface{} {
 	return nil
 }
+
+type PingPongOnlyServiceEchoPingPongArgs struct {
+	Req1 *EchoRequest `thrift:"req1,1" frugal:"1,default,EchoRequest" json:"req1"`
+}
+
+func NewPingPongOnlyServiceEchoPingPongArgs() *PingPongOnlyServiceEchoPingPongArgs {
+	return &PingPongOnlyServiceEchoPingPongArgs{}
+}
+
+func (p *PingPongOnlyServiceEchoPingPongArgs) InitDefault() {
+	*p = PingPongOnlyServiceEchoPingPongArgs{}
+}
+
+var PingPongOnlyServiceEchoPingPongArgs_Req1_DEFAULT *EchoRequest
+
+func (p *PingPongOnlyServiceEchoPingPongArgs) GetReq1() (v *EchoRequest) {
+	if !p.IsSetReq1() {
+		return PingPongOnlyServiceEchoPingPongArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *PingPongOnlyServiceEchoPingPongArgs) SetReq1(val *EchoRequest) {
+	p.Req1 = val
+}
+
+func (p *PingPongOnlyServiceEchoPingPongArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *PingPongOnlyServiceEchoPingPongArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongArgs(%+v)", *p)
+}
+func (p *PingPongOnlyServiceEchoPingPongArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type PingPongOnlyServiceEchoPingPongResult struct {
+	Success *EchoResponse `thrift:"success,0,optional" frugal:"0,optional,EchoResponse" json:"success,omitempty"`
+}
+
+func NewPingPongOnlyServiceEchoPingPongResult() *PingPongOnlyServiceEchoPingPongResult {
+	return &PingPongOnlyServiceEchoPingPongResult{}
+}
+
+func (p *PingPongOnlyServiceEchoPingPongResult) InitDefault() {
+	*p = PingPongOnlyServiceEchoPingPongResult{}
+}
+
+var PingPongOnlyServiceEchoPingPongResult_Success_DEFAULT *EchoResponse
+
+func (p *PingPongOnlyServiceEchoPingPongResult) GetSuccess() (v *EchoResponse) {
+	if !p.IsSetSuccess() {
+		return PingPongOnlyServiceEchoPingPongResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PingPongOnlyServiceEchoPingPongResult) SetSuccess(x interface{}) {
+	p.Success = x.(*EchoResponse)
+}
+
+func (p *PingPongOnlyServiceEchoPingPongResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PingPongOnlyServiceEchoPingPongResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongResult(%+v)", *p)
+}
+func (p *PingPongOnlyServiceEchoPingPongResult) GetResult() interface{} {
+	return p.Success
+}
+
+type StreamOnlyServiceEchoBidirectionalArgs struct {
+	Req1 *EchoRequest `thrift:"req1,1" frugal:"1,default,EchoRequest" json:"req1"`
+}
+
+func NewStreamOnlyServiceEchoBidirectionalArgs() *StreamOnlyServiceEchoBidirectionalArgs {
+	return &StreamOnlyServiceEchoBidirectionalArgs{}
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalArgs) InitDefault() {
+	*p = StreamOnlyServiceEchoBidirectionalArgs{}
+}
+
+var StreamOnlyServiceEchoBidirectionalArgs_Req1_DEFAULT *EchoRequest
+
+func (p *StreamOnlyServiceEchoBidirectionalArgs) GetReq1() (v *EchoRequest) {
+	if !p.IsSetReq1() {
+		return StreamOnlyServiceEchoBidirectionalArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *StreamOnlyServiceEchoBidirectionalArgs) SetReq1(val *EchoRequest) {
+	p.Req1 = val
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalArgs(%+v)", *p)
+}
+func (p *StreamOnlyServiceEchoBidirectionalArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type StreamOnlyServiceEchoBidirectionalResult struct {
+	Success *EchoResponse `thrift:"success,0,optional" frugal:"0,optional,EchoResponse" json:"success,omitempty"`
+}
+
+func NewStreamOnlyServiceEchoBidirectionalResult() *StreamOnlyServiceEchoBidirectionalResult {
+	return &StreamOnlyServiceEchoBidirectionalResult{}
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalResult) InitDefault() {
+	*p = StreamOnlyServiceEchoBidirectionalResult{}
+}
+
+var StreamOnlyServiceEchoBidirectionalResult_Success_DEFAULT *EchoResponse
+
+func (p *StreamOnlyServiceEchoBidirectionalResult) GetSuccess() (v *EchoResponse) {
+	if !p.IsSetSuccess() {
+		return StreamOnlyServiceEchoBidirectionalResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *StreamOnlyServiceEchoBidirectionalResult) SetSuccess(x interface{}) {
+	p.Success = x.(*EchoResponse)
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalResult(%+v)", *p)
+}
+func (p *StreamOnlyServiceEchoBidirectionalResult) GetResult() interface{} {
+	return p.Success
+}

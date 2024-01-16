@@ -125,6 +125,22 @@ type EchoService_EchoServerServer interface {
 	Send(*EchoResponse) error
 }
 
+type PingPongOnlyService interface {
+	EchoPingPong(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
+}
+
+type StreamOnlyService interface {
+	EchoBidirectional(stream StreamOnlyService_EchoBidirectionalServer) (err error)
+}
+
+type StreamOnlyService_EchoBidirectionalServer interface {
+	streaming.Stream
+
+	Recv() (*EchoRequest, error)
+
+	Send(*EchoResponse) error
+}
+
 // exceptions of methods in EchoService.
 var (
 	_ error = (*EchoException)(nil)

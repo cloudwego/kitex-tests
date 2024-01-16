@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/grpc_pb"
@@ -55,6 +56,19 @@ func RunThriftServer(handler echo.EchoService, addr string, opts ...server.Optio
 	opts = append(opts, WithServerAddr(addr))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := echoservice.NewServer(handler, opts...)
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	WaitServer(addr)
+	return svr
+}
+
+func RunCombineThriftServer(handler combineservice.CombineService, addr string, opts ...server.Option) server.Server {
+	opts = append(opts, WithServerAddr(addr))
+	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
+	svr := combineservice.NewServer(handler, opts...)
 	go func() {
 		if err := svr.Run(); err != nil {
 			panic(err)
@@ -110,6 +124,7 @@ var (
 	slimAddr    = addrAllocator()
 	grpcAddr    = addrAllocator()
 	pbAddr      = addrAllocator()
+	combineAddr = addrAllocator()
 )
 
 func addrAllocator() string {
@@ -119,23 +134,26 @@ func addrAllocator() string {
 }
 
 func TestMain(m *testing.M) {
-	var thriftSvr, thriftCrossSvr, slimServer, grpcServer, pbServer server.Server
+	var thriftSvr, thriftCrossSvr, slimServer, grpcServer, pbServer, combineServer server.Server
 	go func() { thriftSvr = RunThriftServer(&EchoServiceImpl{}, thriftAddr) }()
 	go func() { thriftCrossSvr = RunThriftCrossServer(&CrossEchoServiceImpl{}, crossAddr) }()
 	go func() { grpcServer = RunGRPCPBServer(&GRPCPBServiceImpl{}, grpcAddr) }()
 	go func() { pbServer = RunKitexPBServer(&KitexPBServiceImpl{}, pbAddr) }()
 	go func() { slimServer = RunSlimThriftServer(&SlimEchoServiceImpl{}, slimAddr) }()
+	go func() { combineServer = RunCombineThriftServer(&CombineServiceImpl{}, combineAddr) }()
 	defer func() {
 		go thriftSvr.Stop()
 		go grpcServer.Stop()
 		go pbServer.Stop()
 		go slimServer.Stop()
 		go thriftCrossSvr.Stop()
+		go combineServer.Stop()
 	}()
 	WaitServer(thriftAddr)
 	WaitServer(crossAddr)
 	WaitServer(grpcAddr)
 	WaitServer(pbAddr)
 	WaitServer(slimAddr)
+	WaitServer(combineAddr)
 	m.Run()
 }
