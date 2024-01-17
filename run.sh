@@ -62,9 +62,9 @@ go_install() {
 
 which protoc || install_protoc
 
-# install protoc-gen-go and protoc-gen-go-grpc
+# install protoc-gen-go and protoc-gen-go-kitexgrpc
 which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-# install protoc-gen-go and protoc-gen-go-grpc
+# install protoc-gen-go and protoc-gen-go-kitexgrpc
 which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # Install thriftgo
@@ -124,7 +124,7 @@ packages=(
 ./pbrpc/failedcall/...
 ./generic/http/...
 ./generic/map/...
-./grpc/...
+./kitexgrpc/...
 ./thrift_streaming/...
 )
 

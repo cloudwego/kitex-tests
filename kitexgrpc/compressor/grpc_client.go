@@ -16,10 +16,11 @@ package compressor
 
 import (
 	"context"
-	grpc_demo "github.com/cloudwego/kitex-tests/grpc_gen/protobuf/grpc_demo_2"
-	"google.golang.org/grpc"
 	"io"
 	"strconv"
+
+	grpc_demo "github.com/cloudwego/kitex-tests/grpc_gen/protobuf/grpc_demo_2"
+	"google.golang.org/grpc"
 )
 
 type ClientWrapperGRPC struct {
@@ -47,7 +48,7 @@ func (c *ClientWrapperGRPC) RunClientStream(opts ...grpc.CallOption) (*grpc_demo
 		return nil, err
 	}
 	for i := 0; i < 3; i++ {
-		req := &grpc_demo.Request{Name: "grpc-" + strconv.Itoa(i)}
+		req := &grpc_demo.Request{Name: "kitexgrpc-" + strconv.Itoa(i)}
 		err = streamCli.SendMsg(req)
 		if err != nil {
 			return nil, err
@@ -58,7 +59,7 @@ func (c *ClientWrapperGRPC) RunClientStream(opts ...grpc.CallOption) (*grpc_demo
 
 func (c *ClientWrapperGRPC) RunServerStream(opts ...grpc.CallOption) ([]*grpc_demo.Reply, error) {
 	ctx := context.Background()
-	req := &grpc_demo.Request{Name: "grpc"}
+	req := &grpc_demo.Request{Name: "kitexgrpc"}
 	streamCli, err := c.client.CallServerStream(ctx, req)
 	if err != nil {
 		return nil, err
@@ -87,7 +88,7 @@ func (c *ClientWrapperGRPC) RunBidiStream(opts ...grpc.CallOption) ([]*grpc_demo
 	errChan := make(chan error)
 	go func() {
 		for i := 0; i < 3; i++ {
-			req := &grpc_demo.Request{Name: "grpc-" + strconv.Itoa(i)}
+			req := &grpc_demo.Request{Name: "kitexgrpc-" + strconv.Itoa(i)}
 			err = stream.Send(req)
 			if err != nil {
 				errChan <- err

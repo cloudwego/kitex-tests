@@ -6,6 +6,7 @@ import (
 	"context"
 	combine "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine"
 	client "github.com/cloudwego/kitex/client"
+	callopt "github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/client/callopt/streamcall"
 	"github.com/cloudwego/kitex/client/streamclient"
 	streaming "github.com/cloudwego/kitex/pkg/streaming"

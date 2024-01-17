@@ -17,6 +17,10 @@ package compressor
 import (
 	"context"
 	"errors"
+	"net"
+	"testing"
+	"time"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	client_opt "github.com/cloudwego/kitex/client"
@@ -27,9 +31,6 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/encoding/gzip"
-	"net"
-	"testing"
-	"time"
 )
 
 func TestKitexWithoutCompressor(t *testing.T) {
@@ -105,13 +106,13 @@ func TestKitexCompressorWithGRPCClient(t *testing.T) {
 	test.Assert(t, resp != nil && resp.Message == "Grpc Hello!")
 	resp, err = client.RunClientStream(grpc.UseCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
-	test.Assert(t, resp != nil && resp.Message == "all message: grpc-0, grpc-1, grpc-2")
+	test.Assert(t, resp != nil && resp.Message == "all message: kitexgrpc-0, kitexgrpc-1, kitexgrpc-2")
 	respArr, err := client.RunServerStream(grpc.UseCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
-	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "grpc-0" && respArr[1].Message == "grpc-1" && respArr[2].Message == "grpc-2")
+	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "kitexgrpc-0" && respArr[1].Message == "kitexgrpc-1" && respArr[2].Message == "kitexgrpc-2")
 	respArr, err = client.RunBidiStream(grpc.UseCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
-	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "grpc-0" && respArr[1].Message == "grpc-1" && respArr[2].Message == "grpc-2")
+	test.Assert(t, len(respArr) == 3 && respArr[0].Message == "kitexgrpc-0" && respArr[1].Message == "kitexgrpc-1" && respArr[2].Message == "kitexgrpc-2")
 }
 
 func ServiceNameMW(next endpoint.Endpoint) endpoint.Endpoint {

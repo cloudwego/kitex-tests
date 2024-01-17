@@ -17,13 +17,14 @@ package compressor
 import (
 	"context"
 	"fmt"
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
-	"github.com/cloudwego/kitex/server"
 	"io"
 	"log"
 	"net"
 	"strings"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
+	"github.com/cloudwego/kitex/server"
 )
 
 type ServiceAImpl struct{}
