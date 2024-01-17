@@ -44,8 +44,12 @@ function generate_old() {
     export PATH=$OLD:$SAVE_PATH
 
     mkdir -p $dir
-    GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
-    GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.4
+    if [ ! -f "$dir/kitex" ]; then
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
+    fi
+    if [ ! -f "$dir/thriftgo" ]; then
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.4
+    fi
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
         echo "[old] Unable to install kitex or thriftgo to $dir, please check before continue."
         exit 1
@@ -81,10 +85,12 @@ function generate_new() {
     # Thrift
     kitex $module $idl
     kitex $module --combine-service idl/combine.thrift
+    kitex $module --combine-service idl/combine_extend.thrift
 
     # Thrift Slim
     kitex -thrift template=slim -gen-path kitex_gen_slim $module $idl
     kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine.thrift
+    kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine_extend.thrift
 
     # KitexPB
     kitex $module idl/api.proto
@@ -99,8 +105,12 @@ function generate_new_thriftgo_old_kitex() {
     export PATH=$dir:$SAVE_PATH
 
     mkdir -p $dir
-    GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
-    GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
+    if [ ! -f "$dir/kitex" ]; then
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
+    fi
+    if [ ! -f "$dir/thriftgo" ]; then
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
+    fi
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
         echo "[cross] Unable to install kitex or thriftgo to $dir, please check before continue."
         exit 1

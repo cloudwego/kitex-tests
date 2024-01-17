@@ -2171,7 +2171,7 @@ func (p *EchoServicePingResult) BLength() int {
 	return l
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) FastRead(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) FastRead(buf []byte) (int, error) {
 	var err error
 	var offset int
 	var l int
@@ -2233,7 +2233,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongArgs[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongNewArgs[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 ReadFieldEndError:
@@ -2242,7 +2242,7 @@ ReadStructEndError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) FastReadField1(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	tmp := NewEchoRequest()
@@ -2256,13 +2256,13 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) FastReadField1(buf []byte) (int, e
 }
 
 // for compatibility
-func (p *PingPongOnlyServiceEchoPingPongArgs) FastWrite(buf []byte) int {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) FastWrite(buf []byte) int {
 	return 0
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoPingPong_args")
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoPingPongNew_args")
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 	}
@@ -2271,9 +2271,9 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) FastWriteNocopy(buf []byte, binary
 	return offset
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) BLength() int {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) BLength() int {
 	l := 0
-	l += bthrift.Binary.StructBeginLength("EchoPingPong_args")
+	l += bthrift.Binary.StructBeginLength("EchoPingPongNew_args")
 	if p != nil {
 		l += p.field1Length()
 	}
@@ -2282,7 +2282,7 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) BLength() int {
 	return l
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
 	offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "req1", thrift.STRUCT, 1)
 	offset += p.Req1.FastWriteNocopy(buf[offset:], binaryWriter)
@@ -2290,7 +2290,7 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) fastWriteField1(buf []byte, binary
 	return offset
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) field1Length() int {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("req1", thrift.STRUCT, 1)
 	l += p.Req1.BLength()
@@ -2298,7 +2298,7 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) field1Length() int {
 	return l
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) FastRead(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) FastRead(buf []byte) (int, error) {
 	var err error
 	var offset int
 	var l int
@@ -2360,7 +2360,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongResult[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongNewResult[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 ReadFieldEndError:
@@ -2369,7 +2369,7 @@ ReadStructEndError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) FastReadField0(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
 
 	tmp := NewEchoResponse()
@@ -2383,13 +2383,13 @@ func (p *PingPongOnlyServiceEchoPingPongResult) FastReadField0(buf []byte) (int,
 }
 
 // for compatibility
-func (p *PingPongOnlyServiceEchoPingPongResult) FastWrite(buf []byte) int {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) FastWrite(buf []byte) int {
 	return 0
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoPingPong_result")
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoPingPongNew_result")
 	if p != nil {
 		offset += p.fastWriteField0(buf[offset:], binaryWriter)
 	}
@@ -2398,9 +2398,9 @@ func (p *PingPongOnlyServiceEchoPingPongResult) FastWriteNocopy(buf []byte, bina
 	return offset
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) BLength() int {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) BLength() int {
 	l := 0
-	l += bthrift.Binary.StructBeginLength("EchoPingPong_result")
+	l += bthrift.Binary.StructBeginLength("EchoPingPongNew_result")
 	if p != nil {
 		l += p.field0Length()
 	}
@@ -2409,7 +2409,7 @@ func (p *PingPongOnlyServiceEchoPingPongResult) BLength() int {
 	return l
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) fastWriteField0(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) fastWriteField0(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
 	if p.IsSetSuccess() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "success", thrift.STRUCT, 0)
@@ -2419,7 +2419,7 @@ func (p *PingPongOnlyServiceEchoPingPongResult) fastWriteField0(buf []byte, bina
 	return offset
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) field0Length() int {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) field0Length() int {
 	l := 0
 	if p.IsSetSuccess() {
 		l += bthrift.Binary.FieldBeginLength("success", thrift.STRUCT, 0)
@@ -2429,7 +2429,7 @@ func (p *PingPongOnlyServiceEchoPingPongResult) field0Length() int {
 	return l
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) FastRead(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) FastRead(buf []byte) (int, error) {
 	var err error
 	var offset int
 	var l int
@@ -2491,7 +2491,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalArgs[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceChildEchoBidirectionalExtendedArgs[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 ReadFieldEndError:
@@ -2500,7 +2500,7 @@ ReadStructEndError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) FastReadField1(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	tmp := NewEchoRequest()
@@ -2514,13 +2514,13 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) FastReadField1(buf []byte) (int
 }
 
 // for compatibility
-func (p *StreamOnlyServiceEchoBidirectionalArgs) FastWrite(buf []byte) int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) FastWrite(buf []byte) int {
 	return 0
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoBidirectional_args")
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoBidirectionalExtended_args")
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], binaryWriter)
 	}
@@ -2529,9 +2529,9 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) FastWriteNocopy(buf []byte, bin
 	return offset
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) BLength() int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) BLength() int {
 	l := 0
-	l += bthrift.Binary.StructBeginLength("EchoBidirectional_args")
+	l += bthrift.Binary.StructBeginLength("EchoBidirectionalExtended_args")
 	if p != nil {
 		l += p.field1Length()
 	}
@@ -2540,7 +2540,7 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) BLength() int {
 	return l
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
 	offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "req1", thrift.STRUCT, 1)
 	offset += p.Req1.FastWriteNocopy(buf[offset:], binaryWriter)
@@ -2548,7 +2548,7 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) fastWriteField1(buf []byte, bin
 	return offset
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) field1Length() int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) field1Length() int {
 	l := 0
 	l += bthrift.Binary.FieldBeginLength("req1", thrift.STRUCT, 1)
 	l += p.Req1.BLength()
@@ -2556,7 +2556,7 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) field1Length() int {
 	return l
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) FastRead(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) FastRead(buf []byte) (int, error) {
 	var err error
 	var offset int
 	var l int
@@ -2618,7 +2618,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalResult[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceChildEchoBidirectionalExtendedResult[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 ReadFieldEndError:
@@ -2627,7 +2627,7 @@ ReadStructEndError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) FastReadField0(buf []byte) (int, error) {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
 
 	tmp := NewEchoResponse()
@@ -2641,13 +2641,13 @@ func (p *StreamOnlyServiceEchoBidirectionalResult) FastReadField0(buf []byte) (i
 }
 
 // for compatibility
-func (p *StreamOnlyServiceEchoBidirectionalResult) FastWrite(buf []byte) int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) FastWrite(buf []byte) int {
 	return 0
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
-	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoBidirectional_result")
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoBidirectionalExtended_result")
 	if p != nil {
 		offset += p.fastWriteField0(buf[offset:], binaryWriter)
 	}
@@ -2656,9 +2656,9 @@ func (p *StreamOnlyServiceEchoBidirectionalResult) FastWriteNocopy(buf []byte, b
 	return offset
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) BLength() int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) BLength() int {
 	l := 0
-	l += bthrift.Binary.StructBeginLength("EchoBidirectional_result")
+	l += bthrift.Binary.StructBeginLength("EchoBidirectionalExtended_result")
 	if p != nil {
 		l += p.field0Length()
 	}
@@ -2667,7 +2667,7 @@ func (p *StreamOnlyServiceEchoBidirectionalResult) BLength() int {
 	return l
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) fastWriteField0(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) fastWriteField0(buf []byte, binaryWriter bthrift.BinaryWriter) int {
 	offset := 0
 	if p.IsSetSuccess() {
 		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "success", thrift.STRUCT, 0)
@@ -2677,7 +2677,265 @@ func (p *StreamOnlyServiceEchoBidirectionalResult) fastWriteField0(buf []byte, b
 	return offset
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) field0Length() int {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) field0Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += bthrift.Binary.FieldBeginLength("success", thrift.STRUCT, 0)
+		l += p.Success.BLength()
+		l += bthrift.Binary.FieldEndLength()
+	}
+	return l
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) FastRead(buf []byte) (int, error) {
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	_, l, err = bthrift.Binary.ReadStructBegin(buf)
+	offset += l
+	if err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, l, err = bthrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		l, err = bthrift.Binary.ReadFieldEnd(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	l, err = bthrift.Binary.ReadStructEnd(buf[offset:])
+	offset += l
+	if err != nil {
+		goto ReadStructEndError
+	}
+
+	return offset, nil
+ReadStructBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalNewArgs[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+ReadFieldEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := NewEchoRequest()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Req1 = tmp
+	return offset, nil
+}
+
+// for compatibility
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) FastWrite(buf []byte) int {
+	return 0
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoBidirectionalNew_args")
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], binaryWriter)
+	}
+	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
+	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
+	return offset
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) BLength() int {
+	l := 0
+	l += bthrift.Binary.StructBeginLength("EchoBidirectionalNew_args")
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += bthrift.Binary.FieldStopLength()
+	l += bthrift.Binary.StructEndLength()
+	return l
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) fastWriteField1(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "req1", thrift.STRUCT, 1)
+	offset += p.Req1.FastWriteNocopy(buf[offset:], binaryWriter)
+	offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	return offset
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) field1Length() int {
+	l := 0
+	l += bthrift.Binary.FieldBeginLength("req1", thrift.STRUCT, 1)
+	l += p.Req1.BLength()
+	l += bthrift.Binary.FieldEndLength()
+	return l
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) FastRead(buf []byte) (int, error) {
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	_, l, err = bthrift.Binary.ReadStructBegin(buf)
+	offset += l
+	if err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, l, err = bthrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField0(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = bthrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+
+		l, err = bthrift.Binary.ReadFieldEnd(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	l, err = bthrift.Binary.ReadStructEnd(buf[offset:])
+	offset += l
+	if err != nil {
+		goto ReadStructEndError
+	}
+
+	return offset, nil
+ReadStructBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalNewResult[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+ReadFieldEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) FastReadField0(buf []byte) (int, error) {
+	offset := 0
+
+	tmp := NewEchoResponse()
+	if l, err := tmp.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Success = tmp
+	return offset, nil
+}
+
+// for compatibility
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) FastWrite(buf []byte) int {
+	return 0
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) FastWriteNocopy(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	offset += bthrift.Binary.WriteStructBegin(buf[offset:], "EchoBidirectionalNew_result")
+	if p != nil {
+		offset += p.fastWriteField0(buf[offset:], binaryWriter)
+	}
+	offset += bthrift.Binary.WriteFieldStop(buf[offset:])
+	offset += bthrift.Binary.WriteStructEnd(buf[offset:])
+	return offset
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) BLength() int {
+	l := 0
+	l += bthrift.Binary.StructBeginLength("EchoBidirectionalNew_result")
+	if p != nil {
+		l += p.field0Length()
+	}
+	l += bthrift.Binary.FieldStopLength()
+	l += bthrift.Binary.StructEndLength()
+	return l
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) fastWriteField0(buf []byte, binaryWriter bthrift.BinaryWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += bthrift.Binary.WriteFieldBegin(buf[offset:], "success", thrift.STRUCT, 0)
+		offset += p.Success.FastWriteNocopy(buf[offset:], binaryWriter)
+		offset += bthrift.Binary.WriteFieldEnd(buf[offset:])
+	}
+	return offset
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) field0Length() int {
 	l := 0
 	if p.IsSetSuccess() {
 		l += bthrift.Binary.FieldBeginLength("success", thrift.STRUCT, 0)
@@ -2743,18 +3001,26 @@ func (p *EchoServicePingResult) GetResult() interface{} {
 	return nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) GetFirstArgument() interface{} {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) GetFirstArgument() interface{} {
 	return p.Req1
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) GetResult() interface{} {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) GetResult() interface{} {
 	return p.Success
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) GetFirstArgument() interface{} {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) GetFirstArgument() interface{} {
 	return p.Req1
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) GetResult() interface{} {
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) GetResult() interface{} {
+	return p.Success
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) GetResult() interface{} {
 	return p.Success
 }

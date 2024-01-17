@@ -627,7 +627,7 @@ func (p *EchoServiceClient) Ping(ctx context.Context) (err error) {
 }
 
 type PingPongOnlyService interface {
-	EchoPingPong(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
+	EchoPingPongNew(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
 }
 
 type PingPongOnlyServiceClient struct {
@@ -656,18 +656,84 @@ func (p *PingPongOnlyServiceClient) Client_() thrift.TClient {
 	return p.c
 }
 
-func (p *PingPongOnlyServiceClient) EchoPingPong(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error) {
-	var _args PingPongOnlyServiceEchoPingPongArgs
+func (p *PingPongOnlyServiceClient) EchoPingPongNew(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error) {
+	var _args PingPongOnlyServiceEchoPingPongNewArgs
 	_args.Req1 = req1
-	var _result PingPongOnlyServiceEchoPingPongResult
-	if err = p.Client_().Call(ctx, "EchoPingPong", &_args, &_result); err != nil {
+	var _result PingPongOnlyServiceEchoPingPongNewResult
+	if err = p.Client_().Call(ctx, "EchoPingPongNew", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
+type PingPongOnlyServiceChild interface {
+	PingPongOnlyService
+
+	EchoBidirectionalExtended(stream PingPongOnlyServiceChild_EchoBidirectionalExtendedServer) (err error)
+}
+
+type PingPongOnlyServiceChildClient struct {
+	*PingPongOnlyServiceClient
+}
+
+func NewPingPongOnlyServiceChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *PingPongOnlyServiceChildClient {
+	return &PingPongOnlyServiceChildClient{
+		PingPongOnlyServiceClient: NewPingPongOnlyServiceClientFactory(t, f),
+	}
+}
+
+func NewPingPongOnlyServiceChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *PingPongOnlyServiceChildClient {
+	return &PingPongOnlyServiceChildClient{
+		PingPongOnlyServiceClient: NewPingPongOnlyServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewPingPongOnlyServiceChildClient(c thrift.TClient) *PingPongOnlyServiceChildClient {
+	return &PingPongOnlyServiceChildClient{
+		PingPongOnlyServiceClient: NewPingPongOnlyServiceClient(c),
+	}
+}
+
+func (p *PingPongOnlyServiceChildClient) EchoBidirectionalExtended(stream PingPongOnlyServiceChild_EchoBidirectionalExtendedServer) (err error) {
+	panic("streaming method PingPongOnlyServiceChild.EchoBidirectionalExtended(mode = bidirectional) not available, please use Kitex Thrift Streaming Client.")
+}
+
+type PingPongOnlyServiceChild_EchoBidirectionalExtendedServer interface {
+	streaming.Stream
+
+	Recv() (*EchoRequest, error)
+
+	Send(*EchoResponse) error
+}
+
+type PingPongOnlyServiceChildChild interface {
+	PingPongOnlyServiceChild
+}
+
+type PingPongOnlyServiceChildChildClient struct {
+	*PingPongOnlyServiceChildClient
+}
+
+func NewPingPongOnlyServiceChildChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *PingPongOnlyServiceChildChildClient {
+	return &PingPongOnlyServiceChildChildClient{
+		PingPongOnlyServiceChildClient: NewPingPongOnlyServiceChildClientFactory(t, f),
+	}
+}
+
+func NewPingPongOnlyServiceChildChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *PingPongOnlyServiceChildChildClient {
+	return &PingPongOnlyServiceChildChildClient{
+		PingPongOnlyServiceChildClient: NewPingPongOnlyServiceChildClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewPingPongOnlyServiceChildChildClient(c thrift.TClient) *PingPongOnlyServiceChildChildClient {
+	return &PingPongOnlyServiceChildChildClient{
+		PingPongOnlyServiceChildClient: NewPingPongOnlyServiceChildClient(c),
+	}
+}
+
 type StreamOnlyService interface {
-	EchoBidirectional(stream StreamOnlyService_EchoBidirectionalServer) (err error)
+	EchoBidirectionalNew(stream StreamOnlyService_EchoBidirectionalNewServer) (err error)
 }
 
 type StreamOnlyServiceClient struct {
@@ -696,16 +762,68 @@ func (p *StreamOnlyServiceClient) Client_() thrift.TClient {
 	return p.c
 }
 
-func (p *StreamOnlyServiceClient) EchoBidirectional(stream StreamOnlyService_EchoBidirectionalServer) (err error) {
-	panic("streaming method StreamOnlyService.EchoBidirectional(mode = bidirectional) not available, please use Kitex Thrift Streaming Client.")
+func (p *StreamOnlyServiceClient) EchoBidirectionalNew(stream StreamOnlyService_EchoBidirectionalNewServer) (err error) {
+	panic("streaming method StreamOnlyService.EchoBidirectionalNew(mode = bidirectional) not available, please use Kitex Thrift Streaming Client.")
 }
 
-type StreamOnlyService_EchoBidirectionalServer interface {
+type StreamOnlyService_EchoBidirectionalNewServer interface {
 	streaming.Stream
 
 	Recv() (*EchoRequest, error)
 
 	Send(*EchoResponse) error
+}
+
+type StreamOnlyServiceChild interface {
+	StreamOnlyService
+}
+
+type StreamOnlyServiceChildClient struct {
+	*StreamOnlyServiceClient
+}
+
+func NewStreamOnlyServiceChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *StreamOnlyServiceChildClient {
+	return &StreamOnlyServiceChildClient{
+		StreamOnlyServiceClient: NewStreamOnlyServiceClientFactory(t, f),
+	}
+}
+
+func NewStreamOnlyServiceChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *StreamOnlyServiceChildClient {
+	return &StreamOnlyServiceChildClient{
+		StreamOnlyServiceClient: NewStreamOnlyServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewStreamOnlyServiceChildClient(c thrift.TClient) *StreamOnlyServiceChildClient {
+	return &StreamOnlyServiceChildClient{
+		StreamOnlyServiceClient: NewStreamOnlyServiceClient(c),
+	}
+}
+
+type StreamOnlyServiceChildChild interface {
+	StreamOnlyServiceChild
+}
+
+type StreamOnlyServiceChildChildClient struct {
+	*StreamOnlyServiceChildClient
+}
+
+func NewStreamOnlyServiceChildChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *StreamOnlyServiceChildChildClient {
+	return &StreamOnlyServiceChildChildClient{
+		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClientFactory(t, f),
+	}
+}
+
+func NewStreamOnlyServiceChildChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *StreamOnlyServiceChildChildClient {
+	return &StreamOnlyServiceChildChildClient{
+		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewStreamOnlyServiceChildChildClient(c thrift.TClient) *StreamOnlyServiceChildChildClient {
+	return &StreamOnlyServiceChildChildClient{
+		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClient(c),
+	}
 }
 
 type EchoServiceProcessor struct {
@@ -3228,7 +3346,7 @@ func (p *PingPongOnlyServiceProcessor) ProcessorMap() map[string]thrift.TProcess
 
 func NewPingPongOnlyServiceProcessor(handler PingPongOnlyService) *PingPongOnlyServiceProcessor {
 	self := &PingPongOnlyServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self.AddToProcessorMap("EchoPingPong", &pingPongOnlyServiceProcessorEchoPingPong{handler: handler})
+	self.AddToProcessorMap("EchoPingPongNew", &pingPongOnlyServiceProcessorEchoPingPongNew{handler: handler})
 	return self
 }
 func (p *PingPongOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -3249,16 +3367,16 @@ func (p *PingPongOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot
 	return false, x
 }
 
-type pingPongOnlyServiceProcessorEchoPingPong struct {
+type pingPongOnlyServiceProcessorEchoPingPongNew struct {
 	handler PingPongOnlyService
 }
 
-func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := PingPongOnlyServiceEchoPingPongArgs{}
+func (p *pingPongOnlyServiceProcessorEchoPingPongNew) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PingPongOnlyServiceEchoPingPongNewArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("EchoPingPong", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("EchoPingPongNew", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -3267,11 +3385,11 @@ func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, 
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := PingPongOnlyServiceEchoPingPongResult{}
+	result := PingPongOnlyServiceEchoPingPongNewResult{}
 	var retval *EchoResponse
-	if retval, err2 = p.handler.EchoPingPong(ctx, args.Req1); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoPingPong: "+err2.Error())
-		oprot.WriteMessageBegin("EchoPingPong", thrift.EXCEPTION, seqId)
+	if retval, err2 = p.handler.EchoPingPongNew(ctx, args.Req1); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoPingPongNew: "+err2.Error())
+		oprot.WriteMessageBegin("EchoPingPongNew", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -3279,7 +3397,7 @@ func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, 
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("EchoPingPong", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("EchoPingPongNew", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -3297,39 +3415,39 @@ func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, 
 	return true, err
 }
 
-type PingPongOnlyServiceEchoPingPongArgs struct {
+type PingPongOnlyServiceEchoPingPongNewArgs struct {
 	Req1 *EchoRequest `thrift:"req1,1" frugal:"1,default,EchoRequest" json:"req1"`
 }
 
-func NewPingPongOnlyServiceEchoPingPongArgs() *PingPongOnlyServiceEchoPingPongArgs {
-	return &PingPongOnlyServiceEchoPingPongArgs{}
+func NewPingPongOnlyServiceEchoPingPongNewArgs() *PingPongOnlyServiceEchoPingPongNewArgs {
+	return &PingPongOnlyServiceEchoPingPongNewArgs{}
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) InitDefault() {
-	*p = PingPongOnlyServiceEchoPingPongArgs{}
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) InitDefault() {
+	*p = PingPongOnlyServiceEchoPingPongNewArgs{}
 }
 
-var PingPongOnlyServiceEchoPingPongArgs_Req1_DEFAULT *EchoRequest
+var PingPongOnlyServiceEchoPingPongNewArgs_Req1_DEFAULT *EchoRequest
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) GetReq1() (v *EchoRequest) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) GetReq1() (v *EchoRequest) {
 	if !p.IsSetReq1() {
-		return PingPongOnlyServiceEchoPingPongArgs_Req1_DEFAULT
+		return PingPongOnlyServiceEchoPingPongNewArgs_Req1_DEFAULT
 	}
 	return p.Req1
 }
-func (p *PingPongOnlyServiceEchoPingPongArgs) SetReq1(val *EchoRequest) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) SetReq1(val *EchoRequest) {
 	p.Req1 = val
 }
 
-var fieldIDToName_PingPongOnlyServiceEchoPingPongArgs = map[int16]string{
+var fieldIDToName_PingPongOnlyServiceEchoPingPongNewArgs = map[int16]string{
 	1: "req1",
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) IsSetReq1() bool {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) IsSetReq1() bool {
 	return p.Req1 != nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
@@ -3375,7 +3493,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongNewArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3385,7 +3503,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) ReadField1(iprot thrift.TProtocol) error {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) ReadField1(iprot thrift.TProtocol) error {
 	p.Req1 = NewEchoRequest()
 	if err := p.Req1.Read(iprot); err != nil {
 		return err
@@ -3393,9 +3511,9 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) ReadField1(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("EchoPingPong_args"); err != nil {
+	if err = oprot.WriteStructBegin("EchoPingPongNew_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3421,7 +3539,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -3438,15 +3556,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) String() string {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongArgs(%+v)", *p)
+	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongNewArgs(%+v)", *p)
 
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) DeepEqual(ano *PingPongOnlyServiceEchoPingPongArgs) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) DeepEqual(ano *PingPongOnlyServiceEchoPingPongNewArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3458,7 +3576,7 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) DeepEqual(ano *PingPongOnlyService
 	return true
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) Field1DeepEqual(src *EchoRequest) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) Field1DeepEqual(src *EchoRequest) bool {
 
 	if !p.Req1.DeepEqual(src) {
 		return false
@@ -3466,39 +3584,39 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) Field1DeepEqual(src *EchoRequest) 
 	return true
 }
 
-type PingPongOnlyServiceEchoPingPongResult struct {
+type PingPongOnlyServiceEchoPingPongNewResult struct {
 	Success *EchoResponse `thrift:"success,0,optional" frugal:"0,optional,EchoResponse" json:"success,omitempty"`
 }
 
-func NewPingPongOnlyServiceEchoPingPongResult() *PingPongOnlyServiceEchoPingPongResult {
-	return &PingPongOnlyServiceEchoPingPongResult{}
+func NewPingPongOnlyServiceEchoPingPongNewResult() *PingPongOnlyServiceEchoPingPongNewResult {
+	return &PingPongOnlyServiceEchoPingPongNewResult{}
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) InitDefault() {
-	*p = PingPongOnlyServiceEchoPingPongResult{}
+func (p *PingPongOnlyServiceEchoPingPongNewResult) InitDefault() {
+	*p = PingPongOnlyServiceEchoPingPongNewResult{}
 }
 
-var PingPongOnlyServiceEchoPingPongResult_Success_DEFAULT *EchoResponse
+var PingPongOnlyServiceEchoPingPongNewResult_Success_DEFAULT *EchoResponse
 
-func (p *PingPongOnlyServiceEchoPingPongResult) GetSuccess() (v *EchoResponse) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) GetSuccess() (v *EchoResponse) {
 	if !p.IsSetSuccess() {
-		return PingPongOnlyServiceEchoPingPongResult_Success_DEFAULT
+		return PingPongOnlyServiceEchoPingPongNewResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *PingPongOnlyServiceEchoPingPongResult) SetSuccess(x interface{}) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) SetSuccess(x interface{}) {
 	p.Success = x.(*EchoResponse)
 }
 
-var fieldIDToName_PingPongOnlyServiceEchoPingPongResult = map[int16]string{
+var fieldIDToName_PingPongOnlyServiceEchoPingPongNewResult = map[int16]string{
 	0: "success",
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) IsSetSuccess() bool {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
@@ -3544,7 +3662,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongNewResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3554,7 +3672,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) ReadField0(iprot thrift.TProtocol) error {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) ReadField0(iprot thrift.TProtocol) error {
 	p.Success = NewEchoResponse()
 	if err := p.Success.Read(iprot); err != nil {
 		return err
@@ -3562,9 +3680,9 @@ func (p *PingPongOnlyServiceEchoPingPongResult) ReadField0(iprot thrift.TProtoco
 	return nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("EchoPingPong_result"); err != nil {
+	if err = oprot.WriteStructBegin("EchoPingPongNew_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3590,7 +3708,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -3609,15 +3727,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) String() string {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongResult(%+v)", *p)
+	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongNewResult(%+v)", *p)
 
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) DeepEqual(ano *PingPongOnlyServiceEchoPingPongResult) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) DeepEqual(ano *PingPongOnlyServiceEchoPingPongNewResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3629,12 +3747,379 @@ func (p *PingPongOnlyServiceEchoPingPongResult) DeepEqual(ano *PingPongOnlyServi
 	return true
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) Field0DeepEqual(src *EchoResponse) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) Field0DeepEqual(src *EchoResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
 	}
 	return true
+}
+
+type PingPongOnlyServiceChildProcessor struct {
+	*PingPongOnlyServiceProcessor
+}
+
+func NewPingPongOnlyServiceChildProcessor(handler PingPongOnlyServiceChild) *PingPongOnlyServiceChildProcessor {
+	self := &PingPongOnlyServiceChildProcessor{NewPingPongOnlyServiceProcessor(handler)}
+	self.AddToProcessorMap("EchoBidirectionalExtended", &pingPongOnlyServiceChildProcessorEchoBidirectionalExtended{handler: handler})
+	return self
+}
+
+type pingPongOnlyServiceChildProcessorEchoBidirectionalExtended struct {
+	handler PingPongOnlyServiceChild
+}
+
+func (p *pingPongOnlyServiceChildProcessorEchoBidirectionalExtended) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	panic("streaming method PingPongOnlyServiceChild.EchoBidirectionalExtended(mode = bidirectional) not available, please use Kitex Thrift Streaming Client.")
+}
+
+type PingPongOnlyServiceChildEchoBidirectionalExtendedArgs struct {
+	Req1 *EchoRequest `thrift:"req1,1" frugal:"1,default,EchoRequest" json:"req1"`
+}
+
+func NewPingPongOnlyServiceChildEchoBidirectionalExtendedArgs() *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs {
+	return &PingPongOnlyServiceChildEchoBidirectionalExtendedArgs{}
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) InitDefault() {
+	*p = PingPongOnlyServiceChildEchoBidirectionalExtendedArgs{}
+}
+
+var PingPongOnlyServiceChildEchoBidirectionalExtendedArgs_Req1_DEFAULT *EchoRequest
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) GetReq1() (v *EchoRequest) {
+	if !p.IsSetReq1() {
+		return PingPongOnlyServiceChildEchoBidirectionalExtendedArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) SetReq1(val *EchoRequest) {
+	p.Req1 = val
+}
+
+var fieldIDToName_PingPongOnlyServiceChildEchoBidirectionalExtendedArgs = map[int16]string{
+	1: "req1",
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceChildEchoBidirectionalExtendedArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req1 = NewEchoRequest()
+	if err := p.Req1.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoBidirectionalExtended_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req1.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PingPongOnlyServiceChildEchoBidirectionalExtendedArgs(%+v)", *p)
+
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) DeepEqual(ano *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req1) {
+		return false
+	}
+	return true
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedArgs) Field1DeepEqual(src *EchoRequest) bool {
+
+	if !p.Req1.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PingPongOnlyServiceChildEchoBidirectionalExtendedResult struct {
+	Success *EchoResponse `thrift:"success,0,optional" frugal:"0,optional,EchoResponse" json:"success,omitempty"`
+}
+
+func NewPingPongOnlyServiceChildEchoBidirectionalExtendedResult() *PingPongOnlyServiceChildEchoBidirectionalExtendedResult {
+	return &PingPongOnlyServiceChildEchoBidirectionalExtendedResult{}
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) InitDefault() {
+	*p = PingPongOnlyServiceChildEchoBidirectionalExtendedResult{}
+}
+
+var PingPongOnlyServiceChildEchoBidirectionalExtendedResult_Success_DEFAULT *EchoResponse
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) GetSuccess() (v *EchoResponse) {
+	if !p.IsSetSuccess() {
+		return PingPongOnlyServiceChildEchoBidirectionalExtendedResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) SetSuccess(x interface{}) {
+	p.Success = x.(*EchoResponse)
+}
+
+var fieldIDToName_PingPongOnlyServiceChildEchoBidirectionalExtendedResult = map[int16]string{
+	0: "success",
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceChildEchoBidirectionalExtendedResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = NewEchoResponse()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoBidirectionalExtended_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PingPongOnlyServiceChildEchoBidirectionalExtendedResult(%+v)", *p)
+
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) DeepEqual(ano *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *PingPongOnlyServiceChildEchoBidirectionalExtendedResult) Field0DeepEqual(src *EchoResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PingPongOnlyServiceChildChildProcessor struct {
+	*PingPongOnlyServiceChildProcessor
+}
+
+func NewPingPongOnlyServiceChildChildProcessor(handler PingPongOnlyServiceChildChild) *PingPongOnlyServiceChildChildProcessor {
+	self := &PingPongOnlyServiceChildChildProcessor{NewPingPongOnlyServiceChildProcessor(handler)}
+	return self
 }
 
 type StreamOnlyServiceProcessor struct {
@@ -3657,7 +4142,7 @@ func (p *StreamOnlyServiceProcessor) ProcessorMap() map[string]thrift.TProcessor
 
 func NewStreamOnlyServiceProcessor(handler StreamOnlyService) *StreamOnlyServiceProcessor {
 	self := &StreamOnlyServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self.AddToProcessorMap("EchoBidirectional", &streamOnlyServiceProcessorEchoBidirectional{handler: handler})
+	self.AddToProcessorMap("EchoBidirectionalNew", &streamOnlyServiceProcessorEchoBidirectionalNew{handler: handler})
 	return self
 }
 func (p *StreamOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -3678,47 +4163,47 @@ func (p *StreamOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot t
 	return false, x
 }
 
-type streamOnlyServiceProcessorEchoBidirectional struct {
+type streamOnlyServiceProcessorEchoBidirectionalNew struct {
 	handler StreamOnlyService
 }
 
-func (p *streamOnlyServiceProcessorEchoBidirectional) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	panic("streaming method StreamOnlyService.EchoBidirectional(mode = bidirectional) not available, please use Kitex Thrift Streaming Client.")
+func (p *streamOnlyServiceProcessorEchoBidirectionalNew) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	panic("streaming method StreamOnlyService.EchoBidirectionalNew(mode = bidirectional) not available, please use Kitex Thrift Streaming Client.")
 }
 
-type StreamOnlyServiceEchoBidirectionalArgs struct {
+type StreamOnlyServiceEchoBidirectionalNewArgs struct {
 	Req1 *EchoRequest `thrift:"req1,1" frugal:"1,default,EchoRequest" json:"req1"`
 }
 
-func NewStreamOnlyServiceEchoBidirectionalArgs() *StreamOnlyServiceEchoBidirectionalArgs {
-	return &StreamOnlyServiceEchoBidirectionalArgs{}
+func NewStreamOnlyServiceEchoBidirectionalNewArgs() *StreamOnlyServiceEchoBidirectionalNewArgs {
+	return &StreamOnlyServiceEchoBidirectionalNewArgs{}
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) InitDefault() {
-	*p = StreamOnlyServiceEchoBidirectionalArgs{}
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) InitDefault() {
+	*p = StreamOnlyServiceEchoBidirectionalNewArgs{}
 }
 
-var StreamOnlyServiceEchoBidirectionalArgs_Req1_DEFAULT *EchoRequest
+var StreamOnlyServiceEchoBidirectionalNewArgs_Req1_DEFAULT *EchoRequest
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) GetReq1() (v *EchoRequest) {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) GetReq1() (v *EchoRequest) {
 	if !p.IsSetReq1() {
-		return StreamOnlyServiceEchoBidirectionalArgs_Req1_DEFAULT
+		return StreamOnlyServiceEchoBidirectionalNewArgs_Req1_DEFAULT
 	}
 	return p.Req1
 }
-func (p *StreamOnlyServiceEchoBidirectionalArgs) SetReq1(val *EchoRequest) {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) SetReq1(val *EchoRequest) {
 	p.Req1 = val
 }
 
-var fieldIDToName_StreamOnlyServiceEchoBidirectionalArgs = map[int16]string{
+var fieldIDToName_StreamOnlyServiceEchoBidirectionalNewArgs = map[int16]string{
 	1: "req1",
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) IsSetReq1() bool {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) IsSetReq1() bool {
 	return p.Req1 != nil
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
@@ -3764,7 +4249,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalNewArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3774,7 +4259,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) ReadField1(iprot thrift.TProtocol) error {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) ReadField1(iprot thrift.TProtocol) error {
 	p.Req1 = NewEchoRequest()
 	if err := p.Req1.Read(iprot); err != nil {
 		return err
@@ -3782,9 +4267,9 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) ReadField1(iprot thrift.TProtoc
 	return nil
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("EchoBidirectional_args"); err != nil {
+	if err = oprot.WriteStructBegin("EchoBidirectionalNew_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3810,7 +4295,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -3827,15 +4312,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) String() string {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalArgs(%+v)", *p)
+	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalNewArgs(%+v)", *p)
 
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) DeepEqual(ano *StreamOnlyServiceEchoBidirectionalArgs) bool {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) DeepEqual(ano *StreamOnlyServiceEchoBidirectionalNewArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -3847,7 +4332,7 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) DeepEqual(ano *StreamOnlyServic
 	return true
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalArgs) Field1DeepEqual(src *EchoRequest) bool {
+func (p *StreamOnlyServiceEchoBidirectionalNewArgs) Field1DeepEqual(src *EchoRequest) bool {
 
 	if !p.Req1.DeepEqual(src) {
 		return false
@@ -3855,39 +4340,39 @@ func (p *StreamOnlyServiceEchoBidirectionalArgs) Field1DeepEqual(src *EchoReques
 	return true
 }
 
-type StreamOnlyServiceEchoBidirectionalResult struct {
+type StreamOnlyServiceEchoBidirectionalNewResult struct {
 	Success *EchoResponse `thrift:"success,0,optional" frugal:"0,optional,EchoResponse" json:"success,omitempty"`
 }
 
-func NewStreamOnlyServiceEchoBidirectionalResult() *StreamOnlyServiceEchoBidirectionalResult {
-	return &StreamOnlyServiceEchoBidirectionalResult{}
+func NewStreamOnlyServiceEchoBidirectionalNewResult() *StreamOnlyServiceEchoBidirectionalNewResult {
+	return &StreamOnlyServiceEchoBidirectionalNewResult{}
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) InitDefault() {
-	*p = StreamOnlyServiceEchoBidirectionalResult{}
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) InitDefault() {
+	*p = StreamOnlyServiceEchoBidirectionalNewResult{}
 }
 
-var StreamOnlyServiceEchoBidirectionalResult_Success_DEFAULT *EchoResponse
+var StreamOnlyServiceEchoBidirectionalNewResult_Success_DEFAULT *EchoResponse
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) GetSuccess() (v *EchoResponse) {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) GetSuccess() (v *EchoResponse) {
 	if !p.IsSetSuccess() {
-		return StreamOnlyServiceEchoBidirectionalResult_Success_DEFAULT
+		return StreamOnlyServiceEchoBidirectionalNewResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *StreamOnlyServiceEchoBidirectionalResult) SetSuccess(x interface{}) {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) SetSuccess(x interface{}) {
 	p.Success = x.(*EchoResponse)
 }
 
-var fieldIDToName_StreamOnlyServiceEchoBidirectionalResult = map[int16]string{
+var fieldIDToName_StreamOnlyServiceEchoBidirectionalNewResult = map[int16]string{
 	0: "success",
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) IsSetSuccess() bool {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
@@ -3933,7 +4418,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_StreamOnlyServiceEchoBidirectionalNewResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -3943,7 +4428,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) ReadField0(iprot thrift.TProtocol) error {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) ReadField0(iprot thrift.TProtocol) error {
 	p.Success = NewEchoResponse()
 	if err := p.Success.Read(iprot); err != nil {
 		return err
@@ -3951,9 +4436,9 @@ func (p *StreamOnlyServiceEchoBidirectionalResult) ReadField0(iprot thrift.TProt
 	return nil
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("EchoBidirectional_result"); err != nil {
+	if err = oprot.WriteStructBegin("EchoBidirectionalNew_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -3979,7 +4464,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -3998,15 +4483,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) String() string {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalResult(%+v)", *p)
+	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalNewResult(%+v)", *p)
 
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) DeepEqual(ano *StreamOnlyServiceEchoBidirectionalResult) bool {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) DeepEqual(ano *StreamOnlyServiceEchoBidirectionalNewResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -4018,10 +4503,28 @@ func (p *StreamOnlyServiceEchoBidirectionalResult) DeepEqual(ano *StreamOnlyServ
 	return true
 }
 
-func (p *StreamOnlyServiceEchoBidirectionalResult) Field0DeepEqual(src *EchoResponse) bool {
+func (p *StreamOnlyServiceEchoBidirectionalNewResult) Field0DeepEqual(src *EchoResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
 	}
 	return true
+}
+
+type StreamOnlyServiceChildProcessor struct {
+	*StreamOnlyServiceProcessor
+}
+
+func NewStreamOnlyServiceChildProcessor(handler StreamOnlyServiceChild) *StreamOnlyServiceChildProcessor {
+	self := &StreamOnlyServiceChildProcessor{NewStreamOnlyServiceProcessor(handler)}
+	return self
+}
+
+type StreamOnlyServiceChildChildProcessor struct {
+	*StreamOnlyServiceChildProcessor
+}
+
+func NewStreamOnlyServiceChildChildProcessor(handler StreamOnlyServiceChildChild) *StreamOnlyServiceChildChildProcessor {
+	self := &StreamOnlyServiceChildChildProcessor{NewStreamOnlyServiceChildProcessor(handler)}
+	return self
 }

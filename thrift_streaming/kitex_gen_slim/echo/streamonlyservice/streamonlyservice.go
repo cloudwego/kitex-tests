@@ -15,10 +15,10 @@ import (
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
 
 var serviceMethods = map[string]kitex.MethodInfo{
-	"EchoBidirectional": kitex.NewMethodInfo(
-		echoBidirectionalHandler,
-		newStreamOnlyServiceEchoBidirectionalArgs,
-		newStreamOnlyServiceEchoBidirectionalResult,
+	"EchoBidirectionalNew": kitex.NewMethodInfo(
+		echoBidirectionalNewHandler,
+		newStreamOnlyServiceEchoBidirectionalNewArgs,
+		newStreamOnlyServiceEchoBidirectionalNewResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingBidirectional),
 	),
@@ -88,46 +88,46 @@ func newServiceInfo(hasStreaming bool, keepStreamingMethods bool, keepNonStreami
 	return svcInfo
 }
 
-func echoBidirectionalHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+func echoBidirectionalNewHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	st, ok := arg.(*streaming.Args)
 	if !ok {
-		return errors.New("StreamOnlyService.EchoBidirectional is a thrift streaming method, please call with Kitex StreamClient")
+		return errors.New("StreamOnlyService.EchoBidirectionalNew is a thrift streaming method, please call with Kitex StreamClient")
 	}
-	stream := &streamOnlyServiceEchoBidirectionalServer{st.Stream}
-	return handler.(echo.StreamOnlyService).EchoBidirectional(stream)
+	stream := &streamOnlyServiceEchoBidirectionalNewServer{st.Stream}
+	return handler.(echo.StreamOnlyService).EchoBidirectionalNew(stream)
 }
 
-type streamOnlyServiceEchoBidirectionalClient struct {
+type streamOnlyServiceEchoBidirectionalNewClient struct {
 	streaming.Stream
 }
 
-func (x *streamOnlyServiceEchoBidirectionalClient) Send(m *echo.EchoRequest) error {
+func (x *streamOnlyServiceEchoBidirectionalNewClient) Send(m *echo.EchoRequest) error {
 	return x.Stream.SendMsg(m)
 }
-func (x *streamOnlyServiceEchoBidirectionalClient) Recv() (*echo.EchoResponse, error) {
+func (x *streamOnlyServiceEchoBidirectionalNewClient) Recv() (*echo.EchoResponse, error) {
 	m := new(echo.EchoResponse)
 	return m, x.Stream.RecvMsg(m)
 }
 
-type streamOnlyServiceEchoBidirectionalServer struct {
+type streamOnlyServiceEchoBidirectionalNewServer struct {
 	streaming.Stream
 }
 
-func (x *streamOnlyServiceEchoBidirectionalServer) Send(m *echo.EchoResponse) error {
+func (x *streamOnlyServiceEchoBidirectionalNewServer) Send(m *echo.EchoResponse) error {
 	return x.Stream.SendMsg(m)
 }
 
-func (x *streamOnlyServiceEchoBidirectionalServer) Recv() (*echo.EchoRequest, error) {
+func (x *streamOnlyServiceEchoBidirectionalNewServer) Recv() (*echo.EchoRequest, error) {
 	m := new(echo.EchoRequest)
 	return m, x.Stream.RecvMsg(m)
 }
 
-func newStreamOnlyServiceEchoBidirectionalArgs() interface{} {
-	return echo.NewStreamOnlyServiceEchoBidirectionalArgs()
+func newStreamOnlyServiceEchoBidirectionalNewArgs() interface{} {
+	return echo.NewStreamOnlyServiceEchoBidirectionalNewArgs()
 }
 
-func newStreamOnlyServiceEchoBidirectionalResult() interface{} {
-	return echo.NewStreamOnlyServiceEchoBidirectionalResult()
+func newStreamOnlyServiceEchoBidirectionalNewResult() interface{} {
+	return echo.NewStreamOnlyServiceEchoBidirectionalNewResult()
 }
 
 type kClient struct {
@@ -140,16 +140,16 @@ func newServiceClient(c client.Client) *kClient {
 	}
 }
 
-func (p *kClient) EchoBidirectional(ctx context.Context) (StreamOnlyService_EchoBidirectionalClient, error) {
+func (p *kClient) EchoBidirectionalNew(ctx context.Context) (StreamOnlyService_EchoBidirectionalNewClient, error) {
 	streamClient, ok := p.c.(client.Streaming)
 	if !ok {
 		return nil, fmt.Errorf("client not support streaming")
 	}
 	res := new(streaming.Result)
-	err := streamClient.Stream(ctx, "EchoBidirectional", nil, res)
+	err := streamClient.Stream(ctx, "EchoBidirectionalNew", nil, res)
 	if err != nil {
 		return nil, err
 	}
-	stream := &streamOnlyServiceEchoBidirectionalClient{res.Stream}
+	stream := &streamOnlyServiceEchoBidirectionalNewClient{res.Stream}
 	return stream, nil
 }

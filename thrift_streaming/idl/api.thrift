@@ -42,10 +42,24 @@ service EchoService {
 
 // for checking whether the generated code is ok
 service PingPongOnlyService {
-    EchoResponse EchoPingPong (1: EchoRequest req1),
+    EchoResponse EchoPingPongNew (1: EchoRequest req1),
 }
+
+// Also streaming
+service PingPongOnlyServiceChild extends PingPongOnlyService {
+    EchoResponse EchoBidirectionalExtended (1: EchoRequest req1) (streaming.mode="bidirectional"),
+}
+
+// Also streaming
+service PingPongOnlyServiceChildChild extends PingPongOnlyServiceChild {}
 
 // for checking whether the generated code is ok
 service StreamOnlyService {
-    EchoResponse EchoBidirectional (1: EchoRequest req1) (streaming.mode="bidirectional"),
+    EchoResponse EchoBidirectionalNew (1: EchoRequest req1) (streaming.mode="bidirectional"),
 }
+
+// for checking services extending a service extending a service
+service StreamOnlyServiceChild extends StreamOnlyService {}
+
+// should also be a streaming service
+service StreamOnlyServiceChildChild extends StreamOnlyServiceChild {}

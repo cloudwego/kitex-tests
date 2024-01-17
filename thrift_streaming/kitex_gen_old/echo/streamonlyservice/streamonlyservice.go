@@ -19,7 +19,7 @@ func NewServiceInfo() *kitex.ServiceInfo {
 	serviceName := "StreamOnlyService"
 	handlerType := (*echo.StreamOnlyService)(nil)
 	methods := map[string]kitex.MethodInfo{
-		"EchoBidirectional": kitex.NewMethodInfo(echoBidirectionalHandler, newStreamOnlyServiceEchoBidirectionalArgs, newStreamOnlyServiceEchoBidirectionalResult, false),
+		"EchoBidirectionalNew": kitex.NewMethodInfo(echoBidirectionalNewHandler, newStreamOnlyServiceEchoBidirectionalNewArgs, newStreamOnlyServiceEchoBidirectionalNewResult, false),
 	}
 	extra := map[string]interface{}{
 		"PackageName":     "echo",
@@ -36,22 +36,22 @@ func NewServiceInfo() *kitex.ServiceInfo {
 	return svcInfo
 }
 
-func echoBidirectionalHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*echo.StreamOnlyServiceEchoBidirectionalArgs)
-	realResult := result.(*echo.StreamOnlyServiceEchoBidirectionalResult)
-	success, err := handler.(echo.StreamOnlyService).EchoBidirectional(ctx, realArg.Req1)
+func echoBidirectionalNewHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*echo.StreamOnlyServiceEchoBidirectionalNewArgs)
+	realResult := result.(*echo.StreamOnlyServiceEchoBidirectionalNewResult)
+	success, err := handler.(echo.StreamOnlyService).EchoBidirectionalNew(ctx, realArg.Req1)
 	if err != nil {
 		return err
 	}
 	realResult.Success = success
 	return nil
 }
-func newStreamOnlyServiceEchoBidirectionalArgs() interface{} {
-	return echo.NewStreamOnlyServiceEchoBidirectionalArgs()
+func newStreamOnlyServiceEchoBidirectionalNewArgs() interface{} {
+	return echo.NewStreamOnlyServiceEchoBidirectionalNewArgs()
 }
 
-func newStreamOnlyServiceEchoBidirectionalResult() interface{} {
-	return echo.NewStreamOnlyServiceEchoBidirectionalResult()
+func newStreamOnlyServiceEchoBidirectionalNewResult() interface{} {
+	return echo.NewStreamOnlyServiceEchoBidirectionalNewResult()
 }
 
 type kClient struct {
@@ -64,11 +64,11 @@ func newServiceClient(c client.Client) *kClient {
 	}
 }
 
-func (p *kClient) EchoBidirectional(ctx context.Context, req1 *echo.EchoRequest) (r *echo.EchoResponse, err error) {
-	var _args echo.StreamOnlyServiceEchoBidirectionalArgs
+func (p *kClient) EchoBidirectionalNew(ctx context.Context, req1 *echo.EchoRequest) (r *echo.EchoResponse, err error) {
+	var _args echo.StreamOnlyServiceEchoBidirectionalNewArgs
 	_args.Req1 = req1
-	var _result echo.StreamOnlyServiceEchoBidirectionalResult
-	if err = p.c.Call(ctx, "EchoBidirectional", &_args, &_result); err != nil {
+	var _result echo.StreamOnlyServiceEchoBidirectionalNewResult
+	if err = p.c.Call(ctx, "EchoBidirectionalNew", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
