@@ -90,6 +90,8 @@ kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.prot
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.proto
+# generate thrift streaming code
+LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
 test -d grpc_gen && rm -rf grpc_gen
 mkdir grpc_gen
 protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
@@ -127,8 +129,6 @@ packages=(
 ./kitexgrpc/...
 ./thrift_streaming/...
 )
-
-LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
 
 for pkg in ${packages[@]}
 do
