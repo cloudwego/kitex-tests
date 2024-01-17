@@ -11,7 +11,7 @@ import (
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
-	EchoPingPong(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error)
+	EchoPingPongNew(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -43,7 +43,7 @@ type kPingPongOnlyServiceClient struct {
 	*kClient
 }
 
-func (p *kPingPongOnlyServiceClient) EchoPingPong(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error) {
+func (p *kPingPongOnlyServiceClient) EchoPingPongNew(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.EchoPingPong(ctx, req1)
+	return p.kClient.EchoPingPongNew(ctx, req1)
 }

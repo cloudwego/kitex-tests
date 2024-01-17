@@ -581,7 +581,7 @@ func (p *EchoServiceClient) Ping(ctx context.Context) (err error) {
 }
 
 type PingPongOnlyService interface {
-	EchoPingPong(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
+	EchoPingPongNew(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
 }
 
 type PingPongOnlyServiceClient struct {
@@ -610,14 +610,66 @@ func (p *PingPongOnlyServiceClient) Client_() thrift.TClient {
 	return p.c
 }
 
-func (p *PingPongOnlyServiceClient) EchoPingPong(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error) {
-	var _args PingPongOnlyServiceEchoPingPongArgs
+func (p *PingPongOnlyServiceClient) EchoPingPongNew(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error) {
+	var _args PingPongOnlyServiceEchoPingPongNewArgs
 	_args.Req1 = req1
-	var _result PingPongOnlyServiceEchoPingPongResult
-	if err = p.Client_().Call(ctx, "EchoPingPong", &_args, &_result); err != nil {
+	var _result PingPongOnlyServiceEchoPingPongNewResult
+	if err = p.Client_().Call(ctx, "EchoPingPongNew", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
+}
+
+type PingPongOnlyServiceChild interface {
+	PingPongOnlyService
+}
+
+type PingPongOnlyServiceChildClient struct {
+	*PingPongOnlyServiceClient
+}
+
+func NewPingPongOnlyServiceChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *PingPongOnlyServiceChildClient {
+	return &PingPongOnlyServiceChildClient{
+		PingPongOnlyServiceClient: NewPingPongOnlyServiceClientFactory(t, f),
+	}
+}
+
+func NewPingPongOnlyServiceChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *PingPongOnlyServiceChildClient {
+	return &PingPongOnlyServiceChildClient{
+		PingPongOnlyServiceClient: NewPingPongOnlyServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewPingPongOnlyServiceChildClient(c thrift.TClient) *PingPongOnlyServiceChildClient {
+	return &PingPongOnlyServiceChildClient{
+		PingPongOnlyServiceClient: NewPingPongOnlyServiceClient(c),
+	}
+}
+
+type PingPongOnlyServiceChildChild interface {
+	PingPongOnlyServiceChild
+}
+
+type PingPongOnlyServiceChildChildClient struct {
+	*PingPongOnlyServiceChildClient
+}
+
+func NewPingPongOnlyServiceChildChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *PingPongOnlyServiceChildChildClient {
+	return &PingPongOnlyServiceChildChildClient{
+		PingPongOnlyServiceChildClient: NewPingPongOnlyServiceChildClientFactory(t, f),
+	}
+}
+
+func NewPingPongOnlyServiceChildChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *PingPongOnlyServiceChildChildClient {
+	return &PingPongOnlyServiceChildChildClient{
+		PingPongOnlyServiceChildClient: NewPingPongOnlyServiceChildClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewPingPongOnlyServiceChildChildClient(c thrift.TClient) *PingPongOnlyServiceChildChildClient {
+	return &PingPongOnlyServiceChildChildClient{
+		PingPongOnlyServiceChildClient: NewPingPongOnlyServiceChildClient(c),
+	}
 }
 
 type StreamOnlyService interface {
@@ -647,6 +699,58 @@ func NewStreamOnlyServiceClient(c thrift.TClient) *StreamOnlyServiceClient {
 
 func (p *StreamOnlyServiceClient) Client_() thrift.TClient {
 	return p.c
+}
+
+type StreamOnlyServiceChild interface {
+	StreamOnlyService
+}
+
+type StreamOnlyServiceChildClient struct {
+	*StreamOnlyServiceClient
+}
+
+func NewStreamOnlyServiceChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *StreamOnlyServiceChildClient {
+	return &StreamOnlyServiceChildClient{
+		StreamOnlyServiceClient: NewStreamOnlyServiceClientFactory(t, f),
+	}
+}
+
+func NewStreamOnlyServiceChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *StreamOnlyServiceChildClient {
+	return &StreamOnlyServiceChildClient{
+		StreamOnlyServiceClient: NewStreamOnlyServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewStreamOnlyServiceChildClient(c thrift.TClient) *StreamOnlyServiceChildClient {
+	return &StreamOnlyServiceChildClient{
+		StreamOnlyServiceClient: NewStreamOnlyServiceClient(c),
+	}
+}
+
+type StreamOnlyServiceChildChild interface {
+	StreamOnlyServiceChild
+}
+
+type StreamOnlyServiceChildChildClient struct {
+	*StreamOnlyServiceChildClient
+}
+
+func NewStreamOnlyServiceChildChildClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *StreamOnlyServiceChildChildClient {
+	return &StreamOnlyServiceChildChildClient{
+		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClientFactory(t, f),
+	}
+}
+
+func NewStreamOnlyServiceChildChildClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *StreamOnlyServiceChildChildClient {
+	return &StreamOnlyServiceChildChildClient{
+		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewStreamOnlyServiceChildChildClient(c thrift.TClient) *StreamOnlyServiceChildChildClient {
+	return &StreamOnlyServiceChildChildClient{
+		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClient(c),
+	}
 }
 
 type EchoServiceProcessor struct {
@@ -1773,7 +1877,7 @@ func (p *PingPongOnlyServiceProcessor) ProcessorMap() map[string]thrift.TProcess
 
 func NewPingPongOnlyServiceProcessor(handler PingPongOnlyService) *PingPongOnlyServiceProcessor {
 	self := &PingPongOnlyServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
-	self.AddToProcessorMap("EchoPingPong", &pingPongOnlyServiceProcessorEchoPingPong{handler: handler})
+	self.AddToProcessorMap("EchoPingPongNew", &pingPongOnlyServiceProcessorEchoPingPongNew{handler: handler})
 	return self
 }
 func (p *PingPongOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -1794,16 +1898,16 @@ func (p *PingPongOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot
 	return false, x
 }
 
-type pingPongOnlyServiceProcessorEchoPingPong struct {
+type pingPongOnlyServiceProcessorEchoPingPongNew struct {
 	handler PingPongOnlyService
 }
 
-func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := PingPongOnlyServiceEchoPingPongArgs{}
+func (p *pingPongOnlyServiceProcessorEchoPingPongNew) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PingPongOnlyServiceEchoPingPongNewArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("EchoPingPong", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("EchoPingPongNew", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -1812,11 +1916,11 @@ func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, 
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := PingPongOnlyServiceEchoPingPongResult{}
+	result := PingPongOnlyServiceEchoPingPongNewResult{}
 	var retval *EchoResponse
-	if retval, err2 = p.handler.EchoPingPong(ctx, args.Req1); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoPingPong: "+err2.Error())
-		oprot.WriteMessageBegin("EchoPingPong", thrift.EXCEPTION, seqId)
+	if retval, err2 = p.handler.EchoPingPongNew(ctx, args.Req1); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoPingPongNew: "+err2.Error())
+		oprot.WriteMessageBegin("EchoPingPongNew", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -1824,7 +1928,7 @@ func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, 
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("EchoPingPong", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("EchoPingPongNew", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -1842,39 +1946,39 @@ func (p *pingPongOnlyServiceProcessorEchoPingPong) Process(ctx context.Context, 
 	return true, err
 }
 
-type PingPongOnlyServiceEchoPingPongArgs struct {
+type PingPongOnlyServiceEchoPingPongNewArgs struct {
 	Req1 *EchoRequest `thrift:"req1,1" frugal:"1,default,EchoRequest" json:"req1"`
 }
 
-func NewPingPongOnlyServiceEchoPingPongArgs() *PingPongOnlyServiceEchoPingPongArgs {
-	return &PingPongOnlyServiceEchoPingPongArgs{}
+func NewPingPongOnlyServiceEchoPingPongNewArgs() *PingPongOnlyServiceEchoPingPongNewArgs {
+	return &PingPongOnlyServiceEchoPingPongNewArgs{}
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) InitDefault() {
-	*p = PingPongOnlyServiceEchoPingPongArgs{}
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) InitDefault() {
+	*p = PingPongOnlyServiceEchoPingPongNewArgs{}
 }
 
-var PingPongOnlyServiceEchoPingPongArgs_Req1_DEFAULT *EchoRequest
+var PingPongOnlyServiceEchoPingPongNewArgs_Req1_DEFAULT *EchoRequest
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) GetReq1() (v *EchoRequest) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) GetReq1() (v *EchoRequest) {
 	if !p.IsSetReq1() {
-		return PingPongOnlyServiceEchoPingPongArgs_Req1_DEFAULT
+		return PingPongOnlyServiceEchoPingPongNewArgs_Req1_DEFAULT
 	}
 	return p.Req1
 }
-func (p *PingPongOnlyServiceEchoPingPongArgs) SetReq1(val *EchoRequest) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) SetReq1(val *EchoRequest) {
 	p.Req1 = val
 }
 
-var fieldIDToName_PingPongOnlyServiceEchoPingPongArgs = map[int16]string{
+var fieldIDToName_PingPongOnlyServiceEchoPingPongNewArgs = map[int16]string{
 	1: "req1",
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) IsSetReq1() bool {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) IsSetReq1() bool {
 	return p.Req1 != nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
@@ -1920,7 +2024,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongNewArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -1930,7 +2034,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) ReadField1(iprot thrift.TProtocol) error {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) ReadField1(iprot thrift.TProtocol) error {
 	p.Req1 = NewEchoRequest()
 	if err := p.Req1.Read(iprot); err != nil {
 		return err
@@ -1938,9 +2042,9 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) ReadField1(iprot thrift.TProtocol)
 	return nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("EchoPingPong_args"); err != nil {
+	if err = oprot.WriteStructBegin("EchoPingPongNew_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -1966,7 +2070,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -1983,15 +2087,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) String() string {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongArgs(%+v)", *p)
+	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongNewArgs(%+v)", *p)
 
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) DeepEqual(ano *PingPongOnlyServiceEchoPingPongArgs) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) DeepEqual(ano *PingPongOnlyServiceEchoPingPongNewArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -2003,7 +2107,7 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) DeepEqual(ano *PingPongOnlyService
 	return true
 }
 
-func (p *PingPongOnlyServiceEchoPingPongArgs) Field1DeepEqual(src *EchoRequest) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewArgs) Field1DeepEqual(src *EchoRequest) bool {
 
 	if !p.Req1.DeepEqual(src) {
 		return false
@@ -2011,39 +2115,39 @@ func (p *PingPongOnlyServiceEchoPingPongArgs) Field1DeepEqual(src *EchoRequest) 
 	return true
 }
 
-type PingPongOnlyServiceEchoPingPongResult struct {
+type PingPongOnlyServiceEchoPingPongNewResult struct {
 	Success *EchoResponse `thrift:"success,0,optional" frugal:"0,optional,EchoResponse" json:"success,omitempty"`
 }
 
-func NewPingPongOnlyServiceEchoPingPongResult() *PingPongOnlyServiceEchoPingPongResult {
-	return &PingPongOnlyServiceEchoPingPongResult{}
+func NewPingPongOnlyServiceEchoPingPongNewResult() *PingPongOnlyServiceEchoPingPongNewResult {
+	return &PingPongOnlyServiceEchoPingPongNewResult{}
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) InitDefault() {
-	*p = PingPongOnlyServiceEchoPingPongResult{}
+func (p *PingPongOnlyServiceEchoPingPongNewResult) InitDefault() {
+	*p = PingPongOnlyServiceEchoPingPongNewResult{}
 }
 
-var PingPongOnlyServiceEchoPingPongResult_Success_DEFAULT *EchoResponse
+var PingPongOnlyServiceEchoPingPongNewResult_Success_DEFAULT *EchoResponse
 
-func (p *PingPongOnlyServiceEchoPingPongResult) GetSuccess() (v *EchoResponse) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) GetSuccess() (v *EchoResponse) {
 	if !p.IsSetSuccess() {
-		return PingPongOnlyServiceEchoPingPongResult_Success_DEFAULT
+		return PingPongOnlyServiceEchoPingPongNewResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *PingPongOnlyServiceEchoPingPongResult) SetSuccess(x interface{}) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) SetSuccess(x interface{}) {
 	p.Success = x.(*EchoResponse)
 }
 
-var fieldIDToName_PingPongOnlyServiceEchoPingPongResult = map[int16]string{
+var fieldIDToName_PingPongOnlyServiceEchoPingPongNewResult = map[int16]string{
 	0: "success",
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) IsSetSuccess() bool {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) Read(iprot thrift.TProtocol) (err error) {
 
 	var fieldTypeId thrift.TType
 	var fieldId int16
@@ -2089,7 +2193,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PingPongOnlyServiceEchoPingPongNewResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -2099,7 +2203,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) ReadField0(iprot thrift.TProtocol) error {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) ReadField0(iprot thrift.TProtocol) error {
 	p.Success = NewEchoResponse()
 	if err := p.Success.Read(iprot); err != nil {
 		return err
@@ -2107,9 +2211,9 @@ func (p *PingPongOnlyServiceEchoPingPongResult) ReadField0(iprot thrift.TProtoco
 	return nil
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("EchoPingPong_result"); err != nil {
+	if err = oprot.WriteStructBegin("EchoPingPongNew_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -2135,7 +2239,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -2154,15 +2258,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) String() string {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongResult(%+v)", *p)
+	return fmt.Sprintf("PingPongOnlyServiceEchoPingPongNewResult(%+v)", *p)
 
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) DeepEqual(ano *PingPongOnlyServiceEchoPingPongResult) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) DeepEqual(ano *PingPongOnlyServiceEchoPingPongNewResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -2174,12 +2278,30 @@ func (p *PingPongOnlyServiceEchoPingPongResult) DeepEqual(ano *PingPongOnlyServi
 	return true
 }
 
-func (p *PingPongOnlyServiceEchoPingPongResult) Field0DeepEqual(src *EchoResponse) bool {
+func (p *PingPongOnlyServiceEchoPingPongNewResult) Field0DeepEqual(src *EchoResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
 	}
 	return true
+}
+
+type PingPongOnlyServiceChildProcessor struct {
+	*PingPongOnlyServiceProcessor
+}
+
+func NewPingPongOnlyServiceChildProcessor(handler PingPongOnlyServiceChild) *PingPongOnlyServiceChildProcessor {
+	self := &PingPongOnlyServiceChildProcessor{NewPingPongOnlyServiceProcessor(handler)}
+	return self
+}
+
+type PingPongOnlyServiceChildChildProcessor struct {
+	*PingPongOnlyServiceChildProcessor
+}
+
+func NewPingPongOnlyServiceChildChildProcessor(handler PingPongOnlyServiceChildChild) *PingPongOnlyServiceChildChildProcessor {
+	self := &PingPongOnlyServiceChildChildProcessor{NewPingPongOnlyServiceChildProcessor(handler)}
+	return self
 }
 
 type StreamOnlyServiceProcessor struct {
@@ -2220,4 +2342,22 @@ func (p *StreamOnlyServiceProcessor) Process(ctx context.Context, iprot, oprot t
 	oprot.WriteMessageEnd()
 	oprot.Flush(ctx)
 	return false, x
+}
+
+type StreamOnlyServiceChildProcessor struct {
+	*StreamOnlyServiceProcessor
+}
+
+func NewStreamOnlyServiceChildProcessor(handler StreamOnlyServiceChild) *StreamOnlyServiceChildProcessor {
+	self := &StreamOnlyServiceChildProcessor{NewStreamOnlyServiceProcessor(handler)}
+	return self
+}
+
+type StreamOnlyServiceChildChildProcessor struct {
+	*StreamOnlyServiceChildProcessor
+}
+
+func NewStreamOnlyServiceChildChildProcessor(handler StreamOnlyServiceChildChild) *StreamOnlyServiceChildChildProcessor {
+	self := &StreamOnlyServiceChildChildProcessor{NewStreamOnlyServiceChildProcessor(handler)}
+	return self
 }

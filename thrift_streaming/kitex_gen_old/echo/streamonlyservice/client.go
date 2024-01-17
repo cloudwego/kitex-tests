@@ -11,7 +11,7 @@ import (
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
-	EchoBidirectional(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error)
+	EchoBidirectionalNew(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -43,7 +43,7 @@ type kStreamOnlyServiceClient struct {
 	*kClient
 }
 
-func (p *kStreamOnlyServiceClient) EchoBidirectional(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error) {
+func (p *kStreamOnlyServiceClient) EchoBidirectionalNew(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.EchoBidirectional(ctx, req1)
+	return p.kClient.EchoBidirectionalNew(ctx, req1)
 }

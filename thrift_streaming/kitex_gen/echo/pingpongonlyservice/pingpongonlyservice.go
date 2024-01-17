@@ -13,10 +13,10 @@ import (
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
 
 var serviceMethods = map[string]kitex.MethodInfo{
-	"EchoPingPong": kitex.NewMethodInfo(
-		echoPingPongHandler,
-		newPingPongOnlyServiceEchoPingPongArgs,
-		newPingPongOnlyServiceEchoPingPongResult,
+	"EchoPingPongNew": kitex.NewMethodInfo(
+		echoPingPongNewHandler,
+		newPingPongOnlyServiceEchoPingPongNewArgs,
+		newPingPongOnlyServiceEchoPingPongNewResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -86,22 +86,22 @@ func newServiceInfo(hasStreaming bool, keepStreamingMethods bool, keepNonStreami
 	return svcInfo
 }
 
-func echoPingPongHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*echo.PingPongOnlyServiceEchoPingPongArgs)
-	realResult := result.(*echo.PingPongOnlyServiceEchoPingPongResult)
-	success, err := handler.(echo.PingPongOnlyService).EchoPingPong(ctx, realArg.Req1)
+func echoPingPongNewHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*echo.PingPongOnlyServiceEchoPingPongNewArgs)
+	realResult := result.(*echo.PingPongOnlyServiceEchoPingPongNewResult)
+	success, err := handler.(echo.PingPongOnlyService).EchoPingPongNew(ctx, realArg.Req1)
 	if err != nil {
 		return err
 	}
 	realResult.Success = success
 	return nil
 }
-func newPingPongOnlyServiceEchoPingPongArgs() interface{} {
-	return echo.NewPingPongOnlyServiceEchoPingPongArgs()
+func newPingPongOnlyServiceEchoPingPongNewArgs() interface{} {
+	return echo.NewPingPongOnlyServiceEchoPingPongNewArgs()
 }
 
-func newPingPongOnlyServiceEchoPingPongResult() interface{} {
-	return echo.NewPingPongOnlyServiceEchoPingPongResult()
+func newPingPongOnlyServiceEchoPingPongNewResult() interface{} {
+	return echo.NewPingPongOnlyServiceEchoPingPongNewResult()
 }
 
 type kClient struct {
@@ -114,11 +114,11 @@ func newServiceClient(c client.Client) *kClient {
 	}
 }
 
-func (p *kClient) EchoPingPong(ctx context.Context, req1 *echo.EchoRequest) (r *echo.EchoResponse, err error) {
-	var _args echo.PingPongOnlyServiceEchoPingPongArgs
+func (p *kClient) EchoPingPongNew(ctx context.Context, req1 *echo.EchoRequest) (r *echo.EchoResponse, err error) {
+	var _args echo.PingPongOnlyServiceEchoPingPongNewArgs
 	_args.Req1 = req1
-	var _result echo.PingPongOnlyServiceEchoPingPongResult
-	if err = p.c.Call(ctx, "EchoPingPong", &_args, &_result); err != nil {
+	var _result echo.PingPongOnlyServiceEchoPingPongNewResult
+	if err = p.c.Call(ctx, "EchoPingPongNew", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

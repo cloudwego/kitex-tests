@@ -126,19 +126,45 @@ type EchoService_EchoServerServer interface {
 }
 
 type PingPongOnlyService interface {
-	EchoPingPong(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
+	EchoPingPongNew(ctx context.Context, req1 *EchoRequest) (r *EchoResponse, err error)
 }
 
-type StreamOnlyService interface {
-	EchoBidirectional(stream StreamOnlyService_EchoBidirectionalServer) (err error)
+type PingPongOnlyServiceChild interface {
+	PingPongOnlyService
+
+	EchoBidirectionalExtended(stream PingPongOnlyServiceChild_EchoBidirectionalExtendedServer) (err error)
 }
 
-type StreamOnlyService_EchoBidirectionalServer interface {
+type PingPongOnlyServiceChild_EchoBidirectionalExtendedServer interface {
 	streaming.Stream
 
 	Recv() (*EchoRequest, error)
 
 	Send(*EchoResponse) error
+}
+
+type PingPongOnlyServiceChildChild interface {
+	PingPongOnlyServiceChild
+}
+
+type StreamOnlyService interface {
+	EchoBidirectionalNew(stream StreamOnlyService_EchoBidirectionalNewServer) (err error)
+}
+
+type StreamOnlyService_EchoBidirectionalNewServer interface {
+	streaming.Stream
+
+	Recv() (*EchoRequest, error)
+
+	Send(*EchoResponse) error
+}
+
+type StreamOnlyServiceChild interface {
+	StreamOnlyService
+}
+
+type StreamOnlyServiceChildChild interface {
+	StreamOnlyServiceChild
 }
 
 // exceptions of methods in EchoService.

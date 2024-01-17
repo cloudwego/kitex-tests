@@ -18,10 +18,10 @@ type Client interface {
 
 // StreamClient is designed to provide Interface for Streaming APIs.
 type StreamClient interface {
-	EchoBidirectional(ctx context.Context, callOptions ...streamcall.Option) (stream StreamOnlyService_EchoBidirectionalClient, err error)
+	EchoBidirectionalNew(ctx context.Context, callOptions ...streamcall.Option) (stream StreamOnlyService_EchoBidirectionalNewClient, err error)
 }
 
-type StreamOnlyService_EchoBidirectionalClient interface {
+type StreamOnlyService_EchoBidirectionalNewClient interface {
 	streaming.Stream
 	Send(*echo.EchoRequest) error
 	Recv() (*echo.EchoResponse, error)
@@ -86,7 +86,7 @@ type kStreamOnlyServiceStreamClient struct {
 	*kClient
 }
 
-func (p *kStreamOnlyServiceStreamClient) EchoBidirectional(ctx context.Context, callOptions ...streamcall.Option) (stream StreamOnlyService_EchoBidirectionalClient, err error) {
+func (p *kStreamOnlyServiceStreamClient) EchoBidirectionalNew(ctx context.Context, callOptions ...streamcall.Option) (stream StreamOnlyService_EchoBidirectionalNewClient, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, streamcall.GetCallOptions(callOptions))
-	return p.kClient.EchoBidirectional(ctx)
+	return p.kClient.EchoBidirectionalNew(ctx)
 }
