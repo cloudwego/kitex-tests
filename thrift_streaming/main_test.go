@@ -132,12 +132,24 @@ func TestMain(m *testing.M) {
 	go func() { slimServer = RunSlimThriftServer(&SlimEchoServiceImpl{}, slimAddr) }()
 	go func() { combineServer = RunCombineThriftServer(&CombineServiceImpl{}, combineAddr) }()
 	defer func() {
-		go thriftSvr.Stop()
-		go grpcServer.Stop()
-		go pbServer.Stop()
-		go slimServer.Stop()
-		go thriftCrossSvr.Stop()
-		go combineServer.Stop()
+		if thriftSvr != nil {
+			thriftSvr.Stop()
+		}
+		if thriftCrossSvr != nil {
+			thriftCrossSvr.Stop()
+		}
+		if slimServer != nil {
+			slimServer.Stop()
+		}
+		if grpcServer != nil {
+			grpcServer.Stop()
+		}
+		if pbServer != nil {
+			pbServer.Stop()
+		}
+		if combineServer != nil {
+			combineServer.Stop()
+		}
 	}()
 	common.WaitServer(thriftAddr)
 	common.WaitServer(crossAddr)

@@ -73,7 +73,9 @@ function generate_new() {
     else
         GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@develop
     fi
-    GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
+    if [ ! -f "$dir/thriftgo" ]; then
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
+    fi
 
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
         echo "[new] Unable to install kitex or thriftgo to $dir, please check before continue."
