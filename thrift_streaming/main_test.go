@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
@@ -30,7 +31,6 @@ import (
 	kitexpbservice "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/kitex_pb/pbservice"
 	cross_echo "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_cross/echo"
 	cross_echoservice "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_cross/echo/echoservice"
-	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/server"
 )
 
@@ -42,16 +42,6 @@ func WithServerAddr(hostPort string) server.Option {
 	return server.WithServiceAddr(addr)
 }
 
-func WaitServer(hostPort string) {
-	for begin := time.Now(); time.Since(begin) < time.Second; {
-		if _, err := net.Dial("tcp", hostPort); err == nil {
-			klog.Infof("server %s is up", hostPort)
-			return
-		}
-		time.Sleep(time.Millisecond * 10)
-	}
-}
-
 func RunThriftServer(handler echo.EchoService, addr string, opts ...server.Option) server.Server {
 	opts = append(opts, WithServerAddr(addr))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
@@ -61,7 +51,7 @@ func RunThriftServer(handler echo.EchoService, addr string, opts ...server.Optio
 			panic(err)
 		}
 	}()
-	WaitServer(addr)
+	common.WaitServer(addr)
 	return svr
 }
 
@@ -74,7 +64,7 @@ func RunCombineThriftServer(handler combineservice.CombineService, addr string, 
 			panic(err)
 		}
 	}()
-	WaitServer(addr)
+	common.WaitServer(addr)
 	return svr
 }
 
@@ -87,7 +77,7 @@ func RunThriftCrossServer(handler cross_echo.EchoService, addr string, opts ...s
 			panic(err)
 		}
 	}()
-	WaitServer(addr)
+	common.WaitServer(addr)
 	return svr
 }
 
@@ -100,7 +90,7 @@ func RunGRPCPBServer(handler grpc_pb.PBService, addr string, opts ...server.Opti
 			panic(err)
 		}
 	}()
-	WaitServer(addr)
+	common.WaitServer(addr)
 	return svr
 }
 
@@ -113,7 +103,7 @@ func RunKitexPBServer(handler kitex_pb.PBService, addr string, opts ...server.Op
 			panic(err)
 		}
 	}()
-	WaitServer(addr)
+	common.WaitServer(addr)
 	return svr
 }
 
@@ -149,11 +139,11 @@ func TestMain(m *testing.M) {
 		go thriftCrossSvr.Stop()
 		go combineServer.Stop()
 	}()
-	WaitServer(thriftAddr)
-	WaitServer(crossAddr)
-	WaitServer(grpcAddr)
-	WaitServer(pbAddr)
-	WaitServer(slimAddr)
-	WaitServer(combineAddr)
+	common.WaitServer(thriftAddr)
+	common.WaitServer(crossAddr)
+	common.WaitServer(grpcAddr)
+	common.WaitServer(pbAddr)
+	common.WaitServer(slimAddr)
+	common.WaitServer(combineAddr)
 	m.Run()
 }

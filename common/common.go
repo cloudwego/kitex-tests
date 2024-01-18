@@ -1,7 +1,4 @@
-//go:build !amd64 || windows || !go1.16 || go1.22 || disablefrugal
-// +build !amd64 windows !go1.16 go1.22 disablefrugal
-
-// Copyright 2023 CloudWeGo Authors
+// Copyright 2024 CloudWeGo Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package thrift_streaming
+package common
 
 import (
-	"github.com/cloudwego/kitex/server"
+	"net"
+	"time"
 
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo"
+	"github.com/cloudwego/kitex/pkg/klog"
 )
 
-func RunSlimThriftServer(handler echo.EchoService, addr string, opts ...server.Option) server.Server {
-	// frugal + slim not available, return an empty server
-	return server.NewServer()
+func WaitServer(hostPort string) {
+	for begin := time.Now(); time.Since(begin) < time.Second; {
+		if _, err := net.Dial("tcp", hostPort); err == nil {
+			klog.Infof("server %s is up", hostPort)
+			return
+		}
+		time.Sleep(time.Millisecond * 10)
+	}
 }

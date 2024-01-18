@@ -35,6 +35,7 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo/echoservice"
@@ -52,7 +53,7 @@ func RunSlimThriftServer(handler echo.EchoService, addr string, opts ...server.O
 			panic(err)
 		}
 	}()
-	WaitServer(addr)
+	common.WaitServer(addr)
 	return svr
 }
 

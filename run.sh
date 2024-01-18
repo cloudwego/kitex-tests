@@ -62,9 +62,9 @@ go_install() {
 
 which protoc || install_protoc
 
-# install protoc-gen-go and protoc-gen-go-grpc
+# install protoc-gen-go and protoc-gen-go-kitexgrpc
 which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-# install protoc-gen-go and protoc-gen-go-grpc
+# install protoc-gen-go and protoc-gen-go-kitexgrpc
 which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # Install thriftgo
@@ -90,6 +90,8 @@ kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.prot
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.proto
+# generate thrift streaming code
+LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
 test -d grpc_gen && rm -rf grpc_gen
 mkdir grpc_gen
 protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
@@ -124,11 +126,9 @@ packages=(
 ./pbrpc/failedcall/...
 ./generic/http/...
 ./generic/map/...
-./grpc/...
+./kitexgrpc/...
 ./thrift_streaming/...
 )
-
-LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
 
 for pkg in ${packages[@]}
 do

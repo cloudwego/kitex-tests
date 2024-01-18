@@ -7,20 +7,11 @@ import (
 	echo "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
-	"github.com/cloudwego/kitex/client/callopt/streamcall"
-	"github.com/cloudwego/kitex/client/streamclient"
-	streaming "github.com/cloudwego/kitex/pkg/streaming"
-	transport "github.com/cloudwego/kitex/transport"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
 	EchoPingPongNew(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error)
-}
-
-// StreamClient is designed to provide Interface for Streaming APIs.
-type StreamClient interface {
-	EchoBidirectionalNew(ctx context.Context, callOptions ...streamcall.Option) (stream StreamOnlyService_EchoBidirectionalNewClient, err error)
 }
 
 type StreamOnlyService_EchoBidirectionalNewClient interface {
@@ -61,39 +52,4 @@ type kCombineServiceClient struct {
 func (p *kCombineServiceClient) EchoPingPongNew(ctx context.Context, req1 *echo.EchoRequest, callOptions ...callopt.Option) (r *echo.EchoResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.EchoPingPongNew(ctx, req1)
-}
-
-// NewStreamClient creates a stream client for the service's streaming APIs defined in IDL.
-func NewStreamClient(destService string, opts ...streamclient.Option) (StreamClient, error) {
-	var options []client.Option
-	options = append(options, client.WithDestService(destService))
-	options = append(options, client.WithTransportProtocol(transport.GRPC))
-	options = append(options, streamclient.GetClientOptions(opts)...)
-
-	kc, err := client.NewClient(serviceInfoForStreamClient(), options...)
-	if err != nil {
-		return nil, err
-	}
-	return &kCombineServiceStreamClient{
-		kClient: newServiceClient(kc),
-	}, nil
-}
-
-// MustNewStreamClient creates a stream client for the service's streaming APIs defined in IDL.
-// It panics if any error occurs.
-func MustNewStreamClient(destService string, opts ...streamclient.Option) StreamClient {
-	kc, err := NewStreamClient(destService, opts...)
-	if err != nil {
-		panic(err)
-	}
-	return kc
-}
-
-type kCombineServiceStreamClient struct {
-	*kClient
-}
-
-func (p *kCombineServiceStreamClient) EchoBidirectionalNew(ctx context.Context, callOptions ...streamcall.Option) (stream StreamOnlyService_EchoBidirectionalNewClient, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, streamcall.GetCallOptions(callOptions))
-	return p.kClient.EchoBidirectionalNew(ctx)
 }

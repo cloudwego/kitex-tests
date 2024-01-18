@@ -1,7 +1,4 @@
-//go:build !amd64 || windows || !go1.16 || go1.22 || disablefrugal
-// +build !amd64 windows !go1.16 go1.22 disablefrugal
-
-// Copyright 2023 CloudWeGo Authors
+// Copyright 2024 CloudWeGo Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package thrift_streaming
+package main
 
-import (
-	"github.com/cloudwego/kitex/server"
+import "github.com/cloudwego/kitex-tests/kitexgrpc/abc/servicec"
 
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo"
-)
-
-func RunSlimThriftServer(handler echo.EchoService, addr string, opts ...server.Option) server.Server {
-	// frugal + slim not available, return an empty server
-	return server.NewServer()
+func main() {
+	svr := servicec.InitServiceCServer()
+	defer svr.Stop()
+	err := svr.Run()
+	panic(err)
 }
