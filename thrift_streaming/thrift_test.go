@@ -26,8 +26,11 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/cloudwego/kitex-tests/common"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/a/b/c"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/abcservice"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/streamclient"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -975,4 +978,100 @@ func TestThriftStreamLogID(t *testing.T) {
 	if got, ok := checkLogID(stream.Context()); !ok {
 		t.Errorf("stream ctx got logID = %v", got)
 	}
+}
+
+func RunABCServer(handler echo.ABCService, addr string, opts ...server.Option) server.Server {
+	opts = append(opts, WithServerAddr(addr))
+	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
+	svr := abcservice.NewServer(handler, opts...)
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	common.WaitServer(addr)
+	return svr
+}
+
+type abcServerImpl struct {
+}
+
+func (a abcServerImpl) Echo(ctx context.Context, req1 *c.Request, req2 *c.Request) (r *c.Response, err error) {
+	r = &c.Response{
+		Message: req1.Message + req2.Message,
+	}
+	return
+}
+
+func (a abcServerImpl) EchoBidirectional(stream echo.ABCService_EchoBidirectionalServer) (err error) {
+	req, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	return stream.Send(&c.Response{Message: req.Message})
+}
+
+func (a abcServerImpl) EchoServer(req *c.Request, stream echo.ABCService_EchoServerServer) (err error) {
+	return stream.Send(&c.Response{Message: req.Message})
+}
+
+func (a abcServerImpl) EchoClient(stream echo.ABCService_EchoClientServer) (err error) {
+	req, err := stream.Recv()
+	if err != nil {
+		return err
+	}
+	return stream.SendAndClose(&c.Response{Message: req.Message})
+}
+
+func (a abcServerImpl) EchoUnary(ctx context.Context, req1 *c.Request) (r *c.Response, err error) {
+	r = &c.Response{
+		Message: req1.Message,
+	}
+	return
+}
+
+func TestABCService(t *testing.T) {
+	addr := addrAllocator()
+	svr := RunABCServer(&abcServerImpl{}, addr)
+	defer svr.Stop()
+	t.Run("echo", func(t *testing.T) {
+		cli := abcservice.MustNewClient("service", client.WithHostPorts(addr))
+		rsp, err := cli.Echo(context.Background(), &c.Request{Message: "hello"}, &c.Request{Message: "world"})
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "helloworld")
+	})
+	t.Run("echo-unary", func(t *testing.T) {
+		cli := abcservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		rsp, err := cli.EchoUnary(context.Background(), &c.Request{Message: "hello"})
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "hello")
+	})
+	t.Run("echo-bidirectional", func(t *testing.T) {
+		cli := abcservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		stream, err := cli.EchoBidirectional(context.Background())
+		test.Assert(t, err == nil, err)
+		err = stream.Send(&c.Request{Message: "hello"})
+		test.Assert(t, err == nil, err)
+		rsp, err := stream.Recv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "hello")
+	})
+	t.Run("echo-server", func(t *testing.T) {
+		cli := abcservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		stream, err := cli.EchoServer(context.Background(), &c.Request{Message: "hello"})
+		test.Assert(t, err == nil, err)
+		rsp, err := stream.Recv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "hello")
+	})
+	t.Run("echo-client", func(t *testing.T) {
+		cli := abcservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		stream, err := cli.EchoClient(context.Background())
+		test.Assert(t, err == nil, err)
+		err = stream.Send(&c.Request{Message: "hello"})
+		test.Assert(t, err == nil, err)
+		rsp, err := stream.CloseAndRecv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, rsp.Message == "hello")
+	})
 }

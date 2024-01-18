@@ -14,6 +14,8 @@
 
 namespace go echo
 
+include "a.b.c.thrift"
+
 struct EchoRequest {
     1: required string message,
 }
@@ -63,3 +65,11 @@ service StreamOnlyServiceChild extends StreamOnlyService {}
 
 // should also be a streaming service
 service StreamOnlyServiceChildChild extends StreamOnlyServiceChild {}
+
+service ABCService {
+    a.b.c.Response Echo(1: a.b.c.Request req1, 2: a.b.c.Request req2),
+    a.b.c.Response EchoBidirectional(1: a.b.c.Request req1) (streaming.mode="bidirectional"),
+    a.b.c.Response EchoServer(1: a.b.c.Request req1) (streaming.mode="server"),
+    a.b.c.Response EchoClient(1: a.b.c.Request req1) (streaming.mode="client"),
+    a.b.c.Response EchoUnary(1: a.b.c.Request req1) (streaming.mode="unary"),
+}

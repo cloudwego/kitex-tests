@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/apache/thrift/lib/go/thrift"
+
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/a/b/c"
 )
 
 // unused protection
@@ -18,6 +20,7 @@ var (
 	_ = (*strings.Builder)(nil)
 	_ = reflect.Type(nil)
 	_ = thrift.TProtocol(nil)
+	_ = c.KitexUnusedProtection
 )
 
 type EchoServiceEchoBidirectionalArgs struct {
@@ -760,5 +763,402 @@ func (p *StreamOnlyServiceEchoBidirectionalNewResult) String() string {
 	return fmt.Sprintf("StreamOnlyServiceEchoBidirectionalNewResult(%+v)", *p)
 }
 func (p *StreamOnlyServiceEchoBidirectionalNewResult) GetResult() interface{} {
+	return p.Success
+}
+
+type ABCServiceEchoArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+	Req2 *c.Request `thrift:"req2,2" frugal:"2,default,c.Request" json:"req2"`
+}
+
+func NewABCServiceEchoArgs() *ABCServiceEchoArgs {
+	return &ABCServiceEchoArgs{}
+}
+
+func (p *ABCServiceEchoArgs) InitDefault() {
+	*p = ABCServiceEchoArgs{}
+}
+
+var ABCServiceEchoArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+
+var ABCServiceEchoArgs_Req2_DEFAULT *c.Request
+
+func (p *ABCServiceEchoArgs) GetReq2() (v *c.Request) {
+	if !p.IsSetReq2() {
+		return ABCServiceEchoArgs_Req2_DEFAULT
+	}
+	return p.Req2
+}
+func (p *ABCServiceEchoArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+func (p *ABCServiceEchoArgs) SetReq2(val *c.Request) {
+	p.Req2 = val
+}
+
+func (p *ABCServiceEchoArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoArgs) IsSetReq2() bool {
+	return p.Req2 != nil
+}
+
+func (p *ABCServiceEchoArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoArgs(%+v)", *p)
+}
+func (p *ABCServiceEchoArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type ABCServiceEchoResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoResult() *ABCServiceEchoResult {
+	return &ABCServiceEchoResult{}
+}
+
+func (p *ABCServiceEchoResult) InitDefault() {
+	*p = ABCServiceEchoResult{}
+}
+
+var ABCServiceEchoResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+func (p *ABCServiceEchoResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoResult(%+v)", *p)
+}
+func (p *ABCServiceEchoResult) GetResult() interface{} {
+	return p.Success
+}
+
+type ABCServiceEchoBidirectionalArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoBidirectionalArgs() *ABCServiceEchoBidirectionalArgs {
+	return &ABCServiceEchoBidirectionalArgs{}
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) InitDefault() {
+	*p = ABCServiceEchoBidirectionalArgs{}
+}
+
+var ABCServiceEchoBidirectionalArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoBidirectionalArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoBidirectionalArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoBidirectionalArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoBidirectionalArgs(%+v)", *p)
+}
+func (p *ABCServiceEchoBidirectionalArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type ABCServiceEchoBidirectionalResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoBidirectionalResult() *ABCServiceEchoBidirectionalResult {
+	return &ABCServiceEchoBidirectionalResult{}
+}
+
+func (p *ABCServiceEchoBidirectionalResult) InitDefault() {
+	*p = ABCServiceEchoBidirectionalResult{}
+}
+
+var ABCServiceEchoBidirectionalResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoBidirectionalResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoBidirectionalResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoBidirectionalResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+func (p *ABCServiceEchoBidirectionalResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoBidirectionalResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoBidirectionalResult(%+v)", *p)
+}
+func (p *ABCServiceEchoBidirectionalResult) GetResult() interface{} {
+	return p.Success
+}
+
+type ABCServiceEchoServerArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoServerArgs() *ABCServiceEchoServerArgs {
+	return &ABCServiceEchoServerArgs{}
+}
+
+func (p *ABCServiceEchoServerArgs) InitDefault() {
+	*p = ABCServiceEchoServerArgs{}
+}
+
+var ABCServiceEchoServerArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoServerArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoServerArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoServerArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+func (p *ABCServiceEchoServerArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoServerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoServerArgs(%+v)", *p)
+}
+func (p *ABCServiceEchoServerArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type ABCServiceEchoServerResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoServerResult() *ABCServiceEchoServerResult {
+	return &ABCServiceEchoServerResult{}
+}
+
+func (p *ABCServiceEchoServerResult) InitDefault() {
+	*p = ABCServiceEchoServerResult{}
+}
+
+var ABCServiceEchoServerResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoServerResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoServerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoServerResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+func (p *ABCServiceEchoServerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoServerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoServerResult(%+v)", *p)
+}
+func (p *ABCServiceEchoServerResult) GetResult() interface{} {
+	return p.Success
+}
+
+type ABCServiceEchoClientArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoClientArgs() *ABCServiceEchoClientArgs {
+	return &ABCServiceEchoClientArgs{}
+}
+
+func (p *ABCServiceEchoClientArgs) InitDefault() {
+	*p = ABCServiceEchoClientArgs{}
+}
+
+var ABCServiceEchoClientArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoClientArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoClientArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoClientArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+func (p *ABCServiceEchoClientArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoClientArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoClientArgs(%+v)", *p)
+}
+func (p *ABCServiceEchoClientArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type ABCServiceEchoClientResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoClientResult() *ABCServiceEchoClientResult {
+	return &ABCServiceEchoClientResult{}
+}
+
+func (p *ABCServiceEchoClientResult) InitDefault() {
+	*p = ABCServiceEchoClientResult{}
+}
+
+var ABCServiceEchoClientResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoClientResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoClientResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoClientResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+func (p *ABCServiceEchoClientResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoClientResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoClientResult(%+v)", *p)
+}
+func (p *ABCServiceEchoClientResult) GetResult() interface{} {
+	return p.Success
+}
+
+type ABCServiceEchoUnaryArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoUnaryArgs() *ABCServiceEchoUnaryArgs {
+	return &ABCServiceEchoUnaryArgs{}
+}
+
+func (p *ABCServiceEchoUnaryArgs) InitDefault() {
+	*p = ABCServiceEchoUnaryArgs{}
+}
+
+var ABCServiceEchoUnaryArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoUnaryArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoUnaryArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoUnaryArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+func (p *ABCServiceEchoUnaryArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoUnaryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoUnaryArgs(%+v)", *p)
+}
+func (p *ABCServiceEchoUnaryArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type ABCServiceEchoUnaryResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoUnaryResult() *ABCServiceEchoUnaryResult {
+	return &ABCServiceEchoUnaryResult{}
+}
+
+func (p *ABCServiceEchoUnaryResult) InitDefault() {
+	*p = ABCServiceEchoUnaryResult{}
+}
+
+var ABCServiceEchoUnaryResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoUnaryResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoUnaryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoUnaryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+func (p *ABCServiceEchoUnaryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoUnaryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoUnaryResult(%+v)", *p)
+}
+func (p *ABCServiceEchoUnaryResult) GetResult() interface{} {
 	return p.Success
 }

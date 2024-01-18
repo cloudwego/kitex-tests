@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_old/a/b/c"
 	"strings"
 )
 
@@ -818,6 +819,91 @@ func NewStreamOnlyServiceChildChildClient(c thrift.TClient) *StreamOnlyServiceCh
 	return &StreamOnlyServiceChildChildClient{
 		StreamOnlyServiceChildClient: NewStreamOnlyServiceChildClient(c),
 	}
+}
+
+type ABCService interface {
+	Echo(ctx context.Context, req1 *c.Request, req2 *c.Request) (r *c.Response, err error)
+
+	EchoBidirectional(ctx context.Context, req1 *c.Request) (r *c.Response, err error)
+
+	EchoServer(ctx context.Context, req1 *c.Request) (r *c.Response, err error)
+
+	EchoClient(ctx context.Context, req1 *c.Request) (r *c.Response, err error)
+
+	EchoUnary(ctx context.Context, req1 *c.Request) (r *c.Response, err error)
+}
+
+type ABCServiceClient struct {
+	c thrift.TClient
+}
+
+func NewABCServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ABCServiceClient {
+	return &ABCServiceClient{
+		c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
+	}
+}
+
+func NewABCServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ABCServiceClient {
+	return &ABCServiceClient{
+		c: thrift.NewTStandardClient(iprot, oprot),
+	}
+}
+
+func NewABCServiceClient(c thrift.TClient) *ABCServiceClient {
+	return &ABCServiceClient{
+		c: c,
+	}
+}
+
+func (p *ABCServiceClient) Client_() thrift.TClient {
+	return p.c
+}
+
+func (p *ABCServiceClient) Echo(ctx context.Context, req1 *c.Request, req2 *c.Request) (r *c.Response, err error) {
+	var _args ABCServiceEchoArgs
+	_args.Req1 = req1
+	_args.Req2 = req2
+	var _result ABCServiceEchoResult
+	if err = p.Client_().Call(ctx, "Echo", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ABCServiceClient) EchoBidirectional(ctx context.Context, req1 *c.Request) (r *c.Response, err error) {
+	var _args ABCServiceEchoBidirectionalArgs
+	_args.Req1 = req1
+	var _result ABCServiceEchoBidirectionalResult
+	if err = p.Client_().Call(ctx, "EchoBidirectional", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ABCServiceClient) EchoServer(ctx context.Context, req1 *c.Request) (r *c.Response, err error) {
+	var _args ABCServiceEchoServerArgs
+	_args.Req1 = req1
+	var _result ABCServiceEchoServerResult
+	if err = p.Client_().Call(ctx, "EchoServer", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ABCServiceClient) EchoClient(ctx context.Context, req1 *c.Request) (r *c.Response, err error) {
+	var _args ABCServiceEchoClientArgs
+	_args.Req1 = req1
+	var _result ABCServiceEchoClientResult
+	if err = p.Client_().Call(ctx, "EchoClient", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ABCServiceClient) EchoUnary(ctx context.Context, req1 *c.Request) (r *c.Response, err error) {
+	var _args ABCServiceEchoUnaryArgs
+	_args.Req1 = req1
+	var _result ABCServiceEchoUnaryResult
+	if err = p.Client_().Call(ctx, "EchoUnary", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
 }
 
 type EchoServiceProcessor struct {
@@ -4761,4 +4847,2053 @@ type StreamOnlyServiceChildChildProcessor struct {
 func NewStreamOnlyServiceChildChildProcessor(handler StreamOnlyServiceChildChild) *StreamOnlyServiceChildChildProcessor {
 	self := &StreamOnlyServiceChildChildProcessor{NewStreamOnlyServiceChildProcessor(handler)}
 	return self
+}
+
+type ABCServiceProcessor struct {
+	processorMap map[string]thrift.TProcessorFunction
+	handler      ABCService
+}
+
+func (p *ABCServiceProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
+	p.processorMap[key] = processor
+}
+
+func (p *ABCServiceProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
+	processor, ok = p.processorMap[key]
+	return processor, ok
+}
+
+func (p *ABCServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
+	return p.processorMap
+}
+
+func NewABCServiceProcessor(handler ABCService) *ABCServiceProcessor {
+	self := &ABCServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self.AddToProcessorMap("Echo", &aBCServiceProcessorEcho{handler: handler})
+	self.AddToProcessorMap("EchoBidirectional", &aBCServiceProcessorEchoBidirectional{handler: handler})
+	self.AddToProcessorMap("EchoServer", &aBCServiceProcessorEchoServer{handler: handler})
+	self.AddToProcessorMap("EchoClient", &aBCServiceProcessorEchoClient{handler: handler})
+	self.AddToProcessorMap("EchoUnary", &aBCServiceProcessorEchoUnary{handler: handler})
+	return self
+}
+func (p *ABCServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	name, _, seqId, err := iprot.ReadMessageBegin()
+	if err != nil {
+		return false, err
+	}
+	if processor, ok := p.GetProcessorFunction(name); ok {
+		return processor.Process(ctx, seqId, iprot, oprot)
+	}
+	iprot.Skip(thrift.STRUCT)
+	iprot.ReadMessageEnd()
+	x := thrift.NewTApplicationException(thrift.UNKNOWN_METHOD, "Unknown function "+name)
+	oprot.WriteMessageBegin(name, thrift.EXCEPTION, seqId)
+	x.Write(oprot)
+	oprot.WriteMessageEnd()
+	oprot.Flush(ctx)
+	return false, x
+}
+
+type aBCServiceProcessorEcho struct {
+	handler ABCService
+}
+
+func (p *aBCServiceProcessorEcho) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ABCServiceEchoArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("Echo", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ABCServiceEchoResult{}
+	var retval *c.Response
+	if retval, err2 = p.handler.Echo(ctx, args.Req1, args.Req2); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing Echo: "+err2.Error())
+		oprot.WriteMessageBegin("Echo", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("Echo", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type aBCServiceProcessorEchoBidirectional struct {
+	handler ABCService
+}
+
+func (p *aBCServiceProcessorEchoBidirectional) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ABCServiceEchoBidirectionalArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("EchoBidirectional", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ABCServiceEchoBidirectionalResult{}
+	var retval *c.Response
+	if retval, err2 = p.handler.EchoBidirectional(ctx, args.Req1); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoBidirectional: "+err2.Error())
+		oprot.WriteMessageBegin("EchoBidirectional", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("EchoBidirectional", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type aBCServiceProcessorEchoServer struct {
+	handler ABCService
+}
+
+func (p *aBCServiceProcessorEchoServer) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ABCServiceEchoServerArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("EchoServer", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ABCServiceEchoServerResult{}
+	var retval *c.Response
+	if retval, err2 = p.handler.EchoServer(ctx, args.Req1); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoServer: "+err2.Error())
+		oprot.WriteMessageBegin("EchoServer", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("EchoServer", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type aBCServiceProcessorEchoClient struct {
+	handler ABCService
+}
+
+func (p *aBCServiceProcessorEchoClient) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ABCServiceEchoClientArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("EchoClient", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ABCServiceEchoClientResult{}
+	var retval *c.Response
+	if retval, err2 = p.handler.EchoClient(ctx, args.Req1); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoClient: "+err2.Error())
+		oprot.WriteMessageBegin("EchoClient", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("EchoClient", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type aBCServiceProcessorEchoUnary struct {
+	handler ABCService
+}
+
+func (p *aBCServiceProcessorEchoUnary) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ABCServiceEchoUnaryArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("EchoUnary", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ABCServiceEchoUnaryResult{}
+	var retval *c.Response
+	if retval, err2 = p.handler.EchoUnary(ctx, args.Req1); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing EchoUnary: "+err2.Error())
+		oprot.WriteMessageBegin("EchoUnary", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("EchoUnary", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type ABCServiceEchoArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+	Req2 *c.Request `thrift:"req2,2" frugal:"2,default,c.Request" json:"req2"`
+}
+
+func NewABCServiceEchoArgs() *ABCServiceEchoArgs {
+	return &ABCServiceEchoArgs{}
+}
+
+func (p *ABCServiceEchoArgs) InitDefault() {
+	*p = ABCServiceEchoArgs{}
+}
+
+var ABCServiceEchoArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+
+var ABCServiceEchoArgs_Req2_DEFAULT *c.Request
+
+func (p *ABCServiceEchoArgs) GetReq2() (v *c.Request) {
+	if !p.IsSetReq2() {
+		return ABCServiceEchoArgs_Req2_DEFAULT
+	}
+	return p.Req2
+}
+func (p *ABCServiceEchoArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+func (p *ABCServiceEchoArgs) SetReq2(val *c.Request) {
+	p.Req2 = val
+}
+
+var fieldIDToName_ABCServiceEchoArgs = map[int16]string{
+	1: "req1",
+	2: "req2",
+}
+
+func (p *ABCServiceEchoArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoArgs) IsSetReq2() bool {
+	return p.Req2 != nil
+}
+
+func (p *ABCServiceEchoArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req1 = c.NewRequest()
+	if err := p.Req1.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+func (p *ABCServiceEchoArgs) ReadField2(iprot thrift.TProtocol) error {
+	p.Req2 = c.NewRequest()
+	if err := p.Req2.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("Echo_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req1.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoArgs) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req2", thrift.STRUCT, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req2.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoArgs(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoArgs) DeepEqual(ano *ABCServiceEchoArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req1) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Req2) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoArgs) Field1DeepEqual(src *c.Request) bool {
+
+	if !p.Req1.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ABCServiceEchoArgs) Field2DeepEqual(src *c.Request) bool {
+
+	if !p.Req2.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoResult() *ABCServiceEchoResult {
+	return &ABCServiceEchoResult{}
+}
+
+func (p *ABCServiceEchoResult) InitDefault() {
+	*p = ABCServiceEchoResult{}
+}
+
+var ABCServiceEchoResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+var fieldIDToName_ABCServiceEchoResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ABCServiceEchoResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = c.NewResponse()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("Echo_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoResult(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoResult) DeepEqual(ano *ABCServiceEchoResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoResult) Field0DeepEqual(src *c.Response) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoBidirectionalArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoBidirectionalArgs() *ABCServiceEchoBidirectionalArgs {
+	return &ABCServiceEchoBidirectionalArgs{}
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) InitDefault() {
+	*p = ABCServiceEchoBidirectionalArgs{}
+}
+
+var ABCServiceEchoBidirectionalArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoBidirectionalArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoBidirectionalArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoBidirectionalArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+var fieldIDToName_ABCServiceEchoBidirectionalArgs = map[int16]string{
+	1: "req1",
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoBidirectionalArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req1 = c.NewRequest()
+	if err := p.Req1.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoBidirectional_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req1.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoBidirectionalArgs(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) DeepEqual(ano *ABCServiceEchoBidirectionalArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req1) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoBidirectionalArgs) Field1DeepEqual(src *c.Request) bool {
+
+	if !p.Req1.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoBidirectionalResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoBidirectionalResult() *ABCServiceEchoBidirectionalResult {
+	return &ABCServiceEchoBidirectionalResult{}
+}
+
+func (p *ABCServiceEchoBidirectionalResult) InitDefault() {
+	*p = ABCServiceEchoBidirectionalResult{}
+}
+
+var ABCServiceEchoBidirectionalResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoBidirectionalResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoBidirectionalResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoBidirectionalResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+var fieldIDToName_ABCServiceEchoBidirectionalResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ABCServiceEchoBidirectionalResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoBidirectionalResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoBidirectionalResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoBidirectionalResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = c.NewResponse()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoBidirectionalResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoBidirectional_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoBidirectionalResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoBidirectionalResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoBidirectionalResult(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoBidirectionalResult) DeepEqual(ano *ABCServiceEchoBidirectionalResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoBidirectionalResult) Field0DeepEqual(src *c.Response) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoServerArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoServerArgs() *ABCServiceEchoServerArgs {
+	return &ABCServiceEchoServerArgs{}
+}
+
+func (p *ABCServiceEchoServerArgs) InitDefault() {
+	*p = ABCServiceEchoServerArgs{}
+}
+
+var ABCServiceEchoServerArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoServerArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoServerArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoServerArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+var fieldIDToName_ABCServiceEchoServerArgs = map[int16]string{
+	1: "req1",
+}
+
+func (p *ABCServiceEchoServerArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoServerArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoServerArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoServerArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req1 = c.NewRequest()
+	if err := p.Req1.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoServerArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoServer_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoServerArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req1.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoServerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoServerArgs(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoServerArgs) DeepEqual(ano *ABCServiceEchoServerArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req1) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoServerArgs) Field1DeepEqual(src *c.Request) bool {
+
+	if !p.Req1.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoServerResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoServerResult() *ABCServiceEchoServerResult {
+	return &ABCServiceEchoServerResult{}
+}
+
+func (p *ABCServiceEchoServerResult) InitDefault() {
+	*p = ABCServiceEchoServerResult{}
+}
+
+var ABCServiceEchoServerResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoServerResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoServerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoServerResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+var fieldIDToName_ABCServiceEchoServerResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ABCServiceEchoServerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoServerResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoServerResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoServerResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = c.NewResponse()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoServerResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoServer_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoServerResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoServerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoServerResult(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoServerResult) DeepEqual(ano *ABCServiceEchoServerResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoServerResult) Field0DeepEqual(src *c.Response) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoClientArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoClientArgs() *ABCServiceEchoClientArgs {
+	return &ABCServiceEchoClientArgs{}
+}
+
+func (p *ABCServiceEchoClientArgs) InitDefault() {
+	*p = ABCServiceEchoClientArgs{}
+}
+
+var ABCServiceEchoClientArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoClientArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoClientArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoClientArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+var fieldIDToName_ABCServiceEchoClientArgs = map[int16]string{
+	1: "req1",
+}
+
+func (p *ABCServiceEchoClientArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoClientArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoClientArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoClientArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req1 = c.NewRequest()
+	if err := p.Req1.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoClientArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoClient_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoClientArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req1.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoClientArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoClientArgs(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoClientArgs) DeepEqual(ano *ABCServiceEchoClientArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req1) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoClientArgs) Field1DeepEqual(src *c.Request) bool {
+
+	if !p.Req1.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoClientResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoClientResult() *ABCServiceEchoClientResult {
+	return &ABCServiceEchoClientResult{}
+}
+
+func (p *ABCServiceEchoClientResult) InitDefault() {
+	*p = ABCServiceEchoClientResult{}
+}
+
+var ABCServiceEchoClientResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoClientResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoClientResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoClientResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+var fieldIDToName_ABCServiceEchoClientResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ABCServiceEchoClientResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoClientResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoClientResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoClientResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = c.NewResponse()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoClientResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoClient_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoClientResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoClientResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoClientResult(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoClientResult) DeepEqual(ano *ABCServiceEchoClientResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoClientResult) Field0DeepEqual(src *c.Response) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoUnaryArgs struct {
+	Req1 *c.Request `thrift:"req1,1" frugal:"1,default,c.Request" json:"req1"`
+}
+
+func NewABCServiceEchoUnaryArgs() *ABCServiceEchoUnaryArgs {
+	return &ABCServiceEchoUnaryArgs{}
+}
+
+func (p *ABCServiceEchoUnaryArgs) InitDefault() {
+	*p = ABCServiceEchoUnaryArgs{}
+}
+
+var ABCServiceEchoUnaryArgs_Req1_DEFAULT *c.Request
+
+func (p *ABCServiceEchoUnaryArgs) GetReq1() (v *c.Request) {
+	if !p.IsSetReq1() {
+		return ABCServiceEchoUnaryArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *ABCServiceEchoUnaryArgs) SetReq1(val *c.Request) {
+	p.Req1 = val
+}
+
+var fieldIDToName_ABCServiceEchoUnaryArgs = map[int16]string{
+	1: "req1",
+}
+
+func (p *ABCServiceEchoUnaryArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *ABCServiceEchoUnaryArgs) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoUnaryArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoUnaryArgs) ReadField1(iprot thrift.TProtocol) error {
+	p.Req1 = c.NewRequest()
+	if err := p.Req1.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoUnaryArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoUnary_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoUnaryArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req1", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req1.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoUnaryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoUnaryArgs(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoUnaryArgs) DeepEqual(ano *ABCServiceEchoUnaryArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req1) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoUnaryArgs) Field1DeepEqual(src *c.Request) bool {
+
+	if !p.Req1.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ABCServiceEchoUnaryResult struct {
+	Success *c.Response `thrift:"success,0,optional" frugal:"0,optional,c.Response" json:"success,omitempty"`
+}
+
+func NewABCServiceEchoUnaryResult() *ABCServiceEchoUnaryResult {
+	return &ABCServiceEchoUnaryResult{}
+}
+
+func (p *ABCServiceEchoUnaryResult) InitDefault() {
+	*p = ABCServiceEchoUnaryResult{}
+}
+
+var ABCServiceEchoUnaryResult_Success_DEFAULT *c.Response
+
+func (p *ABCServiceEchoUnaryResult) GetSuccess() (v *c.Response) {
+	if !p.IsSetSuccess() {
+		return ABCServiceEchoUnaryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ABCServiceEchoUnaryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*c.Response)
+}
+
+var fieldIDToName_ABCServiceEchoUnaryResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ABCServiceEchoUnaryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ABCServiceEchoUnaryResult) Read(iprot thrift.TProtocol) (err error) {
+
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ABCServiceEchoUnaryResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoUnaryResult) ReadField0(iprot thrift.TProtocol) error {
+	p.Success = c.NewResponse()
+	if err := p.Success.Read(iprot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ABCServiceEchoUnaryResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EchoUnary_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ABCServiceEchoUnaryResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ABCServiceEchoUnaryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ABCServiceEchoUnaryResult(%+v)", *p)
+
+}
+
+func (p *ABCServiceEchoUnaryResult) DeepEqual(ano *ABCServiceEchoUnaryResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ABCServiceEchoUnaryResult) Field0DeepEqual(src *c.Response) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
 }

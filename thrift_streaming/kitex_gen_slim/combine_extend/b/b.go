@@ -48,7 +48,7 @@ func serviceInfoForClient() *kitex.ServiceInfo {
 
 // NewServiceInfo creates a new ServiceInfo containing all methods
 func NewServiceInfo() *kitex.ServiceInfo {
-	return newServiceInfo(false, true, true)
+	return newServiceInfo(true, true, true)
 }
 
 // NewServiceInfo creates a new ServiceInfo containing non-streaming methods
