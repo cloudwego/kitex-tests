@@ -59,10 +59,11 @@ func (s *ServiceCImpl) Echo1(ctx context.Context, req *multi_service.Request) (r
 	return &multi_service.Response{Message: "servicec Echo1"}, nil
 }
 
-func GetServer(hostport string) server.Server {
+func GetServer(hostport string, opts ...server.Option) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
+	opts = append(opts, server.WithServiceAddr(addr))
 
-	return server.NewServer(server.WithServiceAddr(addr))
+	return server.NewServer(opts...)
 }
 
 func TestRegisterService(t *testing.T) {
@@ -96,7 +97,23 @@ func TestRegisterService(t *testing.T) {
 	test.Assert(t, err.Error() == "method name [Echo1] is conflicted between services but no fallback service is specified")
 }
 
-func TestMultiService(t *testing.T) {
+func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
+	ip := "localhost:9900"
+	svr := GetServer(ip, server.WithRefuseTrafficWithoutServiceName(true))
+	err := servicea.RegisterService(svr, new(ServiceAImpl))
+	test.Assert(t, err == nil)
+	err = servicec.RegisterService(svr, new(ServiceCImpl))
+	test.Assert(t, err == nil)
+	go svr.Run()
+	defer svr.Stop()
+
+	clientA, err := servicea.NewClient("ServiceA", client.WithHostPorts(ip))
+	test.Assert(t, err == nil, err)
+	_, err = clientA.Echo1(context.Background(), &multi_service.Request{Message: "multi_service req"})
+	test.Assert(t, err != nil)
+}
+
+func TestMultiServiceWithFallbackService(t *testing.T) {
 	ip := "localhost:9900"
 	svr := GetServer(ip)
 	servicea.RegisterService(svr, new(ServiceAImpl))
