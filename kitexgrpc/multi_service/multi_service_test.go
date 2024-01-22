@@ -21,11 +21,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/pkg/test"
