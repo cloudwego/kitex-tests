@@ -21,14 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/servicec"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/server"
-	"github.com/cloudwego/kitex/transport"
 )
 
 type ServiceAHandler struct{}
@@ -61,7 +62,7 @@ func GetServer(hostport string) server.Server {
 func TestRegisterService(t *testing.T) {
 	ip := "localhost:9901"
 	svr := GetServer(ip)
-	err := servicea.RegisterService(svr, new(ServiceAHandler), true)
+	err := servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBHandler))
 	test.Assert(t, err == nil)
@@ -70,8 +71,8 @@ func TestRegisterService(t *testing.T) {
 
 	svr = GetServer(ip)
 	test.PanicAt(t, func() {
-		_ = servicea.RegisterService(svr, new(ServiceAHandler), true)
-		_ = serviceb.RegisterService(svr, new(ServiceBHandler), true)
+		_ = servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
+		_ = serviceb.RegisterService(svr, new(ServiceBHandler), server.WithFallbackService())
 	}, func(err interface{}) bool {
 		if errMsg, ok := err.(string); ok {
 			return strings.Contains(errMsg, "multiple fallback services cannot be registered")
@@ -94,7 +95,7 @@ func TestMultiService(t *testing.T) {
 	svr := GetServer(ip)
 	servicea.RegisterService(svr, new(ServiceAHandler))
 	serviceb.RegisterService(svr, new(ServiceBHandler))
-	servicec.RegisterService(svr, new(ServiceCHandler), true)
+	servicec.RegisterService(svr, new(ServiceCHandler), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
 

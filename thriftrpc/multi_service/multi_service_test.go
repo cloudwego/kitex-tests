@@ -21,14 +21,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicec"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/server"
-	"github.com/cloudwego/kitex/transport"
 )
 
 // ServiceAImpl implements the last servicea interface defined in the IDL.
@@ -67,7 +68,7 @@ func GetServer(hostport string) server.Server {
 func TestRegisterService(t *testing.T) {
 	ip := "localhost:9900"
 	svr := GetServer(ip)
-	err := servicea.RegisterService(svr, new(ServiceAImpl), true)
+	err := servicea.RegisterService(svr, new(ServiceAImpl), server.WithFallbackService())
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBImpl))
 	test.Assert(t, err == nil)
@@ -76,8 +77,8 @@ func TestRegisterService(t *testing.T) {
 
 	svr = GetServer(ip)
 	test.PanicAt(t, func() {
-		_ = servicea.RegisterService(svr, new(ServiceAImpl), true)
-		_ = serviceb.RegisterService(svr, new(ServiceBImpl), true)
+		_ = servicea.RegisterService(svr, new(ServiceAImpl), server.WithFallbackService())
+		_ = serviceb.RegisterService(svr, new(ServiceBImpl), server.WithFallbackService())
 	}, func(err interface{}) bool {
 		if errMsg, ok := err.(string); ok {
 			return strings.Contains(errMsg, "multiple fallback services cannot be registered")
@@ -100,7 +101,7 @@ func TestMultiService(t *testing.T) {
 	svr := GetServer(ip)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	serviceb.RegisterService(svr, new(ServiceBImpl))
-	servicec.RegisterService(svr, new(ServiceCImpl), true)
+	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
 
