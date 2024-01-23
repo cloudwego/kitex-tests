@@ -99,7 +99,7 @@ func TestRegisterService(t *testing.T) {
 
 func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
 	ip := "localhost:9900"
-	svr := GetServer(ip, server.WithRefuseTrafficWithoutServiceName(true))
+	svr := GetServer(ip, server.WithRefuseTrafficWithoutServiceName())
 	err := servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
