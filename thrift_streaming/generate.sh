@@ -68,7 +68,7 @@ function generate_new() {
     mkdir -p $dir
     if [ -d "$LOCAL_REPO" ]; then
         SAVE_DIR=`pwd`
-        cd $LOCAL_REPO/tool/cmd/kitex && go build && cp kitex $dir
+        cd $LOCAL_REPO/tool/cmd/kitex && go mod tidy && go build && cp kitex $dir
         cd $SAVE_DIR
     else
         GOBIN=$dir GOPROXY=direct go install github.com/cloudwego/kitex/tool/cmd/kitex@feat/thrift_multi_service
@@ -137,4 +137,4 @@ if [ ! -z "$TEST_GENERATE_OLD" ]; then
   generate_old
 fi
 
-cd exitserver && go build && mv exitserver $ROOT/binaries
+cd exitserver && go mod tidy && go build && mv exitserver $ROOT/binaries
