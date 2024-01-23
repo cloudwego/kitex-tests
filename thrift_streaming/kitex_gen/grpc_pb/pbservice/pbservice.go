@@ -111,7 +111,11 @@ func newServiceInfo(hasStreaming bool, keepStreamingMethods bool, keepNonStreami
 }
 
 func echoHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	st := arg.(*streaming.Args).Stream
+	streamingArgs, ok := arg.(*streaming.Args)
+	if !ok {
+		return errInvalidMessageType
+	}
+	st := streamingArgs.Stream
 	stream := &pBServiceEchoServer{st}
 	return handler.(grpc_pb.PBService).Echo(stream)
 }
@@ -270,7 +274,11 @@ func (p *EchoResult) GetResult() interface{} {
 }
 
 func echoClientHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	st := arg.(*streaming.Args).Stream
+	streamingArgs, ok := arg.(*streaming.Args)
+	if !ok {
+		return errInvalidMessageType
+	}
+	st := streamingArgs.Stream
 	stream := &pBServiceEchoClientServer{st}
 	return handler.(grpc_pb.PBService).EchoClient(stream)
 }
@@ -432,7 +440,11 @@ func (p *EchoClientResult) GetResult() interface{} {
 }
 
 func echoServerHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	st := arg.(*streaming.Args).Stream
+	streamingArgs, ok := arg.(*streaming.Args)
+	if !ok {
+		return errInvalidMessageType
+	}
+	st := streamingArgs.Stream
 	stream := &pBServiceEchoServerServer{st}
 	req := new(grpc_pb.Request)
 	if err := st.RecvMsg(req); err != nil {
