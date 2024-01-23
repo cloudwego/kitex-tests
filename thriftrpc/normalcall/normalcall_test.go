@@ -26,6 +26,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
@@ -38,7 +39,10 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
-var cli stservice.Client
+var (
+	cli     stservice.Client
+	cliSlim stservice_slim.Client
+)
 
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
@@ -46,14 +50,29 @@ func TestMain(m *testing.M) {
 		Address: ":9001",
 	}, nil)
 	time.Sleep(time.Second)
+	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: ":9002",
+	}, nil)
+	time.Sleep(time.Second)
 	m.Run()
 	svr.Stop()
+	slimSvr.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
 		HostPorts:         []string{":9001"},
+		Protocol:          p,
+		ConnMode:          thriftrpc.LongConnection,
+	}, opts...)
+}
+
+func getSlimKitexClient(p transport.Protocol, opts ...client.Option) stservice_slim.Client {
+	return thriftrpc.CreateSlimKitexClient(&thriftrpc.ClientInitParam{
+		TargetServiceName: "cloudwego.kitex.testa.slim",
+		HostPorts:         []string{":9002"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
 	}, opts...)
@@ -233,6 +252,24 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 		})
 
 	})
+}
+
+// When using slim template and users do not
+func TestFrugalFallback(t *testing.T) {
+	cliSlim = getSlimKitexClient(transport.PurePayload)
+
+	ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
+	stResp, err := cliSlim.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, stReq.Str == stResp.Str)
+
+	stResp, err = cliSlim.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, stReq.Str == stResp.Str)
+
+	stResp, err = cliSlim.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, stReq.Str == stResp.Str)
 }
 
 func BenchmarkThriftCall(b *testing.B) {

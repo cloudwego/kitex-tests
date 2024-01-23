@@ -90,6 +90,10 @@ kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.prot
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service.proto
 kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.proto
+
+test -d kitex_gen_slim && rm -rf kitex_gen_slim
+kitex -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
+
 # generate thrift streaming code
 LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
 test -d grpc_gen && rm -rf grpc_gen
