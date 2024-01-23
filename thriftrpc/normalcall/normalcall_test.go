@@ -269,13 +269,13 @@ func TestFrugalFallback(t *testing.T) {
 		{
 			desc: "use slim template, configure FastWrite thrift codec",
 			opts: []client.Option{
-				thrift.NewThriftCodecWithConfig(thrift.FastWrite),
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite)),
 			},
 		},
 		{
 			desc: "use slim template, only configure Basic thrift codec to disable frugal",
 			opts: []client.Option{
-				thrift.NewThriftCodecWithConfig(thrift.Basic),
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)),
 			},
 			expectErr: true,
 		},
