@@ -33,6 +33,7 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/utils"
 	"github.com/cloudwego/kitex/server"
@@ -256,20 +257,42 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 
 // When using slim template and users do not
 func TestFrugalFallback(t *testing.T) {
-	cliSlim = getSlimKitexClient(transport.PurePayload)
-
-	ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
-	stResp, err := cliSlim.TestSTReq(ctx, stReq)
-	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
-
-	stResp, err = cliSlim.TestSTReq(ctx, stReq)
-	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
-
-	stResp, err = cliSlim.TestSTReq(ctx, stReq)
-	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testCases := []struct {
+		desc      string
+		opts      []client.Option
+		expectErr bool
+	}{
+		{
+			desc: "use slim template, do not configure thrift codec type",
+			opts: nil,
+		},
+		{
+			desc: "use slim template, configure FastWrite thrift codec",
+			opts: []client.Option{
+				thrift.NewThriftCodecWithConfig(thrift.FastWrite),
+			},
+		},
+		{
+			desc: "use slim template, only configure Basic thrift codec to disable frugal",
+			opts: []client.Option{
+				thrift.NewThriftCodecWithConfig(thrift.Basic),
+			},
+			expectErr: true,
+		},
+	}
+	for _, tc := range testCases {
+		cliSlim = getSlimKitexClient(transport.PurePayload, tc.opts...)
+		ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
+		for i := 0; i < 3; i++ {
+			stResp, err := cliSlim.TestSTReq(ctx, stReq)
+			if tc.expectErr {
+				test.Assert(t, err != nil, err)
+				continue
+			}
+			test.Assert(t, err == nil, err)
+			test.Assert(t, stReq.Str == stResp.Str)
+		}
+	}
 }
 
 func BenchmarkThriftCall(b *testing.B) {

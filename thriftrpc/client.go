@@ -26,7 +26,6 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	"github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/instparam"
 	stability_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/utils"
@@ -63,13 +62,13 @@ type ClientInitParam struct {
 
 // CreateKitexClient .
 func CreateKitexClient(param *ClientInitParam, opts ...client.Option) stservice.Client {
-	opts = generateClientOptionsFromParam(param, opts)
+	opts = generateClientOptionsFromParam(param, opts...)
 
 	return stservice.MustNewClient(param.TargetServiceName, opts...)
 }
 
 func CreateSlimKitexClient(param *ClientInitParam, opts ...client.Option) stservice_slim.Client {
-	opts = generateClientOptionsFromParam(param, opts)
+	opts = generateClientOptionsFromParam(param, opts...)
 
 	return stservice_slim.MustNewClient(param.TargetServiceName, opts...)
 }

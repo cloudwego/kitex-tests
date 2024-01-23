@@ -45,14 +45,14 @@ type ServerInitParam struct {
 
 // RunServer .
 func RunServer(param *ServerInitParam, handler stability.STService, opts ...server.Option) server.Server {
-	opts = generateServerOptionsFromParam(param, opts)
+	opts = generateServerOptionsFromParam(param, opts...)
 	if handler == nil {
 		handler = new(STServiceHandler)
 	}
 	svr := stservice.NewServer(handler, opts...)
 
 	go func() {
-		if err = svr.Run(); err != nil {
+		if err := svr.Run(); err != nil {
 			panic(err)
 		}
 	}()
@@ -61,14 +61,14 @@ func RunServer(param *ServerInitParam, handler stability.STService, opts ...serv
 
 // RunSlimServer .
 func RunSlimServer(param *ServerInitParam, handler stability_slim.STService, opts ...server.Option) server.Server {
-	opts = generateServerOptionsFromParam(param, opts)
+	opts = generateServerOptionsFromParam(param, opts...)
 	if handler == nil {
 		handler = new(STServiceSlimHandler)
 	}
 	svr := stservice_slim.NewServer(handler, opts...)
 
 	go func() {
-		if err = svr.Run(); err != nil {
+		if err := svr.Run(); err != nil {
 			panic(err)
 		}
 	}()
