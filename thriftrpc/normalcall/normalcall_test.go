@@ -281,17 +281,19 @@ func TestFrugalFallback(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		cliSlim = getSlimKitexClient(transport.PurePayload, tc.opts...)
-		ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
-		for i := 0; i < 3; i++ {
-			stResp, err := cliSlim.TestSTReq(ctx, stReq)
-			if tc.expectErr {
-				test.Assert(t, err != nil, err)
-				continue
+		t.Run(tc.desc, func(t *testing.T) {
+			cliSlim = getSlimKitexClient(transport.PurePayload, tc.opts...)
+			ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
+			for i := 0; i < 3; i++ {
+				stResp, err := cliSlim.TestSTReq(ctx, stReq)
+				if tc.expectErr {
+					test.Assert(t, err != nil, err)
+					continue
+				}
+				test.Assert(t, err == nil, err)
+				test.Assert(t, stReq.Str == stResp.Str)
 			}
-			test.Assert(t, err == nil, err)
-			test.Assert(t, stReq.Str == stResp.Str)
-		}
+		})
 	}
 }
 
