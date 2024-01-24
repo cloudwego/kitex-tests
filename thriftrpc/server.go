@@ -24,11 +24,17 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	instparam_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/instparam"
+	stability_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability"
+	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	"github.com/cloudwego/kitex/pkg/limit"
 	"github.com/cloudwego/kitex/server"
 )
 
-var _ stability.STService = &STServiceHandler{}
+var (
+	_ stability.STService      = &STServiceHandler{}
+	_ stability_slim.STService = &STServiceSlimHandler{}
+)
 
 // ServerInitParam .
 type ServerInitParam struct {
@@ -39,6 +45,38 @@ type ServerInitParam struct {
 
 // RunServer .
 func RunServer(param *ServerInitParam, handler stability.STService, opts ...server.Option) server.Server {
+	opts = generateServerOptionsFromParam(param, opts...)
+	if handler == nil {
+		handler = new(STServiceHandler)
+	}
+	svr := stservice.NewServer(handler, opts...)
+
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	return svr
+}
+
+// RunSlimServer .
+func RunSlimServer(param *ServerInitParam, handler stability_slim.STService, opts ...server.Option) server.Server {
+	opts = generateServerOptionsFromParam(param, opts...)
+	if handler == nil {
+		handler = new(STServiceSlimHandler)
+	}
+	svr := stservice_slim.NewServer(handler, opts...)
+
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	return svr
+}
+
+// generateServerOptionsFromParam process ServerInitParam and add server.Option
+func generateServerOptionsFromParam(param *ServerInitParam, opts ...server.Option) []server.Option {
 	var addr net.Addr
 	var err error
 	switch v := param.Network; v {
@@ -60,17 +98,8 @@ func RunServer(param *ServerInitParam, handler stability.STService, opts ...serv
 	if param.ConnMode == ConnectionMultiplexed {
 		opts = append(opts, server.WithMuxTransport())
 	}
-	if handler == nil {
-		handler = new(STServiceHandler)
-	}
-	svr := stservice.NewServer(handler, opts...)
 
-	go func() {
-		if err = svr.Run(); err != nil {
-			panic(err)
-		}
-	}()
-	return svr
+	return opts
 }
 
 // STServiceHandler .
@@ -134,6 +163,64 @@ func (h *STServiceHandler) CircuitBreakTest(ctx context.Context, req *stability.
 		time.Sleep(200 * time.Millisecond)
 	}
 	resp := &stability.STResponse{
+		Str:     req.Str,
+		Mp:      req.StringMap,
+		FlagMsg: req.FlagMsg,
+	}
+	return resp, nil
+}
+
+type STServiceSlimHandler struct{}
+
+func (S *STServiceSlimHandler) VisitOneway(ctx context.Context, req *stability_slim.STRequest) (err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (S *STServiceSlimHandler) TestSTReq(ctx context.Context, req *stability_slim.STRequest) (r *stability_slim.STResponse, err error) {
+	resp := &stability_slim.STResponse{
+		Str:     req.Str,
+		Mp:      req.StringMap,
+		FlagMsg: req.FlagMsg,
+	}
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return nil, err
+		} else {
+			time.Sleep(mockSleep)
+		}
+	}
+	return resp, nil
+}
+
+func (S *STServiceSlimHandler) TestObjReq(ctx context.Context, req *instparam_slim.ObjReq) (r *instparam_slim.ObjResp, err error) {
+	resp := &instparam_slim.ObjResp{
+		Msg:     req.Msg,
+		MsgSet:  req.MsgSet,
+		MsgMap:  req.MsgMap,
+		FlagMsg: req.FlagMsg,
+	}
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return nil, err
+		} else {
+			time.Sleep(mockSleep)
+		}
+	}
+	return resp, nil
+}
+
+func (S *STServiceSlimHandler) TestException(ctx context.Context, req *stability_slim.STRequest) (r *stability_slim.STResponse, err error) {
+	err = &stability_slim.STException{Message: "mock exception"}
+	return nil, err
+}
+
+func (S *STServiceSlimHandler) CircuitBreakTest(ctx context.Context, req *stability_slim.STRequest) (r *stability_slim.STResponse, err error) {
+	// force 50% of the responses to cost over 200ms
+	if atomic.AddInt32(&countFlag, 1)%2 == 0 {
+		time.Sleep(200 * time.Millisecond)
+	}
+	resp := &stability_slim.STResponse{
 		Str:     req.Str,
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,

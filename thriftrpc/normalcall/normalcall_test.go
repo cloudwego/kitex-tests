@@ -26,19 +26,24 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/utils"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
 
-var cli stservice.Client
+var (
+	cli     stservice.Client
+	cliSlim stservice_slim.Client
+)
 
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
@@ -46,14 +51,34 @@ func TestMain(m *testing.M) {
 		Address: ":9001",
 	}, nil)
 	time.Sleep(time.Second)
+	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: ":9003",
+	}, nil)
+	time.Sleep(time.Second)
+	slimSvrWithFrugalConfigured := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: ":9004",
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
 	m.Run()
 	svr.Stop()
+	slimSvr.Stop()
+	slimSvrWithFrugalConfigured.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
 		HostPorts:         []string{":9001"},
+		Protocol:          p,
+		ConnMode:          thriftrpc.LongConnection,
+	}, opts...)
+}
+
+func getSlimKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_slim.Client {
+	return thriftrpc.CreateSlimKitexClient(&thriftrpc.ClientInitParam{
+		TargetServiceName: "cloudwego.kitex.testa.slim",
+		HostPorts:         hostPorts,
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
 	}, opts...)
@@ -233,6 +258,59 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 		})
 
 	})
+}
+
+// When using slim template and users do not
+func TestFrugalFallback(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		hostPorts []string
+		opts      []client.Option
+		expectErr bool
+	}{
+		{
+			desc:      "use slim template, do not configure thrift codec type",
+			hostPorts: []string{":9003"},
+			opts:      nil,
+		},
+		{
+			desc:      "use slim template, configure FastWrite | FastRead thrift codec",
+			hostPorts: []string{":9003"},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
+			},
+		},
+		{
+			desc:      "use slim template, only configure Basic thrift codec to disable frugal",
+			hostPorts: []string{":9003"},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)),
+			},
+			expectErr: true,
+		},
+		{
+			desc:      "use slim template, configure FrugalWrite | FrugalRead thrift codec, connect to frugal configured server",
+			hostPorts: []string{":9004"},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cliSlim = getSlimKitexClient(transport.TTHeader, tc.hostPorts, tc.opts...)
+			ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
+			for i := 0; i < 3; i++ {
+				stResp, err := cliSlim.TestSTReq(ctx, stReq)
+				if tc.expectErr {
+					test.Assert(t, err != nil, err)
+					continue
+				}
+				test.Assert(t, err == nil, err)
+				test.Assert(t, stReq.Str == stResp.Str)
+			}
+		})
+	}
 }
 
 func BenchmarkThriftCall(b *testing.B) {
