@@ -298,7 +298,7 @@ func TestFrugalFallback(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cliSlim = getSlimKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
+			cliSlim = getSlimKitexClient(transport.TTHeader, tc.hostPorts, tc.opts...)
 			ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
 			for i := 0; i < 3; i++ {
 				stResp, err := cliSlim.TestSTReq(ctx, stReq)
