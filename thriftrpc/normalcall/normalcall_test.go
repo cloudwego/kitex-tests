@@ -53,7 +53,7 @@ func TestMain(m *testing.M) {
 	time.Sleep(time.Second)
 	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9002",
+		Address: ":9003",
 	}, nil)
 	time.Sleep(time.Second)
 	m.Run()
@@ -73,7 +73,7 @@ func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Clien
 func getSlimKitexClient(p transport.Protocol, opts ...client.Option) stservice_slim.Client {
 	return thriftrpc.CreateSlimKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa.slim",
-		HostPorts:         []string{":9002"},
+		HostPorts:         []string{":9003"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
 	}, opts...)
