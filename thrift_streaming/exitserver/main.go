@@ -21,9 +21,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
 	"github.com/cloudwego/kitex/server"
+
+	"github.com/cloudwego/kitex-tests/thrift_streaming/exitserver/kitex_gen/echo"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/exitserver/kitex_gen/echo/echoservice"
 )
 
 func WithServerAddr(hostPort string) server.Option {

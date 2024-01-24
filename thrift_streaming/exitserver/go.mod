@@ -1,16 +1,15 @@
-module exitserver
+module github.com/cloudwego/kitex-tests/thrift_streaming/exitserver
 
-go 1.20
+go 1.16
 
-replace github.com/cloudwego/kitex-tests => ../..
+replace github.com/apache/thrift => github.com/apache/thrift v0.13.0
 
 require (
+	github.com/apache/thrift v0.13.0
 	github.com/cloudwego/kitex v0.9.0-rc4
-	github.com/cloudwego/kitex-tests v0.1.0
 )
 
 require (
-	github.com/apache/thrift v0.13.0 // indirect
 	github.com/bytedance/gopkg v0.0.0-20230728082804-614d0af6619b // indirect
 	github.com/bytedance/sonic v1.10.2 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
