@@ -542,7 +542,7 @@ func TestTracingServerReturnBizError(t *testing.T) {
 		test.Assert(t, serverTracer.finishCalled, serverTracer)
 	})
 
-	/* Waiting for fix for streaming apis with biz error
+	// Waiting for fix for streaming apis with biz error
 	t.Run("server", func(t *testing.T) {
 		clientTracer.Reset()
 		serverTracer.Reset()
@@ -590,7 +590,6 @@ func TestTracingServerReturnBizError(t *testing.T) {
 		clientTracer.finishCheck(t, "client")
 		serverTracer.finishCheck(t, "server")
 	})
-	*/
 }
 
 func TestTracingClientTimeout(t *testing.T) {
