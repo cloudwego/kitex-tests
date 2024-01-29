@@ -77,8 +77,8 @@ func GetServer(hostport string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 
 	svr := server.NewServer(server.WithServiceAddr(addr))
-	svr.RegisterService(servicea.NewServiceInfo(), new(ServiceAImpl))
-	svr.RegisterService(serviceb.NewServiceInfo(), new(ServiceBImpl))
+	servicea.RegisterService(svr, new(ServiceAImpl))
+	serviceb.RegisterService(svr, new(ServiceBImpl))
 
 	return svr
 }
