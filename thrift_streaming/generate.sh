@@ -76,7 +76,7 @@ function generate_new() {
         GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@develop
     fi
     if [ ! -f "$dir/thriftgo" ]; then
-        GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.6
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
     fi
 
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
@@ -114,7 +114,7 @@ function generate_new_thriftgo_old_kitex() {
         GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
     fi
     if [ ! -f "$dir/thriftgo" ]; then
-        GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.6
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
     fi
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
         echo "[cross] Unable to install kitex or thriftgo to $dir, please check before continue."
