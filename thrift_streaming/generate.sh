@@ -45,7 +45,7 @@ function generate_old() {
 
     mkdir -p $dir
     if [ ! -f "$dir/kitex" ]; then
-        GOBIN=$dir GOPROXY=direct go install github.com/cloudwego/kitex/tool/cmd/kitex@feat/thrift_multi_service
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
     fi
     if [ ! -f "$dir/thriftgo" ]; then
         GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.4
@@ -73,10 +73,10 @@ function generate_new() {
         cd $LOCAL_REPO/tool/cmd/kitex && go build && cp kitex $dir
         cd $SAVE_DIR
     else
-        GOBIN=$dir GOPROXY=direct go install github.com/cloudwego/kitex/tool/cmd/kitex@feat/thrift_multi_service
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@develop
     fi
     if [ ! -f "$dir/thriftgo" ]; then
-        GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.6
     fi
 
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
@@ -111,10 +111,10 @@ function generate_new_thriftgo_old_kitex() {
 
     mkdir -p $dir
     if [ ! -f "$dir/kitex" ]; then
-        GOBIN=$dir GOPROXY=direct go install github.com/cloudwego/kitex/tool/cmd/kitex@feat/thrift_multi_service
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@v0.8.0
     fi
     if [ ! -f "$dir/thriftgo" ]; then
-        GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
+        GOBIN=$dir go install github.com/cloudwego/thriftgo@v0.3.6
     fi
     if [ ! -f "$dir/kitex" -o ! -f "$dir/thriftgo" ]; then
         echo "[cross] Unable to install kitex or thriftgo to $dir, please check before continue."
@@ -127,7 +127,7 @@ function generate_new_thriftgo_old_kitex() {
     kitex -gen-path kitex_gen_cross $module $idl
 }
 
-GOPROXY=direct go get github.com/cloudwego/kitex@feat/thrift_multi_service
+go get github.com/cloudwego/kitex@develop
 if [ -d "$LOCAL_REPO" ]; then
     go mod edit -replace github.com/cloudwego/kitex=$LOCAL_REPO
 fi
