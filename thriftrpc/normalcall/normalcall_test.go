@@ -24,11 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -38,29 +33,49 @@ import (
 	"github.com/cloudwego/kitex/pkg/utils"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/common"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
 var (
 	cli     stservice.Client
 	cliSlim stservice_slim.Client
+
+	addr              = "127.0.0.1:9001"
+	disablePoolAddr   = "127.0.0.1:9002"
+	muxAdr            = "127.0.0.1:9003" // used in `muxcall`
+	slimFrugalAddr    = "127.0.0.1:9004"
+	slimAddr          = "127.0.0.1:9005"
+	serverTimeoutAddr = "127.0.0.1:9006"
 )
 
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9001",
+		Address: addr,
 	}, nil)
-	time.Sleep(time.Second)
+
 	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9003",
+		Address: slimAddr,
 	}, nil)
-	time.Sleep(time.Second)
+
 	slimSvrWithFrugalConfigured := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9004",
+		Address: slimFrugalAddr,
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
+
+	common.WaitServer(addr)
+	common.WaitServer(slimAddr)
+	common.WaitServer(slimFrugalAddr)
+
 	m.Run()
+
 	svr.Stop()
 	slimSvr.Stop()
 	slimSvrWithFrugalConfigured.Stop()
@@ -209,7 +224,7 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 
 	t.Run("server", func(t *testing.T) {
 		var ri1, ri2 rpcinfo.RPCInfo
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: ":9002"}, nil,
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: disablePoolAddr}, nil,
 			server.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, req, resp interface{}) (err error) {
 					err = endpoint(ctx, req, resp)
@@ -222,7 +237,7 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 					return err
 				}
 			}))
-		time.Sleep(time.Second)
+		common.WaitServer(addr)
 		defer svr.Stop()
 
 		cli = getKitexClient(transport.TTHeaderFramed)
@@ -232,11 +247,11 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 			rpcinfo.EnablePool(true)
 
 			stReq.Name = "1"
-			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
 			test.Assert(t, err == nil, err)
 
 			stReq.Name = "2"
-			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
 			test.Assert(t, err == nil, err)
 
 			addr1, addr2 := reflect.ValueOf(ri1).Pointer(), reflect.ValueOf(ri2).Pointer()
@@ -246,17 +261,16 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 		t.Run("disable", func(t *testing.T) {
 			rpcinfo.EnablePool(false)
 			stReq.Name = "1"
-			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
 			test.Assert(t, err == nil, err)
 
 			stReq.Name = "2"
-			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9002"))
+			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
 			test.Assert(t, err == nil, err)
 
 			addr1, addr2 := reflect.ValueOf(ri1).Pointer(), reflect.ValueOf(ri2).Pointer()
 			test.Assertf(t, addr1 != addr2, "addr1: %v, addr2: %v", addr1, addr2)
 		})
-
 	})
 }
 
@@ -270,19 +284,19 @@ func TestFrugalFallback(t *testing.T) {
 	}{
 		{
 			desc:      "use slim template, do not configure thrift codec type",
-			hostPorts: []string{":9003"},
+			hostPorts: []string{slimAddr},
 			opts:      nil,
 		},
 		{
 			desc:      "use slim template, configure FastWrite | FastRead thrift codec",
-			hostPorts: []string{":9003"},
+			hostPorts: []string{slimAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
 			},
 		},
 		{
 			desc:      "use slim template, only configure Basic thrift codec to disable frugal",
-			hostPorts: []string{":9003"},
+			hostPorts: []string{slimAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)),
 			},
@@ -290,7 +304,7 @@ func TestFrugalFallback(t *testing.T) {
 		},
 		{
 			desc:      "use slim template, configure FrugalWrite | FrugalRead thrift codec, connect to frugal configured server",
-			hostPorts: []string{":9004"},
+			hostPorts: []string{slimFrugalAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
 			},

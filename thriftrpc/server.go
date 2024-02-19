@@ -21,14 +21,15 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/cloudwego/kitex/pkg/limit"
+	"github.com/cloudwego/kitex/server"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	instparam_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/instparam"
 	stability_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
-	"github.com/cloudwego/kitex/pkg/limit"
-	"github.com/cloudwego/kitex/server"
 )
 
 var (
@@ -91,6 +92,7 @@ func generateServerOptionsFromParam(param *ServerInitParam, opts ...server.Optio
 		panic(err)
 	}
 
+	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	opts = append(opts, server.WithServiceAddr(addr))
 	opts = append(opts, server.WithLimit(&limit.Option{
 		MaxConnections: 30000, MaxQPS: 300000, UpdateControl: func(u limit.Updater) {},
@@ -173,7 +175,7 @@ func (h *STServiceHandler) CircuitBreakTest(ctx context.Context, req *stability.
 type STServiceSlimHandler struct{}
 
 func (S *STServiceSlimHandler) VisitOneway(ctx context.Context, req *stability_slim.STRequest) (err error) {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
