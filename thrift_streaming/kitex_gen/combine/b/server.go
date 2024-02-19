@@ -19,3 +19,7 @@ func NewServer(handler combine.B, opts ...server.Option) server.Server {
 	}
 	return svr
 }
+
+func RegisterService(svr server.Server, handler combine.B, opts ...server.RegisterOption) error {
+	return svr.RegisterService(serviceInfo(), handler, opts...)
+}

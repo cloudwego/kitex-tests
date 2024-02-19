@@ -18,3 +18,7 @@ func NewServer(handler kitex_pb.PBService, opts ...server.Option) server.Server 
 	}
 	return svr
 }
+
+func RegisterService(svr server.Server, handler kitex_pb.PBService, opts ...server.RegisterOption) error {
+	return svr.RegisterService(serviceInfo(), handler, opts...)
+}

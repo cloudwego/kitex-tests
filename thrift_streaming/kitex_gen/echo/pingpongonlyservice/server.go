@@ -19,3 +19,7 @@ func NewServer(handler echo.PingPongOnlyService, opts ...server.Option) server.S
 	}
 	return svr
 }
+
+func RegisterService(svr server.Server, handler echo.PingPongOnlyService, opts ...server.RegisterOption) error {
+	return svr.RegisterService(serviceInfo(), handler, opts...)
+}

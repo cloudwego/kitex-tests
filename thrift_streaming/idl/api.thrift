@@ -73,3 +73,24 @@ service ABCService {
     a.b.c.Response EchoClient(1: a.b.c.Request req1) (streaming.mode="client"),
     a.b.c.Response EchoUnary(1: a.b.c.Request req1) (streaming.mode="unary"),
 }
+
+// test for lower case type, service, method
+
+struct lower_request {
+    1: required string message,
+}
+
+struct lower_response {
+    1: required string message,
+}
+
+service lower_service {
+    // streaming api (HTTP2)
+    lower_response echo_bidirectional (1: lower_request req1) (streaming.mode="bidirectional"),
+    lower_response echo_client (1: lower_request req1) (streaming.mode="client"),
+    lower_response echo_server (1: lower_request req1) (streaming.mode="server"),
+    lower_response echo_unary (1: lower_request req1) (streaming.mode="unary"),
+
+    // KitexThrift
+    lower_response echo_pingPong (1: lower_request req1),
+}
