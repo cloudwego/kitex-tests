@@ -50,4 +50,5 @@ go.mod
 go.sum
 bin
 thrift_streaming/binaries
+thrift_streaming/kitex_gen*
 thrift_streaming/exitserver/exitserver

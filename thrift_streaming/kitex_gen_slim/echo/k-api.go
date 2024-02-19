@@ -1162,3 +1162,383 @@ func (p *ABCServiceEchoUnaryResult) String() string {
 func (p *ABCServiceEchoUnaryResult) GetResult() interface{} {
 	return p.Success
 }
+
+type LowerServiceEchoBidirectionalArgs struct {
+	Req1 *LowerRequest `thrift:"req1,1" frugal:"1,default,LowerRequest" json:"req1"`
+}
+
+func NewLowerServiceEchoBidirectionalArgs() *LowerServiceEchoBidirectionalArgs {
+	return &LowerServiceEchoBidirectionalArgs{}
+}
+
+func (p *LowerServiceEchoBidirectionalArgs) InitDefault() {
+	*p = LowerServiceEchoBidirectionalArgs{}
+}
+
+var LowerServiceEchoBidirectionalArgs_Req1_DEFAULT *LowerRequest
+
+func (p *LowerServiceEchoBidirectionalArgs) GetReq1() (v *LowerRequest) {
+	if !p.IsSetReq1() {
+		return LowerServiceEchoBidirectionalArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *LowerServiceEchoBidirectionalArgs) SetReq1(val *LowerRequest) {
+	p.Req1 = val
+}
+
+func (p *LowerServiceEchoBidirectionalArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *LowerServiceEchoBidirectionalArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoBidirectionalArgs(%+v)", *p)
+}
+func (p *LowerServiceEchoBidirectionalArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type LowerServiceEchoBidirectionalResult struct {
+	Success *LowerResponse `thrift:"success,0,optional" frugal:"0,optional,LowerResponse" json:"success,omitempty"`
+}
+
+func NewLowerServiceEchoBidirectionalResult() *LowerServiceEchoBidirectionalResult {
+	return &LowerServiceEchoBidirectionalResult{}
+}
+
+func (p *LowerServiceEchoBidirectionalResult) InitDefault() {
+	*p = LowerServiceEchoBidirectionalResult{}
+}
+
+var LowerServiceEchoBidirectionalResult_Success_DEFAULT *LowerResponse
+
+func (p *LowerServiceEchoBidirectionalResult) GetSuccess() (v *LowerResponse) {
+	if !p.IsSetSuccess() {
+		return LowerServiceEchoBidirectionalResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LowerServiceEchoBidirectionalResult) SetSuccess(x interface{}) {
+	p.Success = x.(*LowerResponse)
+}
+
+func (p *LowerServiceEchoBidirectionalResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LowerServiceEchoBidirectionalResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoBidirectionalResult(%+v)", *p)
+}
+func (p *LowerServiceEchoBidirectionalResult) GetResult() interface{} {
+	return p.Success
+}
+
+type LowerServiceEchoClientArgs struct {
+	Req1 *LowerRequest `thrift:"req1,1" frugal:"1,default,LowerRequest" json:"req1"`
+}
+
+func NewLowerServiceEchoClientArgs() *LowerServiceEchoClientArgs {
+	return &LowerServiceEchoClientArgs{}
+}
+
+func (p *LowerServiceEchoClientArgs) InitDefault() {
+	*p = LowerServiceEchoClientArgs{}
+}
+
+var LowerServiceEchoClientArgs_Req1_DEFAULT *LowerRequest
+
+func (p *LowerServiceEchoClientArgs) GetReq1() (v *LowerRequest) {
+	if !p.IsSetReq1() {
+		return LowerServiceEchoClientArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *LowerServiceEchoClientArgs) SetReq1(val *LowerRequest) {
+	p.Req1 = val
+}
+
+func (p *LowerServiceEchoClientArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *LowerServiceEchoClientArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoClientArgs(%+v)", *p)
+}
+func (p *LowerServiceEchoClientArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type LowerServiceEchoClientResult struct {
+	Success *LowerResponse `thrift:"success,0,optional" frugal:"0,optional,LowerResponse" json:"success,omitempty"`
+}
+
+func NewLowerServiceEchoClientResult() *LowerServiceEchoClientResult {
+	return &LowerServiceEchoClientResult{}
+}
+
+func (p *LowerServiceEchoClientResult) InitDefault() {
+	*p = LowerServiceEchoClientResult{}
+}
+
+var LowerServiceEchoClientResult_Success_DEFAULT *LowerResponse
+
+func (p *LowerServiceEchoClientResult) GetSuccess() (v *LowerResponse) {
+	if !p.IsSetSuccess() {
+		return LowerServiceEchoClientResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LowerServiceEchoClientResult) SetSuccess(x interface{}) {
+	p.Success = x.(*LowerResponse)
+}
+
+func (p *LowerServiceEchoClientResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LowerServiceEchoClientResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoClientResult(%+v)", *p)
+}
+func (p *LowerServiceEchoClientResult) GetResult() interface{} {
+	return p.Success
+}
+
+type LowerServiceEchoServerArgs struct {
+	Req1 *LowerRequest `thrift:"req1,1" frugal:"1,default,LowerRequest" json:"req1"`
+}
+
+func NewLowerServiceEchoServerArgs() *LowerServiceEchoServerArgs {
+	return &LowerServiceEchoServerArgs{}
+}
+
+func (p *LowerServiceEchoServerArgs) InitDefault() {
+	*p = LowerServiceEchoServerArgs{}
+}
+
+var LowerServiceEchoServerArgs_Req1_DEFAULT *LowerRequest
+
+func (p *LowerServiceEchoServerArgs) GetReq1() (v *LowerRequest) {
+	if !p.IsSetReq1() {
+		return LowerServiceEchoServerArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *LowerServiceEchoServerArgs) SetReq1(val *LowerRequest) {
+	p.Req1 = val
+}
+
+func (p *LowerServiceEchoServerArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *LowerServiceEchoServerArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoServerArgs(%+v)", *p)
+}
+func (p *LowerServiceEchoServerArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type LowerServiceEchoServerResult struct {
+	Success *LowerResponse `thrift:"success,0,optional" frugal:"0,optional,LowerResponse" json:"success,omitempty"`
+}
+
+func NewLowerServiceEchoServerResult() *LowerServiceEchoServerResult {
+	return &LowerServiceEchoServerResult{}
+}
+
+func (p *LowerServiceEchoServerResult) InitDefault() {
+	*p = LowerServiceEchoServerResult{}
+}
+
+var LowerServiceEchoServerResult_Success_DEFAULT *LowerResponse
+
+func (p *LowerServiceEchoServerResult) GetSuccess() (v *LowerResponse) {
+	if !p.IsSetSuccess() {
+		return LowerServiceEchoServerResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LowerServiceEchoServerResult) SetSuccess(x interface{}) {
+	p.Success = x.(*LowerResponse)
+}
+
+func (p *LowerServiceEchoServerResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LowerServiceEchoServerResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoServerResult(%+v)", *p)
+}
+func (p *LowerServiceEchoServerResult) GetResult() interface{} {
+	return p.Success
+}
+
+type LowerServiceEchoUnaryArgs struct {
+	Req1 *LowerRequest `thrift:"req1,1" frugal:"1,default,LowerRequest" json:"req1"`
+}
+
+func NewLowerServiceEchoUnaryArgs() *LowerServiceEchoUnaryArgs {
+	return &LowerServiceEchoUnaryArgs{}
+}
+
+func (p *LowerServiceEchoUnaryArgs) InitDefault() {
+	*p = LowerServiceEchoUnaryArgs{}
+}
+
+var LowerServiceEchoUnaryArgs_Req1_DEFAULT *LowerRequest
+
+func (p *LowerServiceEchoUnaryArgs) GetReq1() (v *LowerRequest) {
+	if !p.IsSetReq1() {
+		return LowerServiceEchoUnaryArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *LowerServiceEchoUnaryArgs) SetReq1(val *LowerRequest) {
+	p.Req1 = val
+}
+
+func (p *LowerServiceEchoUnaryArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *LowerServiceEchoUnaryArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoUnaryArgs(%+v)", *p)
+}
+func (p *LowerServiceEchoUnaryArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type LowerServiceEchoUnaryResult struct {
+	Success *LowerResponse `thrift:"success,0,optional" frugal:"0,optional,LowerResponse" json:"success,omitempty"`
+}
+
+func NewLowerServiceEchoUnaryResult() *LowerServiceEchoUnaryResult {
+	return &LowerServiceEchoUnaryResult{}
+}
+
+func (p *LowerServiceEchoUnaryResult) InitDefault() {
+	*p = LowerServiceEchoUnaryResult{}
+}
+
+var LowerServiceEchoUnaryResult_Success_DEFAULT *LowerResponse
+
+func (p *LowerServiceEchoUnaryResult) GetSuccess() (v *LowerResponse) {
+	if !p.IsSetSuccess() {
+		return LowerServiceEchoUnaryResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LowerServiceEchoUnaryResult) SetSuccess(x interface{}) {
+	p.Success = x.(*LowerResponse)
+}
+
+func (p *LowerServiceEchoUnaryResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LowerServiceEchoUnaryResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoUnaryResult(%+v)", *p)
+}
+func (p *LowerServiceEchoUnaryResult) GetResult() interface{} {
+	return p.Success
+}
+
+type LowerServiceEchoPingPongArgs struct {
+	Req1 *LowerRequest `thrift:"req1,1" frugal:"1,default,LowerRequest" json:"req1"`
+}
+
+func NewLowerServiceEchoPingPongArgs() *LowerServiceEchoPingPongArgs {
+	return &LowerServiceEchoPingPongArgs{}
+}
+
+func (p *LowerServiceEchoPingPongArgs) InitDefault() {
+	*p = LowerServiceEchoPingPongArgs{}
+}
+
+var LowerServiceEchoPingPongArgs_Req1_DEFAULT *LowerRequest
+
+func (p *LowerServiceEchoPingPongArgs) GetReq1() (v *LowerRequest) {
+	if !p.IsSetReq1() {
+		return LowerServiceEchoPingPongArgs_Req1_DEFAULT
+	}
+	return p.Req1
+}
+func (p *LowerServiceEchoPingPongArgs) SetReq1(val *LowerRequest) {
+	p.Req1 = val
+}
+
+func (p *LowerServiceEchoPingPongArgs) IsSetReq1() bool {
+	return p.Req1 != nil
+}
+
+func (p *LowerServiceEchoPingPongArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoPingPongArgs(%+v)", *p)
+}
+func (p *LowerServiceEchoPingPongArgs) GetFirstArgument() interface{} {
+	return p.Req1
+}
+
+type LowerServiceEchoPingPongResult struct {
+	Success *LowerResponse `thrift:"success,0,optional" frugal:"0,optional,LowerResponse" json:"success,omitempty"`
+}
+
+func NewLowerServiceEchoPingPongResult() *LowerServiceEchoPingPongResult {
+	return &LowerServiceEchoPingPongResult{}
+}
+
+func (p *LowerServiceEchoPingPongResult) InitDefault() {
+	*p = LowerServiceEchoPingPongResult{}
+}
+
+var LowerServiceEchoPingPongResult_Success_DEFAULT *LowerResponse
+
+func (p *LowerServiceEchoPingPongResult) GetSuccess() (v *LowerResponse) {
+	if !p.IsSetSuccess() {
+		return LowerServiceEchoPingPongResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *LowerServiceEchoPingPongResult) SetSuccess(x interface{}) {
+	p.Success = x.(*LowerResponse)
+}
+
+func (p *LowerServiceEchoPingPongResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *LowerServiceEchoPingPongResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerServiceEchoPingPongResult(%+v)", *p)
+}
+func (p *LowerServiceEchoPingPongResult) GetResult() interface{} {
+	return p.Success
+}

@@ -19,3 +19,7 @@ func NewServer(handler echo.EchoService, opts ...server.Option) server.Server {
 	}
 	return svr
 }
+
+func RegisterService(svr server.Server, handler echo.EchoService, opts ...server.RegisterOption) error {
+	return svr.RegisterService(serviceInfo(), handler, opts...)
+}

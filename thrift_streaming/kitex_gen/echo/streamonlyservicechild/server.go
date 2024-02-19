@@ -19,3 +19,7 @@ func NewServer(handler echo.StreamOnlyServiceChild, opts ...server.Option) serve
 	}
 	return svr
 }
+
+func RegisterService(svr server.Server, handler echo.StreamOnlyServiceChild, opts ...server.RegisterOption) error {
+	return svr.RegisterService(serviceInfo(), handler, opts...)
+}

@@ -61,6 +61,58 @@ func (p *EchoResponse) String() string {
 	return fmt.Sprintf("EchoResponse(%+v)", *p)
 }
 
+type LowerRequest struct {
+	Message string `thrift:"message,1,required" frugal:"1,required,string" json:"message"`
+}
+
+func NewLowerRequest() *LowerRequest {
+	return &LowerRequest{}
+}
+
+func (p *LowerRequest) InitDefault() {
+	*p = LowerRequest{}
+}
+
+func (p *LowerRequest) GetMessage() (v string) {
+	return p.Message
+}
+func (p *LowerRequest) SetMessage(val string) {
+	p.Message = val
+}
+
+func (p *LowerRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerRequest(%+v)", *p)
+}
+
+type LowerResponse struct {
+	Message string `thrift:"message,1,required" frugal:"1,required,string" json:"message"`
+}
+
+func NewLowerResponse() *LowerResponse {
+	return &LowerResponse{}
+}
+
+func (p *LowerResponse) InitDefault() {
+	*p = LowerResponse{}
+}
+
+func (p *LowerResponse) GetMessage() (v string) {
+	return p.Message
+}
+func (p *LowerResponse) SetMessage(val string) {
+	p.Message = val
+}
+
+func (p *LowerResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("LowerResponse(%+v)", *p)
+}
+
 type EchoException struct {
 	Message string `thrift:"message,1" frugal:"1,default,string" json:"message"`
 }
@@ -198,6 +250,38 @@ type ABCService_EchoClientServer interface {
 	Recv() (*c.Request, error)
 
 	SendAndClose(*c.Response) error
+}
+
+type LowerService interface {
+	EchoBidirectional(stream LowerService_echo_bidirectionalServer) (err error)
+
+	EchoClient(stream LowerService_echo_clientServer) (err error)
+
+	EchoServer(req *LowerRequest, stream LowerService_echo_serverServer) (err error)
+
+	EchoUnary(ctx context.Context, req1 *LowerRequest) (r *LowerResponse, err error)
+
+	EchoPingPong(ctx context.Context, req1 *LowerRequest) (r *LowerResponse, err error)
+}
+
+type LowerService_echo_bidirectionalServer interface {
+	streaming.Stream
+
+	Recv() (*LowerRequest, error)
+
+	Send(*LowerResponse) error
+}
+type LowerService_echo_clientServer interface {
+	streaming.Stream
+
+	Recv() (*LowerRequest, error)
+
+	SendAndClose(*LowerResponse) error
+}
+type LowerService_echo_serverServer interface {
+	streaming.Stream
+
+	Send(*LowerResponse) error
 }
 
 // exceptions of methods in EchoService.
