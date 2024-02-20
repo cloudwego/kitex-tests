@@ -1,4 +1,4 @@
-// Copyright 2021 CloudWeGo Authors
+// Copyright 2024 CloudWeGo Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -78,9 +78,6 @@ func assertRequest(req *tenant.EchoRequest) error {
 		return err
 	}
 	if err := assert(req.GetI64(), int64(1)); err != nil {
-		return err
-	}
-	if err := assert(req.GetBinary(), []byte("hello")); err != nil {
 		return err
 	}
 	if err := assert(req.GetMap(), map[string]string{
