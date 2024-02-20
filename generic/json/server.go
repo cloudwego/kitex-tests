@@ -1,4 +1,4 @@
-// Copyright 2021 CloudWeGo Authors
+// Copyright 2024 CloudWeGo Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func runGenericServer() server.Server {
 	if err != nil {
 		panic(err)
 	}
-	g, err := generic.MapThriftGeneric(p)
+	g, err := generic.JSONThriftGeneric(p)
 	if err != nil {
 		panic(err)
 	}
