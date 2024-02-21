@@ -21,16 +21,19 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/endpoint"
+	"github.com/cloudwego/kitex/pkg/remote/codec"
+	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/client/callopt"
-	"github.com/cloudwego/kitex/pkg/endpoint"
-	"github.com/cloudwego/kitex/pkg/rpcinfo"
-	"github.com/cloudwego/kitex/server"
-	"github.com/cloudwego/kitex/transport"
 )
 
 var cli stservice.Client
@@ -40,7 +43,7 @@ func TestMain(m *testing.M) {
 		Network:  "tcp",
 		Address:  ":9002",
 		ConnMode: thriftrpc.ConnectionMultiplexed,
-	}, nil)
+	}, nil, server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})), server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
 	time.Sleep(time.Second)
 	m.Run()
 	svr.Stop()
@@ -90,6 +93,22 @@ func TestVisitOneway(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
+}
+
+func TestSTReqWithPayloadCheck(t *testing.T) {
+	cli = getKitexMuxClient(client.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})))
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stResp, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, stReq.Str == stResp.Str)
+}
+
+func TestSTReqWithPayloadCheckAndFrugal(t *testing.T) {
+	cli = getKitexMuxClient(client.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})), client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stResp, err := cli.TestSTReq(ctx, stReq)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, stReq.Str == stResp.Str)
 }
 
 func TestDisableRPCInfoReuse(t *testing.T) {

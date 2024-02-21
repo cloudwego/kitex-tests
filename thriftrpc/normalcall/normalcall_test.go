@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: addr,
-	}, nil, server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})))
+	}, nil, server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})), server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
 	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: slimAddr,
