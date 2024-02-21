@@ -17,6 +17,7 @@ package muxcall
 import (
 	"context"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -105,10 +106,21 @@ func TestSTReqWithPayloadCheck(t *testing.T) {
 
 func TestSTReqWithPayloadCheckAndFrugal(t *testing.T) {
 	cli = getKitexMuxClient(client.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})), client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
-	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	stResp, err := cli.TestSTReq(ctx, stReq)
-	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	for i := 0; i < 100000; i++ {
+		println("round=", i)
+		wg := sync.WaitGroup{}
+		for j := 0; j < 100; j++ {
+			go func() {
+				wg.Add(1)
+				defer wg.Done()
+				ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+				stResp, err := cli.TestSTReq(ctx, stReq)
+				test.Assert(t, err == nil, err)
+				test.Assert(t, stReq.Str == stResp.Str)
+			}()
+		}
+		wg.Wait()
+	}
 }
 
 func TestDisableRPCInfoReuse(t *testing.T) {
