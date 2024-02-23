@@ -28,7 +28,6 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
-	"github.com/cloudwego/kitex/pkg/remote/codec"
 	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/utils"
@@ -59,7 +58,8 @@ func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: addr,
-	}, nil, server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})))
+	}, nil)
+
 	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
 		Address: slimAddr,
@@ -325,14 +325,6 @@ func TestFrugalFallback(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestPayloadCheck(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader, client.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true})))
-	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	stResp, err := cli.TestSTReq(ctx, stReq)
-	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
 }
 
 func BenchmarkThriftCall(b *testing.B) {
