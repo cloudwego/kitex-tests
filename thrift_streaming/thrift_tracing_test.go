@@ -20,6 +20,7 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -741,4 +742,95 @@ func TestTracingServerStop(t *testing.T) {
 		test.Assert(t, clientTracer.recvCount == 1, clientTracer)
 		clientTracer.finishCheck(t, "client")
 	})
+}
+
+var _ rpcinfo.StreamEventReporter = (*customTracer)(nil)
+
+type customTracer struct {
+	reportStreamEvent func(ctx context.Context, ri rpcinfo.RPCInfo, event rpcinfo.Event)
+	start             func(ctx context.Context) context.Context
+	finish            func(ctx context.Context)
+}
+
+func (c *customTracer) Start(ctx context.Context) context.Context {
+	if c.start != nil {
+		return c.start(ctx)
+	}
+	return ctx
+}
+
+func (c *customTracer) Finish(ctx context.Context) {
+	if c.finish != nil {
+		c.finish(ctx)
+	}
+}
+
+func (c *customTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo, event rpcinfo.Event) {
+	if c.reportStreamEvent != nil {
+		c.reportStreamEvent(ctx, ri, event)
+	}
+}
+
+func TestTracerStreamEventEOF(t *testing.T) {
+	addr := addrAllocator()
+	svr := RunThriftServer(&thriftTraceHandler{
+		echoServer: func(request *echo.EchoRequest, st echo.EchoService_EchoServerServer) error {
+			_ = st.Send(&echo.EchoResponse{Message: request.Message})
+			return nil
+		},
+	}, addr, server.WithExitWaitTime(time.Millisecond*10))
+	defer svr.Stop()
+
+	recvCountSuccess := int32(0)
+	cli := echoservice.MustNewStreamClient("server",
+		streamclient.WithHostPorts(addr),
+		streamclient.WithTracer(&customTracer{
+			reportStreamEvent: func(ctx context.Context, ri rpcinfo.RPCInfo, event rpcinfo.Event) {
+				if event.Event() == stats.StreamRecv && event.Status() == stats.StatusInfo {
+					atomic.AddInt32(&recvCountSuccess, 1)
+				}
+			},
+		}))
+
+	st, err := cli.EchoServer(context.Background(), &echo.EchoRequest{Message: "hello"})
+	test.Assert(t, err == nil, err)
+
+	_, err = st.Recv()
+	test.Assert(t, err == nil, err)
+
+	_, err = st.Recv()
+	test.Assert(t, err == io.EOF, err)
+
+	count := atomic.LoadInt32(&recvCountSuccess)
+	test.Assert(t, count == 2, count)
+}
+
+func TestTracerFinishStream(t *testing.T) {
+	addr := addrAllocator()
+	svr := RunThriftServer(&thriftTraceHandler{
+		echoServer: func(request *echo.EchoRequest, st echo.EchoService_EchoServerServer) error {
+			_ = st.Send(&echo.EchoResponse{Message: request.Message})
+			return nil
+		},
+	}, addr, server.WithExitWaitTime(time.Millisecond*10))
+	defer svr.Stop()
+
+	finishCalled := int32(0)
+	cli := echoservice.MustNewStreamClient("server",
+		streamclient.WithHostPorts(addr),
+		streamclient.WithTracer(&customTracer{
+			finish: func(ctx context.Context) {
+				atomic.StoreInt32(&finishCalled, 1)
+			},
+		}),
+	)
+
+	st, err := cli.EchoServer(context.Background(), &echo.EchoRequest{Message: "hello"})
+	test.Assert(t, err == nil, err)
+
+	_, err = st.Recv()
+	test.Assert(t, err == nil, err)
+
+	streaming.FinishStream(st, nil)
+	test.Assert(t, atomic.LoadInt32(&finishCalled) == 1)
 }
