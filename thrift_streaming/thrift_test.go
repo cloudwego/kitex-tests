@@ -18,10 +18,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -36,8 +38,10 @@ import (
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/logid"
+	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/metadata"
 	"github.com/cloudwego/kitex/pkg/streaming"
+	"github.com/cloudwego/kitex/pkg/utils/contextmap"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
@@ -1075,5 +1079,51 @@ func TestABCService(t *testing.T) {
 		rsp, err := stream.CloseAndRecv()
 		test.Assert(t, err == nil, err)
 		test.Assert(t, rsp.Message == "hello")
+	})
+}
+
+func TestCustomMetaHandler(t *testing.T) {
+	t.Run("OnReadStream", func(t *testing.T) {
+		addr := addrAllocator()
+		var value atomic.Value
+		var expectedValue = "value"
+		svr := RunABCServer(&abcServerImpl{}, addr,
+			server.WithMetaHandler(remote.NewCustomMetaHandler(remote.WithOnReadStream(
+				func(ctx context.Context) (context.Context, error) {
+					return contextmap.WithContextMap(ctx), nil
+				},
+			))),
+			server.WithRecvMiddleware(func(next endpoint.RecvEndpoint) endpoint.RecvEndpoint {
+				return func(stream streaming.Stream, message interface{}) (err error) {
+					if m, ok := contextmap.GetContextMap(stream.Context()); ok {
+						m.Store("key", expectedValue)
+					}
+					return next(stream, message)
+				}
+			}),
+			server.WithSendMiddleware(func(next endpoint.SendEndpoint) endpoint.SendEndpoint {
+				return func(stream streaming.Stream, message interface{}) (err error) {
+					if m, ok := contextmap.GetContextMap(stream.Context()); ok {
+						if v, ok := m.Load("key"); ok {
+							value.Store(v)
+						}
+					}
+					return next(stream, message)
+				}
+			}),
+		)
+		defer svr.Stop()
+
+		cli := abcservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		st, err := cli.EchoServer(context.Background(), &c.Request{Message: "hello"})
+		test.Assert(t, err == nil, err)
+
+		_, err = st.Recv()
+		test.Assert(t, err == nil, err)
+
+		_, err = st.Recv()
+		test.Assert(t, err == io.EOF, err)
+
+		test.Assert(t, value.Load() == expectedValue)
 	})
 }
