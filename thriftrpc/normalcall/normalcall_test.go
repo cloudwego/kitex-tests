@@ -17,6 +17,7 @@ package normalcall
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/circuitbreak"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
@@ -325,6 +327,64 @@ func TestFrugalFallback(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCircuitBreakerCustomErrorTypeFunc(t *testing.T) {
+	cli = getKitexClient(transport.TTHeader,
+		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				return nil
+			}
+		}),
+		client.WithCircuitBreaker(circuitbreak.NewCBSuite(
+			func(ri rpcinfo.RPCInfo) string {
+				return fmt.Sprintf("%s:%s", ri.To().ServiceName(), ri.To().Method())
+			},
+			circuitbreak.WithServiceGetErrorType(
+				func(ctx context.Context, request, response interface{}, err error) circuitbreak.ErrorType {
+					return circuitbreak.TypeFailure
+				},
+			),
+		)),
+	)
+
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	fuseCount := 0
+	for i := 0; i < 300; i++ { // minSample = 200
+		if _, err := cli.TestSTReq(ctx, stReq); kerrors.IsKitexError(err) { // circuit breaker err
+			fuseCount += 1
+		}
+	}
+	test.Assert(t, fuseCount >= 100, fuseCount)
+}
+
+func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
+	cli = getKitexClient(transport.TTHeader,
+		client.WithInstanceMW(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				return nil
+			}
+		}),
+		client.WithCircuitBreaker(circuitbreak.NewCBSuite(
+			func(ri rpcinfo.RPCInfo) string {
+				return fmt.Sprintf("%s:%s", ri.To().ServiceName(), ri.To().Method())
+			},
+			circuitbreak.WithInstanceGetErrorType(
+				func(ctx context.Context, request, response interface{}, err error) circuitbreak.ErrorType {
+					return circuitbreak.TypeFailure
+				},
+			),
+		)),
+	)
+
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	fuseCount := 0
+	for i := 0; i < 300; i++ { // minSample = 200
+		if _, err := cli.TestSTReq(ctx, stReq); kerrors.IsKitexError(err) { // circuit breaker err
+			fuseCount += 1
+		}
+	}
+	test.Assert(t, fuseCount >= 100, fuseCount)
 }
 
 func BenchmarkThriftCall(b *testing.B) {
