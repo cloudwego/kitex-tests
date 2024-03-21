@@ -16,18 +16,18 @@
 
 syntax = "proto3";
 
-option go_package = "protobuf/multi_service";
+option go_package = "protobuf/grpc_multi_service";
 
 package multi_service;
 
-service ServiceB {
-  rpc EchoB (stream RequestB) returns (stream ReplyB) {}
+service ServiceA {
+  rpc EchoA (stream RequestA) returns (stream ReplyA) {}
 }
 
-message RequestB {
+message RequestA {
   string name = 1;
 }
 
-message ReplyB {
+message ReplyA {
   string message = 1;
 }
