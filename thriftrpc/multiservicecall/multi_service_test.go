@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package multi_service
+package multiservicecall
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
@@ -67,8 +68,31 @@ func GetServer(hostport string, opts ...server.Option) server.Server {
 }
 
 func TestRegisterService(t *testing.T) {
-	ip := "localhost:9900"
-	svr := GetServer(ip)
+	testRegisterService(t, "localhost:9900")
+}
+
+func TestMuxRegisterService(t *testing.T) {
+	testRegisterService(t, "localhost:9901", server.WithMuxTransport())
+}
+
+func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
+	testMultiServiceWithRefuseTrafficWithoutServiceName(t, "localhost:9902", server.WithRefuseTrafficWithoutServiceName())
+}
+
+func TestMuxMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
+	testMultiServiceWithRefuseTrafficWithoutServiceName(t, "localhost:9903", server.WithRefuseTrafficWithoutServiceName(), server.WithMuxTransport())
+}
+
+func TestMultiService(t *testing.T) {
+	testMultiService(t, "localhost:9904")
+}
+
+func TestMuxMultiService(t *testing.T) {
+	testMultiService(t, "localhost:9905", server.WithMuxTransport())
+}
+
+func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
+	svr := GetServer(ip, opts...)
 	err := servicea.RegisterService(svr, new(ServiceAImpl), server.WithFallbackService())
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBImpl))
@@ -76,7 +100,7 @@ func TestRegisterService(t *testing.T) {
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
 	test.Assert(t, err == nil)
 
-	svr = GetServer(ip)
+	svr = GetServer(ip, opts...)
 	test.PanicAt(t, func() {
 		_ = servicea.RegisterService(svr, new(ServiceAImpl), server.WithFallbackService())
 		_ = serviceb.RegisterService(svr, new(ServiceBImpl), server.WithFallbackService())
@@ -87,7 +111,7 @@ func TestRegisterService(t *testing.T) {
 		return true
 	})
 
-	svr = GetServer(ip)
+	svr = GetServer(ip, opts...)
 	err = servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
@@ -97,9 +121,8 @@ func TestRegisterService(t *testing.T) {
 	test.Assert(t, err.Error() == "method name [Echo1] is conflicted between services but no fallback service is specified")
 }
 
-func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
-	ip := "localhost:9900"
-	svr := GetServer(ip, server.WithRefuseTrafficWithoutServiceName())
+func testMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T, ip string, opts ...server.Option) {
+	svr := GetServer(ip, opts...)
 	err := servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
@@ -113,9 +136,8 @@ func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
 	test.Assert(t, err != nil)
 }
 
-func TestMultiServiceWithFallbackService(t *testing.T) {
-	ip := "localhost:9900"
-	svr := GetServer(ip)
+func testMultiService(t *testing.T, ip string, opts ...server.Option) {
+	svr := GetServer(ip, opts...)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	serviceb.RegisterService(svr, new(ServiceBImpl))
 	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
@@ -125,39 +147,48 @@ func TestMultiServiceWithFallbackService(t *testing.T) {
 	req := &multi_service.Request{Message: "multi_service req"}
 
 	time.Sleep(time.Second)
-	clientA, err := servicea.NewClient("ServiceA", client.WithHostPorts(ip))
+	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err := clientA.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp.Message == "servicec Echo1")
 
-	clientAWithTTHeader, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
+	clientAWithMetaHandler, err := servicea.NewClient("ServiceA",
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+		client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
-	resp, err = clientAWithTTHeader.Echo1(context.Background(), req)
+	resp, err = clientAWithMetaHandler.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp.Message == "servicea Echo1")
 
-	clientB, err := serviceb.NewClient("ServiceB", client.WithHostPorts(ip))
+	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientB.Echo2(context.Background(), req)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp.Message == "serviceb Echo2")
 
-	clientBWithTTHeader, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
+	clientBWithMetaHandler, err := serviceb.NewClient("ServiceB",
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+		client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
-	resp, err = clientBWithTTHeader.Echo2(context.Background(), req)
+	resp, err = clientBWithMetaHandler.Echo2(context.Background(), req)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp.Message == "serviceb Echo2")
 
-	clientC, err := servicec.NewClient("ServiceC", client.WithHostPorts(ip))
+	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err = clientC.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp.Message == "servicec Echo1")
 
-	clientCWithTTHeader, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
+	clientCWithMetaHandler, err := servicec.NewClient("ServiceC",
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+		client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
-	resp, err = clientCWithTTHeader.Echo1(context.Background(), req)
+	resp, err = clientCWithMetaHandler.Echo1(context.Background(), req)
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp.Message == "servicec Echo1")
 }
