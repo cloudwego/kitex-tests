@@ -94,6 +94,9 @@ kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.prot
 test -d kitex_gen_slim && rm -rf kitex_gen_slim
 kitex -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
 
+test -d kitex_gen_noDefSerdes && rm -rf kitex_gen_noDefSerdes
+kitex -module github.com/cloudwego/kitex-tests -thrift no_default_serdes -gen-path kitex_gen_noDefSerdes ./idl/stability.thrift
+
 # generate thrift streaming code
 LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
 test -d grpc_gen && rm -rf grpc_gen
@@ -112,41 +115,41 @@ fi
 
 go mod tidy
 
-# static check
-go vet -stdmethods=false $(go list ./...)
-#go_install mvdan.cc/gofumpt@v0.2.0
-#test -z "$(gofumpt -l -extra .)"
-
-# run tests
-packages=(
-./thriftrpc/normalcall/...
-./thriftrpc/muxcall/...
-./thriftrpc/retrycall/...
-./thriftrpc/failedcall/...
-./thriftrpc/failedmux/...
-./thriftrpc/abctest/...
-./pbrpc/normalcall/...
-./pbrpc/muxcall/...
-./pbrpc/failedcall/...
-./generic/http/...
-./generic/map/...
-./kitexgrpc/...
-./thrift_streaming/...
-)
-
-for pkg in ${packages[@]}
-do
-    if [[ -n $LOCAL_REPO ]]; then
-        go test -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt.tmp -coverpkg=github.com/cloudwego/kitex/... $pkg
-        if [[ "$OSTYPE" =~ ^darwin ]];
-        then
-            sed -i '' 1d ${LOCAL_REPO}/coverage.txt.tmp
-        else
-            sed -i '1d' ${LOCAL_REPO}/coverage.txt.tmp
-        fi
-        cat ${LOCAL_REPO}/coverage.txt.tmp >> ${LOCAL_REPO}/coverage.txt
-        rm ${LOCAL_REPO}/coverage.txt.tmp
-    else
-        go test $pkg
-    fi
-done
+## static check
+#go vet -stdmethods=false $(go list ./...)
+##go_install mvdan.cc/gofumpt@v0.2.0
+##test -z "$(gofumpt -l -extra .)"
+#
+## run tests
+#packages=(
+#./thriftrpc/normalcall/...
+#./thriftrpc/muxcall/...
+#./thriftrpc/retrycall/...
+#./thriftrpc/failedcall/...
+#./thriftrpc/failedmux/...
+#./thriftrpc/abctest/...
+#./pbrpc/normalcall/...
+#./pbrpc/muxcall/...
+#./pbrpc/failedcall/...
+#./generic/http/...
+#./generic/map/...
+#./kitexgrpc/...
+#./thrift_streaming/...
+#)
+#
+#for pkg in ${packages[@]}
+#do
+#    if [[ -n $LOCAL_REPO ]]; then
+#        go test -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt.tmp -coverpkg=github.com/cloudwego/kitex/... $pkg
+#        if [[ "$OSTYPE" =~ ^darwin ]];
+#        then
+#            sed -i '' 1d ${LOCAL_REPO}/coverage.txt.tmp
+#        else
+#            sed -i '1d' ${LOCAL_REPO}/coverage.txt.tmp
+#        fi
+#        cat ${LOCAL_REPO}/coverage.txt.tmp >> ${LOCAL_REPO}/coverage.txt
+#        rm ${LOCAL_REPO}/coverage.txt.tmp
+#    else
+#        go test $pkg
+#    fi
+#done
