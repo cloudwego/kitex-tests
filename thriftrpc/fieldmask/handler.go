@@ -14,18 +14,18 @@ type BizServiceImpl struct{}
 // BizMethod1 implements the BizServiceImpl interface.
 func (s *BizServiceImpl) BizMethod1(ctx context.Context, req *fieldmask0.BizRequest) (resp *fieldmask0.BizResponse, err error) {
 	// check if reques has been masked
-	if req.A != "" { // req.A not in mask
-		return nil, errors.New("request must mask BizRequest.A!")
+	if req.A != "" { // req.A must be filtered
+		return nil, errors.New("request must filter BizRequest.A!")
 	}
-	if req.B == "" { // req.B in mask
-		return nil, errors.New("request must not mask BizRequest.B!")
+	if req.B == "" { // req.B must not be filtered
+		return nil, errors.New("request must not filter BizRequest.B!")
 	}
 
 	resp = fieldmask0.NewBizResponse()
 
 	// check if request carries a fieldmask
 	if req.RespMask != nil {
-		println("got fm", string(req.RespMask))
+		println("got fieldmask", string(req.RespMask))
 		fm, err := fieldmask.Unmarshal(req.RespMask)
 		if err != nil {
 			return nil, err

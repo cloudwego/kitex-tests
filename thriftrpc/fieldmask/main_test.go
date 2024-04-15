@@ -55,6 +55,18 @@ func TestMain(m *testing.M) {
 	}
 	fmCache.Store("BizRequest", reqMask)
 
+	// black list mod
+	respMaskBlack, err := fieldmask.Options{BlackListMode: true}.NewFieldMask((*fieldmask0.BizResponse)(nil).GetTypeDescriptor(), "$.A", "$.B")
+	if err != nil {
+		panic(err)
+	}
+	fmCache.Store("BizResponse-Black", respMaskBlack)
+	reqMaskBlack, err := fieldmask.Options{BlackListMode: true}.NewFieldMask((*fieldmask0.BizRequest)(nil).GetTypeDescriptor(), "$.A")
+	if err != nil {
+		panic(err)
+	}
+	fmCache.Store("BizRequest-Black", reqMaskBlack)
+
 	time.Sleep(time.Second)
 	m.Run()
 	svr.Stop()
@@ -71,7 +83,7 @@ func TestFieldMask(t *testing.T) {
 	req := fieldmask0.NewBizRequest()
 	req.A = "A"
 	req.B = "B"
-	// try set request's fieldmask
+	// try load request's fieldmask
 	reqMask, ok := fmCache.Load("BizRequest")
 	if ok {
 		req.Set_FieldMask(reqMask.(*fieldmask.FieldMask))
@@ -96,12 +108,56 @@ func TestFieldMask(t *testing.T) {
 	fmt.Printf("%#v\n", resp)
 
 	if resp.A == "" { // resp.A in mask
-		t.Fatal()
+		t.Fail()
 	}
 	if resp.B == "" { // resp.B not in mask, but it's required, so still written
 		t.Fail()
 	}
 	if resp.C != "" { // resp.C not in mask
+		t.Fail()
+	}
+}
+
+func TestFieldMask_BlackList(t *testing.T) {
+	cli, err := bizservice.NewClient("BizService", client.WithHostPorts(":8999"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := fieldmask0.NewBizRequest()
+	req.A = "A"
+	req.B = "B"
+	// try load request's fieldmask
+	reqMask, ok := fmCache.Load("BizRequest-Black")
+	if ok {
+		req.Set_FieldMask(reqMask.(*fieldmask.FieldMask))
+	}
+
+	// try get reponse's fieldmask
+	respMask, ok := fmCache.Load("BizResponse-Black")
+	if ok {
+		// serialize the respMask
+		fm, err := fieldmask.Marshal(respMask.(*fieldmask.FieldMask))
+		if err != nil {
+			t.Fatal(err)
+		}
+		// let request carry fm
+		req.RespMask = fm
+	}
+
+	resp, err := cli.BizMethod1(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Printf("%#v\n", resp)
+
+	if resp.A != "" { // resp.A in mask
+		t.Fail()
+	}
+	if resp.B == "" { // resp.B not in mask, but it's required, so still written
+		t.Fail()
+	}
+	if resp.C == "" { // resp.C not in mask
 		t.Fail()
 	}
 }
