@@ -39,21 +39,25 @@ import (
 	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
 var (
-	cli     stservice.Client
-	cliSlim stservice_slim.Client
+	cli            stservice.Client
+	cliSlim        stservice_slim.Client
+	cliNoDefSerdes stservice_noDefSerdes.Client
 
-	addr              = "127.0.0.1:9001"
-	disablePoolAddr   = "127.0.0.1:9002"
-	muxAdr            = "127.0.0.1:9003" // used in `muxcall`
-	slimFrugalAddr    = "127.0.0.1:9004"
-	slimAddr          = "127.0.0.1:9005"
-	serverTimeoutAddr = "127.0.0.1:9006"
+	addr                     = "127.0.0.1:9001"
+	disablePoolAddr          = "127.0.0.1:9002"
+	muxAdr                   = "127.0.0.1:9003" // used in `muxcall`
+	slimFrugalAddr           = "127.0.0.1:9004"
+	slimAddr                 = "127.0.0.1:9005"
+	serverTimeoutAddr        = "127.0.0.1:9006"
+	noDefSerdesFrugalAddr    = "127.0.0.1:9007"
+	noDefSerdesFastCodecAddr = "127.0.0.1:9008"
 )
 
 func TestMain(m *testing.M) {
@@ -72,15 +76,29 @@ func TestMain(m *testing.M) {
 		Address: slimFrugalAddr,
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
 
+	noDefSerdesSvrWithFrugalConfigured := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: noDefSerdesFrugalAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead|thrift.EnableSkipDecoder)))
+
+	noDefSerdesSvcWithFastCodecConfigured := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: noDefSerdesFastCodecAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite|thrift.FastRead|thrift.EnableSkipDecoder)))
+
 	common.WaitServer(addr)
 	common.WaitServer(slimAddr)
 	common.WaitServer(slimFrugalAddr)
+	common.WaitServer(noDefSerdesFrugalAddr)
+	common.WaitServer(noDefSerdesFastCodecAddr)
 
 	m.Run()
 
 	svr.Stop()
 	slimSvr.Stop()
 	slimSvrWithFrugalConfigured.Stop()
+	noDefSerdesSvrWithFrugalConfigured.Stop()
+	noDefSerdesSvcWithFastCodecConfigured.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
@@ -95,6 +113,15 @@ func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Clien
 func getSlimKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_slim.Client {
 	return thriftrpc.CreateSlimKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa.slim",
+		HostPorts:         hostPorts,
+		Protocol:          p,
+		ConnMode:          thriftrpc.LongConnection,
+	}, opts...)
+}
+
+func getNoDefSerdesKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_noDefSerdes.Client {
+	return thriftrpc.CreateNoDefSerdesKitexClient(&thriftrpc.ClientInitParam{
+		TargetServiceName: "cloudwego.kitex.testa.noDefSerdes",
 		HostPorts:         hostPorts,
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
@@ -385,6 +412,54 @@ func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
 		}
 	}
 	test.Assert(t, fuseCount >= 100, fuseCount)
+}
+
+func TestNoDefaultSerdes(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		hostPorts []string
+		opts      []client.Option
+	}{
+		{
+			desc:      "use FastCodec, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
+			},
+		},
+		{
+			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
+			},
+		},
+		{
+			desc:      "use FastCodec, connect to FastCodec and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFastCodecAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
+			},
+		},
+		{
+			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFastCodecAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cliNoDefSerdes = getNoDefSerdesKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
+			ctx, stReq := thriftrpc.CreateNoDefSerdesSTRequest(context.Background())
+			for i := 0; i < 3; i++ {
+				stResp, err := cliNoDefSerdes.TestSTReq(ctx, stReq)
+				test.Assert(t, err == nil, err)
+				test.Assert(t, stReq.Str == stResp.Str)
+			}
+		})
+	}
 }
 
 func BenchmarkThriftCall(b *testing.B) {

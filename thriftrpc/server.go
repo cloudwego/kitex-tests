@@ -27,6 +27,9 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	instparam_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/instparam"
+	stability_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability"
+	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
 	instparam_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/instparam"
 	stability_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
@@ -67,6 +70,22 @@ func RunSlimServer(param *ServerInitParam, handler stability_slim.STService, opt
 		handler = new(STServiceSlimHandler)
 	}
 	svr := stservice_slim.NewServer(handler, opts...)
+
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	return svr
+}
+
+// RunNoDefSerdesServer .
+func RunNoDefSerdesServer(param *ServerInitParam, handler stability_noDefSerdes.STService, opts ...server.Option) server.Server {
+	opts = generateServerOptionsFromParam(param, opts...)
+	if handler == nil {
+		handler = new(STServiceNoDefSerdesHandler)
+	}
+	svr := stservice_noDefSerdes.NewServer(handler, opts...)
 
 	go func() {
 		if err := svr.Run(); err != nil {
@@ -223,6 +242,64 @@ func (S *STServiceSlimHandler) CircuitBreakTest(ctx context.Context, req *stabil
 		time.Sleep(200 * time.Millisecond)
 	}
 	resp := &stability_slim.STResponse{
+		Str:     req.Str,
+		Mp:      req.StringMap,
+		FlagMsg: req.FlagMsg,
+	}
+	return resp, nil
+}
+
+type STServiceNoDefSerdesHandler struct{}
+
+func (S *STServiceNoDefSerdesHandler) VisitOneway(ctx context.Context, req *stability_noDefSerdes.STRequest) (err error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (S *STServiceNoDefSerdesHandler) TestSTReq(ctx context.Context, req *stability_noDefSerdes.STRequest) (r *stability_noDefSerdes.STResponse, err error) {
+	resp := &stability_noDefSerdes.STResponse{
+		Str:     req.Str,
+		Mp:      req.StringMap,
+		FlagMsg: req.FlagMsg,
+	}
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return nil, err
+		} else {
+			time.Sleep(mockSleep)
+		}
+	}
+	return resp, nil
+}
+
+func (S *STServiceNoDefSerdesHandler) TestObjReq(ctx context.Context, req *instparam_noDefSerdes.ObjReq) (r *instparam_noDefSerdes.ObjResp, err error) {
+	resp := &instparam_noDefSerdes.ObjResp{
+		Msg:     req.Msg,
+		MsgSet:  req.MsgSet,
+		MsgMap:  req.MsgMap,
+		FlagMsg: req.FlagMsg,
+	}
+	if req.MockCost != nil {
+		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
+			return nil, err
+		} else {
+			time.Sleep(mockSleep)
+		}
+	}
+	return resp, nil
+}
+
+func (S *STServiceNoDefSerdesHandler) TestException(ctx context.Context, req *stability_noDefSerdes.STRequest) (r *stability_noDefSerdes.STResponse, err error) {
+	err = &stability_noDefSerdes.STException{Message: "mock exception"}
+	return nil, err
+}
+
+func (S *STServiceNoDefSerdesHandler) CircuitBreakTest(ctx context.Context, req *stability_noDefSerdes.STRequest) (r *stability_noDefSerdes.STResponse, err error) {
+	// force 50% of the responses to cost over 200ms
+	if atomic.AddInt32(&countFlag, 1)%2 == 0 {
+		time.Sleep(200 * time.Millisecond)
+	}
+	resp := &stability_noDefSerdes.STResponse{
 		Str:     req.Str,
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,
