@@ -21,6 +21,9 @@ import (
 	"runtime"
 	"time"
 
+	stability_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability"
+	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
+
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
@@ -71,6 +74,13 @@ func CreateSlimKitexClient(param *ClientInitParam, opts ...client.Option) stserv
 	opts = generateClientOptionsFromParam(param, opts...)
 
 	return stservice_slim.MustNewClient(param.TargetServiceName, opts...)
+}
+
+// CreateNoDefSerdesKitexClient .
+func CreateNoDefSerdesKitexClient(param *ClientInitParam, opts ...client.Option) stservice_noDefSerdes.Client {
+	opts = generateClientOptionsFromParam(param, opts...)
+
+	return stservice_noDefSerdes.MustNewClient(param.TargetServiceName, opts...)
 }
 
 // generateClientOptionsFromParam process ClientInitParam and add client.Option
@@ -159,6 +169,38 @@ func CreateSlimSTRequest(ctx context.Context) (context.Context, *stability_slim.
 		utils.RandomString(100),
 	}
 	req.E = stability_slim.TestEnum_FIRST
+
+	ctx = metainfo.WithValue(ctx, "TK", "TV")
+	ctx = metainfo.WithPersistentValue(ctx, "PK", "PV")
+	return ctx, req
+}
+
+// CreateNoDefSerdesSTRequest .
+func CreateNoDefSerdesSTRequest(ctx context.Context) (context.Context, *stability_noDefSerdes.STRequest) {
+	req := stability_noDefSerdes.NewSTRequest()
+	req.Name = "byted"
+	req.On = thrift.BoolPtr(true)
+	req.B = 10
+	req.Int16 = 10
+	req.Int32 = math.MaxInt32
+	req.Int64 = math.MaxInt64
+	req.D = 0.0
+	req.Str = utils.RandomString(100)
+	req.Bin = []byte{1, 'a', '*'}
+	req.StringMap = map[string]string{
+		"key1": utils.RandomString(100),
+		"key2": utils.RandomString(10),
+	}
+	req.StringList = []string{
+		utils.RandomString(10),
+		utils.RandomString(20),
+		utils.RandomString(30),
+	}
+	req.StringSet = []string{
+		utils.RandomString(10),
+		utils.RandomString(100),
+	}
+	req.E = stability_noDefSerdes.TestEnum_FIRST
 
 	ctx = metainfo.WithValue(ctx, "TK", "TV")
 	ctx = metainfo.WithPersistentValue(ctx, "PK", "PV")
