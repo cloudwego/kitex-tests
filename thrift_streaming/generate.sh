@@ -123,7 +123,6 @@ function generate_new_thriftgo_old_kitex() {
     kitex -gen-path kitex_gen_cross $module $idl
 }
 
-go get github.com/cloudwego/kitex@develop
 if [ -d "$LOCAL_REPO" ]; then
     go mod edit -replace github.com/cloudwego/kitex=$LOCAL_REPO
 fi

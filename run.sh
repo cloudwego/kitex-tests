@@ -107,7 +107,6 @@ protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
-go get github.com/cloudwego/kitex@develop
 
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
