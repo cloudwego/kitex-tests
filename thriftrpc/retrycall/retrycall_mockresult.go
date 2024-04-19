@@ -16,6 +16,7 @@ package retrycall
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
@@ -25,7 +26,39 @@ import (
 	"github.com/cloudwego/kitex/pkg/retry"
 )
 
-const retryMsg = "retry"
+const (
+	retryMsg            = "retry"
+	sleepTimeMsKey      = "TIME_SLEEP_TIME_MS"
+	skipCounterSleepKey = "TIME_SKIP_COUNTER_SLEEP"
+)
+
+func setSkipCounterSleep(ctx context.Context) context.Context {
+	return metainfo.WithPersistentValue(ctx, skipCounterSleepKey, "1")
+}
+
+func skipCounterSleep(ctx context.Context) bool {
+	if _, exist := metainfo.GetValue(ctx, skipCounterSleepKey); exist {
+		return true
+	}
+	if _, exist := metainfo.GetPersistentValue(ctx, skipCounterSleepKey); exist {
+		return true
+	}
+	return false
+}
+
+func getSleepTimeMS(ctx context.Context) time.Duration {
+	if value, exist := metainfo.GetPersistentValue(ctx, sleepTimeMsKey); exist {
+		if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
+			return time.Duration(sleepTimeMS) * time.Millisecond
+		}
+	}
+	if value, exist := metainfo.GetValue(ctx, sleepTimeMsKey); exist {
+		if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
+			return time.Duration(sleepTimeMS) * time.Millisecond
+		}
+	}
+	return 0
+}
 
 var _ stability.STService = &STServiceMockResultHandler{}
 
@@ -86,7 +119,11 @@ func (*STServiceMockResultHandler) VisitOneway(ctx context.Context, req *stabili
 func (h *STServiceMockResultHandler) CircuitBreakTest(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
 	// use ttheader
 	if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
-		time.Sleep(200 * time.Millisecond)
+		sleepTime := 200 * time.Millisecond
+		if v := getSleepTimeMS(ctx); v > 0 {
+			sleepTime = v
+		}
+		time.Sleep(sleepTime)
 	}
 	resp := &stability.STResponse{
 		Str:     req.Str,

@@ -24,13 +24,18 @@ import (
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
+	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/transport"
 )
 
 func TestMain(m *testing.M) {
 	svc := runServer()
+	gsvc := runGenericServer()
 	time.Sleep(time.Second)
 	m.Run()
 	svc.Stop()
+	gsvc.Stop()
 }
 
 func TestClient(t *testing.T) {
@@ -121,4 +126,19 @@ func TestGeneric(t *testing.T) {
 	// wait for request received
 	time.Sleep(200 * time.Millisecond)
 	test.Assert(t, atomic.LoadInt32(&checkNum) == int32(num))
+}
+
+func TestBizErr(t *testing.T) {
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	test.Assert(t, err == nil)
+	g, err := generic.MapThriftGeneric(p)
+	test.Assert(t, err == nil)
+
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(genericAddress), client.WithMetaHandler(transmeta.ClientTTHeaderHandler), client.WithTransportProtocol(transport.TTHeader))
+	test.Assert(t, err == nil)
+	_, err = cli.GenericCall(context.Background(), "Echo", nil)
+	bizerr, ok := kerrors.FromBizStatusError(err)
+	test.Assert(t, ok)
+	test.Assert(t, bizerr.BizStatusCode() == 404)
+	test.Assert(t, bizerr.BizMessage() == "not found")
 }

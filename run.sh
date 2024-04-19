@@ -62,6 +62,11 @@ go_install() {
 
 which protoc || install_protoc
 
+# install protoc-gen-go and protoc-gen-go-kitexgrpc
+which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+# install protoc-gen-go and protoc-gen-go-kitexgrpc
+which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+
 # Install thriftgo
 which thriftgo || go_install github.com/cloudwego/thriftgo@latest
 
@@ -80,8 +85,24 @@ test -d kitex_gen && rm -rf kitex_gen
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
-kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/stability.proto
-kitex -module github.com/cloudwego/kitex-tests -type protobuf -I idl ./idl/unknown_handler.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/stability.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service.proto
+kitex -module github.com/cloudwego/kitex-tests -I idl ./idl/multi_service_2.proto
+
+test -d kitex_gen_slim && rm -rf kitex_gen_slim
+kitex -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
+
+test -d kitex_gen_noDefSerdes && rm -rf kitex_gen_noDefSerdes
+kitex -module github.com/cloudwego/kitex-tests -thrift no_default_serdes -gen-path kitex_gen_noDefSerdes ./idl/stability.thrift
+
+# generate thrift streaming code
+LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
+test -d grpc_gen && rm -rf grpc_gen
+mkdir grpc_gen
+protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
+protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 
 # Init dependencies
@@ -113,7 +134,8 @@ packages=(
 ./pbrpc/failedcall/...
 ./generic/http/...
 ./generic/map/...
-./grpc/...
+./kitexgrpc/...
+./thrift_streaming/...
 )
 
 for pkg in ${packages[@]}

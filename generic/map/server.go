@@ -20,7 +20,10 @@ import (
 	"reflect"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
+	"github.com/cloudwego/kitex/pkg/generic"
+	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/server/genericserver"
 )
 
 func assert(expected, actual interface{}) error {
@@ -36,6 +39,27 @@ const address = ":9009"
 func runServer() server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", address)
 	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithServiceAddr(addr))
+	go func() {
+		if err := svc.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	return svc
+}
+
+const genericAddress = ":9010"
+
+func runGenericServer() server.Server {
+	addr, _ := net.ResolveTCPAddr("tcp", genericAddress)
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	if err != nil {
+		panic(err)
+	}
+	g, err := generic.MapThriftGeneric(p)
+	if err != nil {
+		panic(err)
+	}
+	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithServiceAddr(addr), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)

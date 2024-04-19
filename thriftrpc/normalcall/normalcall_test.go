@@ -17,38 +17,112 @@ package normalcall
 import (
 	"context"
 	"errors"
+	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/pkg/circuitbreak"
+	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/pkg/utils"
+	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/common"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
+	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
-var cli stservice.Client
+var (
+	cli            stservice.Client
+	cliSlim        stservice_slim.Client
+	cliNoDefSerdes stservice_noDefSerdes.Client
+
+	addr                     = "127.0.0.1:9001"
+	disablePoolAddr          = "127.0.0.1:9002"
+	muxAdr                   = "127.0.0.1:9003" // used in `muxcall`
+	slimFrugalAddr           = "127.0.0.1:9004"
+	slimAddr                 = "127.0.0.1:9005"
+	serverTimeoutAddr        = "127.0.0.1:9006"
+	noDefSerdesFrugalAddr    = "127.0.0.1:9007"
+	noDefSerdesFastCodecAddr = "127.0.0.1:9008"
+)
 
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9001",
+		Address: addr,
 	}, nil)
-	time.Sleep(time.Second)
+
+	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: slimAddr,
+	}, nil)
+
+	slimSvrWithFrugalConfigured := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: slimFrugalAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
+
+	noDefSerdesSvrWithFrugalConfigured := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: noDefSerdesFrugalAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead|thrift.EnableSkipDecoder)))
+
+	noDefSerdesSvcWithFastCodecConfigured := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: noDefSerdesFastCodecAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite|thrift.FastRead|thrift.EnableSkipDecoder)))
+
+	common.WaitServer(addr)
+	common.WaitServer(slimAddr)
+	common.WaitServer(slimFrugalAddr)
+	common.WaitServer(noDefSerdesFrugalAddr)
+	common.WaitServer(noDefSerdesFastCodecAddr)
+
 	m.Run()
+
 	svr.Stop()
+	slimSvr.Stop()
+	slimSvrWithFrugalConfigured.Stop()
+	noDefSerdesSvrWithFrugalConfigured.Stop()
+	noDefSerdesSvcWithFastCodecConfigured.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
 		HostPorts:         []string{":9001"},
+		Protocol:          p,
+		ConnMode:          thriftrpc.LongConnection,
+	}, opts...)
+}
+
+func getSlimKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_slim.Client {
+	return thriftrpc.CreateSlimKitexClient(&thriftrpc.ClientInitParam{
+		TargetServiceName: "cloudwego.kitex.testa.slim",
+		HostPorts:         hostPorts,
+		Protocol:          p,
+		ConnMode:          thriftrpc.LongConnection,
+	}, opts...)
+}
+
+func getNoDefSerdesKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_noDefSerdes.Client {
+	return thriftrpc.CreateNoDefSerdesKitexClient(&thriftrpc.ClientInitParam{
+		TargetServiceName: "cloudwego.kitex.testa.noDefSerdes",
+		HostPorts:         hostPorts,
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
 	}, opts...)
@@ -148,6 +222,244 @@ func TestRPCTimeoutPriority(t *testing.T) {
 	test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
 	test.Assert(t, strings.Contains(err.Error(), "timeout=200ms"))
 	test.Assert(t, stResp == nil)
+}
+
+func TestDisablePoolForRPCInfo(t *testing.T) {
+	backupState := rpcinfo.PoolEnabled()
+	defer rpcinfo.EnablePool(backupState)
+
+	t.Run("client", func(t *testing.T) {
+		var ri rpcinfo.RPCInfo
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		cli = getKitexClient(transport.TTHeaderFramed, client.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				ri = rpcinfo.GetRPCInfo(ctx)
+				return nil // no need to send the real request
+			}
+		}))
+
+		t.Run("enable", func(t *testing.T) {
+			rpcinfo.EnablePool(true)
+			_, _ = cli.TestSTReq(ctx, stReq)
+			test.Assert(t, ri.From() == nil, ri.From()) // zeroed
+		})
+
+		t.Run("disable", func(t *testing.T) {
+			rpcinfo.EnablePool(false)
+			_, _ = cli.TestSTReq(ctx, stReq)
+			test.Assert(t, ri.From() != nil, ri.From()) // should not be zeroed
+		})
+	})
+
+	t.Run("server", func(t *testing.T) {
+		var ri1, ri2 rpcinfo.RPCInfo
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: disablePoolAddr}, nil,
+			server.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
+				return func(ctx context.Context, req, resp interface{}) (err error) {
+					err = endpoint(ctx, req, resp)
+					request := req.(utils.KitexArgs).GetFirstArgument().(*stability.STRequest)
+					if request.Name == "1" {
+						ri1 = rpcinfo.GetRPCInfo(ctx)
+					} else {
+						ri2 = rpcinfo.GetRPCInfo(ctx)
+					}
+					return err
+				}
+			}))
+		common.WaitServer(addr)
+		defer svr.Stop()
+
+		cli = getKitexClient(transport.TTHeaderFramed)
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+
+		t.Run("enable", func(t *testing.T) {
+			rpcinfo.EnablePool(true)
+
+			stReq.Name = "1"
+			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
+			test.Assert(t, err == nil, err)
+
+			stReq.Name = "2"
+			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
+			test.Assert(t, err == nil, err)
+
+			addr1, addr2 := reflect.ValueOf(ri1).Pointer(), reflect.ValueOf(ri2).Pointer()
+			test.Assertf(t, addr1 == addr2, "addr1: %v, addr2: %v", addr1, addr2)
+		})
+
+		t.Run("disable", func(t *testing.T) {
+			rpcinfo.EnablePool(false)
+			stReq.Name = "1"
+			_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
+			test.Assert(t, err == nil, err)
+
+			stReq.Name = "2"
+			_, err = cli.TestSTReq(ctx, stReq, callopt.WithHostPort(disablePoolAddr))
+			test.Assert(t, err == nil, err)
+
+			addr1, addr2 := reflect.ValueOf(ri1).Pointer(), reflect.ValueOf(ri2).Pointer()
+			test.Assertf(t, addr1 != addr2, "addr1: %v, addr2: %v", addr1, addr2)
+		})
+	})
+}
+
+// When using slim template and users do not
+func TestFrugalFallback(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		hostPorts []string
+		opts      []client.Option
+		expectErr bool
+	}{
+		{
+			desc:      "use slim template, do not configure thrift codec type",
+			hostPorts: []string{slimAddr},
+			opts:      nil,
+		},
+		{
+			desc:      "use slim template, configure FastWrite | FastRead thrift codec",
+			hostPorts: []string{slimAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
+			},
+		},
+		{
+			desc:      "use slim template, only configure Basic thrift codec to disable frugal",
+			hostPorts: []string{slimAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)),
+			},
+			expectErr: true,
+		},
+		{
+			desc:      "use slim template, configure FrugalWrite | FrugalRead thrift codec, connect to frugal configured server",
+			hostPorts: []string{slimFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cliSlim = getSlimKitexClient(transport.TTHeader, tc.hostPorts, tc.opts...)
+			ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
+			for i := 0; i < 3; i++ {
+				stResp, err := cliSlim.TestSTReq(ctx, stReq)
+				if tc.expectErr {
+					test.Assert(t, err != nil, err)
+					continue
+				}
+				test.Assert(t, err == nil, err)
+				test.Assert(t, stReq.Str == stResp.Str)
+			}
+		})
+	}
+}
+
+func TestCircuitBreakerCustomErrorTypeFunc(t *testing.T) {
+	cli = getKitexClient(transport.TTHeader,
+		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				return nil
+			}
+		}),
+		client.WithCircuitBreaker(circuitbreak.NewCBSuite(
+			func(ri rpcinfo.RPCInfo) string {
+				return fmt.Sprintf("%s:%s", ri.To().ServiceName(), ri.To().Method())
+			},
+			circuitbreak.WithServiceGetErrorType(
+				func(ctx context.Context, request, response interface{}, err error) circuitbreak.ErrorType {
+					return circuitbreak.TypeFailure
+				},
+			),
+		)),
+	)
+
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	fuseCount := 0
+	for i := 0; i < 300; i++ { // minSample = 200
+		if _, err := cli.TestSTReq(ctx, stReq); kerrors.IsKitexError(err) { // circuit breaker err
+			fuseCount += 1
+		}
+	}
+	test.Assert(t, fuseCount >= 100, fuseCount)
+}
+
+func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
+	cli = getKitexClient(transport.TTHeader,
+		client.WithInstanceMW(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				return nil
+			}
+		}),
+		client.WithCircuitBreaker(circuitbreak.NewCBSuite(
+			func(ri rpcinfo.RPCInfo) string {
+				return fmt.Sprintf("%s:%s", ri.To().ServiceName(), ri.To().Method())
+			},
+			circuitbreak.WithInstanceGetErrorType(
+				func(ctx context.Context, request, response interface{}, err error) circuitbreak.ErrorType {
+					return circuitbreak.TypeFailure
+				},
+			),
+		)),
+	)
+
+	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	fuseCount := 0
+	for i := 0; i < 300; i++ { // minSample = 200
+		if _, err := cli.TestSTReq(ctx, stReq); kerrors.IsKitexError(err) { // circuit breaker err
+			fuseCount += 1
+		}
+	}
+	test.Assert(t, fuseCount >= 100, fuseCount)
+}
+
+func TestNoDefaultSerdes(t *testing.T) {
+	testCases := []struct {
+		desc      string
+		hostPorts []string
+		opts      []client.Option
+	}{
+		{
+			desc:      "use FastCodec, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
+			},
+		},
+		{
+			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
+			},
+		},
+		{
+			desc:      "use FastCodec, connect to FastCodec and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFastCodecAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
+			},
+		},
+		{
+			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFastCodecAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			cliNoDefSerdes = getNoDefSerdesKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
+			ctx, stReq := thriftrpc.CreateNoDefSerdesSTRequest(context.Background())
+			for i := 0; i < 3; i++ {
+				stResp, err := cliNoDefSerdes.TestSTReq(ctx, stReq)
+				test.Assert(t, err == nil, err)
+				test.Assert(t, stReq.Str == stResp.Str)
+			}
+		})
+	}
 }
 
 func BenchmarkThriftCall(b *testing.B) {

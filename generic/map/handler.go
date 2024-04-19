@@ -19,6 +19,7 @@ import (
 	"sync/atomic"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
+	"github.com/cloudwego/kitex/pkg/kerrors"
 )
 
 // EchoServiceImpl implements the last service interface defined in the IDL.
@@ -55,6 +56,12 @@ func (s *EchoServiceImpl) EchoOneway(ctx context.Context, req *tenant.EchoReques
 	}
 	atomic.AddInt32(&checkNum, 1)
 	return nil
+}
+
+type GenericServiceImpl struct{}
+
+func (s *GenericServiceImpl) GenericCall(ctx context.Context, method string, request interface{}) (response interface{}, err error) {
+	return nil, kerrors.NewBizStatusError(404, "not found")
 }
 
 func assertRequest(req *tenant.EchoRequest) error {
