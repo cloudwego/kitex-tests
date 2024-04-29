@@ -37,4 +37,8 @@ service greet {
 	void HelloC(1:required MyReq req)
 	void HelloD(1:required MyReq req) throws(1:SomeException o1)
 	oneway void HelloE(1:required MyReq req)
+    MyResp EchoBidirectional (1: MyReq req1) (streaming.mode="bidirectional")
+    MyResp EchoClient (1: MyReq req1) (streaming.mode="client")
+    MyResp EchoServer (1: MyReq req1) (streaming.mode="server")
+    MyResp EchoUnary (1: MyReq req1) (streaming.mode="unary")
 }
