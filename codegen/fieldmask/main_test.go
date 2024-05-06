@@ -16,6 +16,7 @@ package test
 
 import (
 	"runtime"
+	"sync"
 	hbase "test/halfway_gen/base"
 	nbase "test/kitex_gen/base"
 	obase "test/old_gen/base"
@@ -26,11 +27,42 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var fieldmaskCache sync.Map
+
+func init() {
+	// new a obj to get its TypeDescriptor
+	obj := nbase.NewBase()
+
+	// construct a fieldmask with TypeDescriptor and thrift pathes
+	fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(),
+		"$.Enum", "$.EnumMap{1}", "$.LogID", "$.TrafficEnv.Name", "$.TrafficEnv.Code", "$.Meta.IntMap{1}", "$.Meta.StrMap{\"1234\"}",
+		"$.Meta.List[1]", "$.Meta.Set[0].id", "$.Meta.Set[1].name")
+	if err != nil {
+		panic(err)
+	}
+
+	// cache it for future usage of nbase.Base
+	fieldmaskCache.Store("Mask1ForBase", fm)
+
+	fm2, err := fieldmask.Options{BlackListMode: true}.NewFieldMask(obj.GetTypeDescriptor(),
+		"$.Enum", "$.EnumMap{1}", "$.LogID", "$.TrafficEnv.Name", "$.TrafficEnv.Code", "$.Meta.IntMap{1}", "$.Meta.StrMap{\"1234\"}",
+		"$.Meta.List[1]", "$.Meta.Set[0].id", "$.Meta.Set[1].name")
+	if err != nil {
+		panic(err)
+	}
+	fieldmaskCache.Store("Mask1ForBase-Black", fm2)
+}
+
 func SampleNewBase() *nbase.Base {
 	obj := nbase.NewBase()
 	obj.Addr = "abcd"
 	obj.Caller = "abcd"
 	obj.LogID = "abcd"
+	obj.Enum = nbase.Ex_A
+	obj.EnumMap = map[nbase.Ex]string{
+		nbase.Ex_A: "a",
+		nbase.Ex_B: "b",
+	}
 	obj.Meta = nbase.NewMetaInfo()
 	obj.Meta.StrMap = map[string]*nbase.Val{
 		"abcd": nbase.NewVal(),
@@ -96,21 +128,14 @@ func SampleOldBase() *obase.Base {
 	return obj
 }
 
-func TestFastWrite(t *testing.T) {
+func TestFastWrite_WhiteList(t *testing.T) {
 	var obj = SampleNewBase()
-	fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(), "$.Addr",
-		"$.LogID",
-		"$.TrafficEnv.Code",
-		"$.Meta.IntMap{1}.id",
-		"$.Meta.IntMap{2}.name",
-		"$.Meta.StrMap{\"1234\"}",
-		"$.Meta.List[1]",
-		"$.Meta.Set[0].id",
-		"$.Meta.Set[1].name")
-	if err != nil {
-		t.Fatal(err)
+	// Load fieldmask from cache
+	fm, _ := fieldmaskCache.Load("Mask1ForBase")
+	if fm != nil {
+		// load ok, set fieldmask onto the object using codegen API
+		obj.Set_FieldMask(fm.(*fieldmask.FieldMask))
 	}
-	obj.Set_FieldMask(fm)
 	out := make([]byte, obj.BLength())
 	// out := make([]byte, 24000000)
 	e := obj.FastWriteNocopy(out, nil)
@@ -120,77 +145,147 @@ func TestFastWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.Equal(t, e, n)
+
 	require.Equal(t, obj.Addr, obj2.Addr)
+	require.Equal(t, obj.Enum, obj2.Enum)
+	require.Equal(t, map[nbase.Ex]string{nbase.Ex_A: "a"}, obj2.EnumMap)
 	require.Equal(t, obj.LogID, obj2.LogID)
 	require.Equal(t, "", obj2.Caller)
-	require.Equal(t, "", obj2.TrafficEnv.Name)
+	require.Equal(t, obj.TrafficEnv.Name, obj2.TrafficEnv.Name)
 	require.Equal(t, false, obj2.TrafficEnv.Open)
 	require.Equal(t, "", obj2.TrafficEnv.Env)
 	require.Equal(t, obj.TrafficEnv.Code, obj2.TrafficEnv.Code)
-	require.Equal(t, 2, len(obj2.Meta.IntMap))
 	require.Equal(t, obj.Meta.IntMap[1].Id, obj2.Meta.IntMap[1].Id)
-	require.Equal(t, "", obj2.Meta.IntMap[1].Name)
-	require.Equal(t, "", obj2.Meta.IntMap[2].Id)
-	require.Equal(t, obj.Meta.IntMap[2].Name, obj2.Meta.IntMap[2].Name)
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.IntMap[0])
 	require.Equal(t, obj.Meta.StrMap["1234"].Id, obj2.Meta.StrMap["1234"].Id)
 	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.StrMap["abcd"])
 	require.Equal(t, 1, len(obj2.Meta.List))
-	require.Equal(t, obj.Meta.List[1].Id, obj2.Meta.List[0].Id)
-	require.Equal(t, obj.Meta.List[1].Name, obj2.Meta.List[0].Name)
+	require.Equal(t, "b", obj2.Meta.List[0].Id)
+	require.Equal(t, "b", obj2.Meta.List[0].Name)
 	require.Equal(t, 2, len(obj2.Meta.Set))
-	require.Equal(t, obj.Meta.Set[0].Id, obj2.Meta.Set[0].Id)
+	require.Equal(t, "a", obj2.Meta.Set[0].Id)
 	require.Equal(t, "", obj2.Meta.Set[0].Name)
 	require.Equal(t, "", obj2.Meta.Set[1].Id)
-	require.Equal(t, obj.Meta.Set[1].Name, obj2.Meta.Set[1].Name)
+	require.Equal(t, "b", obj2.Meta.Set[1].Name)
 }
 
-func TestFastRead(t *testing.T) {
+func TestFastWrite_BlackList(t *testing.T) {
+	var obj = SampleNewBase()
+	// Load fieldmask from cache
+	fm, _ := fieldmaskCache.Load("Mask1ForBase-Black")
+	if fm != nil {
+		// load ok, set fieldmask onto the object using codegen API
+		obj.Set_FieldMask(fm.(*fieldmask.FieldMask))
+	}
+	out := make([]byte, obj.BLength())
+	// out := make([]byte, 24000000)
+	e := obj.FastWriteNocopy(out, nil)
+	var obj2 = nbase.NewBase()
+	n, err := obj2.FastRead(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, e, n)
+
+	require.Equal(t, obj.Addr, obj2.Addr)
+	require.Equal(t, nbase.Ex(0), obj2.Enum)
+	require.Equal(t, map[nbase.Ex]string{nbase.Ex_B: "b"}, obj2.EnumMap)
+	require.Equal(t, "", obj2.LogID)
+	require.Equal(t, obj.Caller, obj2.Caller)
+	require.Equal(t, "", obj2.TrafficEnv.Name)
+	require.Equal(t, obj.TrafficEnv.Open, obj2.TrafficEnv.Open)
+	require.Equal(t, obj.TrafficEnv.Env, obj2.TrafficEnv.Env)
+	require.Equal(t, obj.TrafficEnv.Code, obj2.TrafficEnv.Code) // required
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.IntMap[1])
+	require.Equal(t, obj.Meta.IntMap[0], obj2.Meta.IntMap[0])
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.StrMap["1234"])
+	require.Equal(t, obj.Meta.StrMap["abcd"], obj2.Meta.StrMap["abcd"])
+	require.Equal(t, 1, len(obj2.Meta.List))
+	require.Equal(t, "a", obj2.Meta.List[0].Id)
+	require.Equal(t, "a", obj2.Meta.List[0].Name)
+	require.Equal(t, 2, len(obj2.Meta.Set))
+	require.Equal(t, "", obj2.Meta.Set[0].Id)
+	require.Equal(t, "a", obj2.Meta.Set[0].Name)
+	require.Equal(t, "b", obj2.Meta.Set[1].Id)
+	require.Equal(t, "", obj2.Meta.Set[1].Name)
+}
+
+func TestFastRead_WhiteList(t *testing.T) {
 	obj := SampleNewBase()
 	buf := make([]byte, obj.BLength())
 	e := obj.FastWriteNocopy(buf, nil)
 	obj2 := nbase.NewBase()
-	fm, err := fieldmask.NewFieldMask(obj2.GetTypeDescriptor(), "$.Addr",
-		"$.LogID",
-		"$.TrafficEnv.Code",
-		"$.Meta.IntMap{1}.id",
-		"$.Meta.IntMap{2}.name",
-		"$.Meta.StrMap{\"1234\"}",
-		"$.Meta.List[1]",
-		"$.Meta.Set[0].id",
-		"$.Meta.Set[1].name")
-	if err != nil {
-		t.Fatal(err)
+	fm, _ := fieldmaskCache.Load("Mask1ForBase")
+	if fm != nil {
+		obj2.Set_FieldMask(fm.(*fieldmask.FieldMask))
 	}
-	obj2.Set_FieldMask(fm)
+
 	n, err := obj2.FastRead(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
 	require.Equal(t, e, n)
 
-	require.Equal(t, e, n)
-	require.Equal(t, obj.Addr, obj2.Addr)
+	require.Equal(t, "", obj2.Addr)
+	require.Equal(t, obj.Enum, obj2.Enum)
+	require.Equal(t, map[nbase.Ex]string{nbase.Ex_A: "a"}, obj2.EnumMap)
 	require.Equal(t, obj.LogID, obj2.LogID)
 	require.Equal(t, "", obj2.Caller)
-	require.Equal(t, "", obj2.TrafficEnv.Name)
+	require.Equal(t, obj.TrafficEnv.Name, obj2.TrafficEnv.Name)
 	require.Equal(t, false, obj2.TrafficEnv.Open)
 	require.Equal(t, "", obj2.TrafficEnv.Env)
 	require.Equal(t, obj.TrafficEnv.Code, obj2.TrafficEnv.Code)
-	require.Equal(t, 2, len(obj2.Meta.IntMap))
 	require.Equal(t, obj.Meta.IntMap[1].Id, obj2.Meta.IntMap[1].Id)
-	require.Equal(t, "", obj2.Meta.IntMap[1].Name)
-	require.Equal(t, "", obj2.Meta.IntMap[2].Id)
-	require.Equal(t, obj.Meta.IntMap[2].Name, obj2.Meta.IntMap[2].Name)
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.IntMap[0])
 	require.Equal(t, obj.Meta.StrMap["1234"].Id, obj2.Meta.StrMap["1234"].Id)
 	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.StrMap["abcd"])
-	require.Equal(t, obj.Meta.List[1].Id, obj2.Meta.List[0].Id)
-	require.Equal(t, obj.Meta.List[1].Name, obj2.Meta.List[0].Name)
 	require.Equal(t, 1, len(obj2.Meta.List))
+	require.Equal(t, "b", obj2.Meta.List[0].Id)
+	require.Equal(t, "b", obj2.Meta.List[0].Name)
 	require.Equal(t, 2, len(obj2.Meta.Set))
-	require.Equal(t, obj.Meta.Set[0].Id, obj2.Meta.Set[0].Id)
+	require.Equal(t, "a", obj2.Meta.Set[0].Id)
 	require.Equal(t, "", obj2.Meta.Set[0].Name)
 	require.Equal(t, "", obj2.Meta.Set[1].Id)
-	require.Equal(t, obj.Meta.Set[1].Name, obj2.Meta.Set[1].Name)
+	require.Equal(t, "b", obj2.Meta.Set[1].Name)
+}
+
+func TestFastRead_BlackList(t *testing.T) {
+	obj := SampleNewBase()
+	buf := make([]byte, obj.BLength())
+	e := obj.FastWriteNocopy(buf, nil)
+	obj2 := nbase.NewBase()
+	fm, _ := fieldmaskCache.Load("Mask1ForBase-Black")
+	if fm != nil {
+		obj2.Set_FieldMask(fm.(*fieldmask.FieldMask))
+	}
+
+	n, err := obj2.FastRead(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, e, n)
+
+	require.Equal(t, obj.Addr, obj2.Addr)
+	require.Equal(t, nbase.Ex(0), obj2.Enum)
+	require.Equal(t, map[nbase.Ex]string{nbase.Ex_B: "b"}, obj2.EnumMap)
+	require.Equal(t, "", obj2.LogID)
+	require.Equal(t, obj.Caller, obj2.Caller)
+	require.Equal(t, "", obj2.TrafficEnv.Name)
+	require.Equal(t, obj.TrafficEnv.Open, obj2.TrafficEnv.Open)
+	require.Equal(t, obj.TrafficEnv.Env, obj2.TrafficEnv.Env)
+	require.Equal(t, int64(0), obj2.TrafficEnv.Code)
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.IntMap[1])
+	require.Equal(t, obj.Meta.IntMap[0], obj2.Meta.IntMap[0])
+	require.Equal(t, (*nbase.Val)(nil), obj2.Meta.StrMap["1234"])
+	require.Equal(t, obj.Meta.StrMap["abcd"], obj2.Meta.StrMap["abcd"])
+	require.Equal(t, 1, len(obj2.Meta.List))
+	require.Equal(t, "a", obj2.Meta.List[0].Id)
+	require.Equal(t, "a", obj2.Meta.List[0].Name)
+	require.Equal(t, 2, len(obj2.Meta.Set))
+	require.Equal(t, "", obj2.Meta.Set[0].Id)
+	require.Equal(t, "a", obj2.Meta.Set[0].Name)
+	require.Equal(t, "b", obj2.Meta.Set[1].Id)
+	require.Equal(t, "", obj2.Meta.Set[1].Name)
 }
 
 func TestMaskRequired(t *testing.T) {
