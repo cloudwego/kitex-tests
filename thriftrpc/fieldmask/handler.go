@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package fieldmask
 
 import (
 	"context"
@@ -27,7 +27,7 @@ type BizServiceImpl struct{}
 
 // BizMethod1 implements the BizServiceImpl interface.
 func (s *BizServiceImpl) BizMethod1(ctx context.Context, req *fieldmask0.BizRequest) (resp *fieldmask0.BizResponse, err error) {
-	// check if reques has been masked
+	// check if request has been masked
 	if req.A != "" { // req.A must be filtered
 		return nil, errors.New("request must filter BizRequest.A!")
 	}

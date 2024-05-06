@@ -33,7 +33,7 @@ func init() {
 	// new a obj to get its TypeDescriptor
 	obj := nbase.NewBase()
 
-	// construct a fieldmask with TypeDescriptor and thrift pathes
+	// construct a fieldmask with TypeDescriptor and thrift paths
 	fm, err := fieldmask.NewFieldMask(obj.GetTypeDescriptor(),
 		"$.Enum", "$.EnumMap{1}", "$.LogID", "$.TrafficEnv.Name", "$.TrafficEnv.Code", "$.Meta.IntMap{1}", "$.Meta.StrMap{\"1234\"}",
 		"$.Meta.List[1]", "$.Meta.Set[0].id", "$.Meta.Set[1].name")
