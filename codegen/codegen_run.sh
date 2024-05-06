@@ -29,6 +29,7 @@ function check_cmd {
       "kitex -module codegen-test -thrift template=slim $filename"
       "kitex -module codegen-test -thrift keep_unknown_fields $filename"
       "kitex -module codegen-test -thrift template=slim -thrift keep_unknown_fields $filename"
+      "kitex -module codegen-test -thrift with_field_mask -thrift with_reflection -thrift keep_unknown_fields $filename"
     )
 
     skip_error_info=(
@@ -43,7 +44,8 @@ function check_cmd {
         if ! grep -q -E "$(printf '%s\n' "${skip_error_info[@]}" | paste -sd '|' -)" "$tmp_file"; then
           echo "$cmd" >> "errors.txt"
           cat "$tmp_file" >> "errors.txt" # 将错误输出添加到错误文件中
-          echo "Error: $cmd"
+          echo "Kitex Error: $cmd"
+          exit 1
         fi
         rm "$tmp_file" # 删除临时文件
         continue
@@ -52,27 +54,49 @@ function check_cmd {
       rm "$tmp_file" # 删除临时文件
 
       # go mod 不展示输出，会干扰看结果，如果这一步出问题了，下一步 go build 会报错，所以不用担心
+      go get github.com/cloudwego/thriftgo@main 2>&1
       go mod tidy > /dev/null 2>&1
+
 
       # 验证编译
       local tmp_file_2=$(mktemp) # 创建一个临时文件来存储输出
       if ! eval "go build ./..." > "$tmp_file_2" 2>&1; then
         echo "$cmd" >> "errors.txt"
         cat "$tmp_file_2" >> "errors.txt" # 将错误输出添加到错误文件中
-        echo "Error: $cmd"
+        echo "Go Error: $cmd"
+        exit 2
       fi
       rm "$tmp_file_2" # 删除临时文件
       done
 }
 
+function run_test {
+  echo "run test..."
+
+  #run fieldmask tests...
+  cd fieldmask
+  sh run.sh
+  if test $? != 0  
+  then
+    echo "run fieldmask test failed"
+    exit 3
+  fi
+  cd ..
+}
+
 function main {
+
+  mkdir -p testdata
+  cd testdata
+
+  clean_codegen
 
   if [ -e "errors.txt" ]; then
     rm errors.txt
   fi
   touch errors.txt
 
-  basic_file_dir="basic_idls"
+  basic_file_dir="../basic_idls"
   basic_files=($(find "$basic_file_dir" -name "*.thrift" -type f -print))
   basic_total=${#basic_files[@]}
   echo "starting test"
@@ -92,6 +116,11 @@ function main {
       cat errors.txt
       exit 1
   fi
+
+  cd ..
+  
+  run_test
+
 }
 
 main
