@@ -16,6 +16,10 @@ package retrycall
 
 import (
 	"context"
+	"sync/atomic"
+	"testing"
+	"time"
+
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
@@ -24,9 +28,6 @@ import (
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/cloudwego/kitex/transport"
-	"sync/atomic"
-	"testing"
-	"time"
 )
 
 func TestPercentageLimit(t *testing.T) {
@@ -48,7 +49,6 @@ func TestPercentageLimit(t *testing.T) {
 	cli := getKitexClient(
 		transport.TTHeader,
 		client.WithRetryContainer(rc),
-		client.WithHostPorts(":9002"),
 		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				atomic.AddInt32(&totalCnt, 1)
@@ -60,6 +60,7 @@ func TestPercentageLimit(t *testing.T) {
 		}),
 	)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stReq.FlagMsg = CircuitBreakRetrySleep
 	ctx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "20") //ms
 
 	for i := 0; i < 5; i++ {
@@ -111,7 +112,6 @@ func TestPercentageLimitAfterUpdate(t *testing.T) {
 	cli := getKitexClient(
 		transport.TTHeader,
 		client.WithRetryContainer(rc),
-		client.WithHostPorts(":9002"),
 		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				atomic.AddInt32(&totalCnt, 1)
@@ -123,6 +123,7 @@ func TestPercentageLimitAfterUpdate(t *testing.T) {
 		}),
 	)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+	stReq.FlagMsg = CircuitBreakRetrySleep
 	ctx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "20") //ms
 
 	for i := 0; i < 46; i++ {
