@@ -21,14 +21,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/server"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/combine_service"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/combine_service/combineservice"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/servicec"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/transmeta"
-	"github.com/cloudwego/kitex/server"
 )
 
 type ServiceAHandler struct{}
@@ -80,6 +83,29 @@ func TestMultiService(t *testing.T) {
 func TestMuxMultiService(t *testing.T) {
 	ip := "localhost:9904"
 	testMultiService(t, GetMuxServer(ip), ip)
+}
+
+func TestMultiServiceWithCombineServiceClient(t *testing.T) {
+	ip := "localhost:9905"
+	svr := GetServer(ip)
+	err := servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
+	test.Assert(t, err == nil)
+	err = serviceb.RegisterService(svr, new(ServiceBHandler))
+	test.Assert(t, err == nil)
+	err = servicec.RegisterService(svr, new(ServiceCHandler))
+	test.Assert(t, err == nil)
+	go svr.Run()
+	defer svr.Stop()
+
+	combineServiceClient, err := combineservice.NewClient("combineservice",
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+		client.WithHostPorts(ip),
+	)
+	test.Assert(t, err == nil)
+	req := &combine_service.Request{Name: "CombineService"}
+	resp, err := combineServiceClient.Chat1(context.Background(), req)
+	test.Assert(t, err == nil, err)
+	test.Assert(t, resp.Message == "servicea Chat1")
 }
 
 func testRegisterService(t *testing.T, getServer func(ip string) server.Server, ip string) {

@@ -16,6 +16,8 @@ package multiservicecall
 
 import (
 	"context"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service/combineservice"
 	"net"
 	"strings"
 	"testing"
@@ -89,6 +91,28 @@ func TestMultiService(t *testing.T) {
 
 func TestMuxMultiService(t *testing.T) {
 	testMultiService(t, "localhost:9905", server.WithMuxTransport())
+}
+
+func TestMultiServiceWithCombineServiceClient(t *testing.T) {
+	ip := "localhost:9906"
+	svr := GetServer(ip)
+	err := servicea.RegisterService(svr, new(ServiceAImpl))
+	test.Assert(t, err == nil)
+	err = serviceb.RegisterService(svr, new(ServiceBImpl))
+	test.Assert(t, err == nil)
+	go svr.Run()
+	defer svr.Stop()
+
+	combineServiceClient, err := combineservice.NewClient("combineservice",
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+		client.WithHostPorts(ip),
+	)
+	test.Assert(t, err == nil)
+	req := &combine_service.Request{Message: "req from client using combine service"}
+	resp, err := combineServiceClient.Echo1(context.Background(), req)
+	test.Assert(t, err == nil)
+	test.Assert(t, resp.Message == "servicea Echo1")
 }
 
 func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
