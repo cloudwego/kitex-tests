@@ -17,9 +17,10 @@ set -e
 set -x
 
 export GO111MODULE=on
-export GOBIN=$(pwd)/bin
-export PATH=${GOBIN}:$PATH
-mkdir -p ${GOBIN}
+#export GOBIN=$(pwd)/bin
+export PATH=${GOPATH}:$PATH
+#mkdir -p ${GOBIN}
+echo ${GOPATH}
 
 bits=$(getconf LONG_BIT)
 if [[ $bits != 64 ]]; then
@@ -44,7 +45,7 @@ get_protoc() {
 
 install_protoc() {
     PROTOC_VERSION=v3.13.0
-    OUT=./bin
+    OUT=$(pwd)/bin
     export PATH=$OUT:$PATH
     mkdir -p $OUT
 
@@ -69,6 +70,8 @@ which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-
 
 # Install thriftgo
 which thriftgo || go_install github.com/cloudwego/thriftgo@latest
+which thriftgo
+echo $GOPATH
 
 # Install kitex and generate codes
 LOCAL_REPO=$1
@@ -81,6 +84,7 @@ else
     go_install github.com/cloudwego/kitex/tool/cmd/kitex@latest
 fi
 
+go mod init github.com/cloudwego/kitex-tests
 test -d kitex_gen && rm -rf kitex_gen
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex -module github.com/cloudwego/kitex-tests ./idl/http.thrift
@@ -107,6 +111,8 @@ protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
+go get google.golang.org/grpc@latest
+go get google.golang.org/genproto@latest
 go get github.com/cloudwego/kitex@develop
 
 if [[ -n $LOCAL_REPO ]]; then
