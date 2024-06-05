@@ -17,10 +17,6 @@ set -e
 set -x
 
 export GO111MODULE=on
-#export GOBIN=$(pwd)/bin
-export PATH=${GOPATH}:$PATH
-#mkdir -p ${GOBIN}
-echo ${GOPATH}
 
 bits=$(getconf LONG_BIT)
 if [[ $bits != 64 ]]; then
@@ -70,8 +66,6 @@ which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-
 
 # Install thriftgo
 which thriftgo || go_install github.com/cloudwego/thriftgo@latest
-which thriftgo
-echo $GOPATH
 
 # Install kitex and generate codes
 LOCAL_REPO=$1
