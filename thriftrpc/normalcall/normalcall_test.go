@@ -132,7 +132,7 @@ func getNoDefSerdesKitexClient(p transport.Protocol, hostPorts []string, opts ..
 
 func testSTArgs(t *testing.T, req *stability.STRequest, resp *stability.STResponse) {
 	test.Assert(t, req.Str == resp.Str)
-	test.Assert(t, req.DefaultValue == stability.STResponse_DefaultValue_DEFAULT)
+	test.Assert(t, req.DefaultValue == stability.STRequest_DefaultValue_DEFAULT)
 	test.Assert(t, resp.DefaultValue == stability.STResponse_DefaultValue_DEFAULT)
 }
 
