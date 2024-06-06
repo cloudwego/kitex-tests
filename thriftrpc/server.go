@@ -128,11 +128,11 @@ type STServiceHandler struct{}
 
 // TestSTReq .
 func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
-	resp := &stability.STResponse{
-		Str:     req.Str,
-		Mp:      req.StringMap,
-		FlagMsg: req.FlagMsg,
-	}
+	resp := stability.NewSTResponse()
+	resp.Str = req.Str
+	resp.Mp = req.StringMap
+	resp.FlagMsg = req.FlagMsg
+	resp.DefaultValue = req.DefaultValue
 	if req.MockCost != nil {
 		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
 			return nil, err
@@ -145,12 +145,11 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 
 // TestObjReq .
 func (*STServiceHandler) TestObjReq(ctx context.Context, req *instparam.ObjReq) (r *instparam.ObjResp, err error) {
-	resp := &instparam.ObjResp{
-		Msg:     req.Msg,
-		MsgSet:  req.MsgSet,
-		MsgMap:  req.MsgMap,
-		FlagMsg: req.FlagMsg,
-	}
+	resp := instparam.NewObjResp()
+	resp.Msg = req.Msg
+	resp.MsgSet = req.MsgSet
+	resp.MsgMap = req.MsgMap
+	resp.FlagMsg = req.FlagMsg
 	if req.MockCost != nil {
 		if mockSleep, err := time.ParseDuration(*req.MockCost); err != nil {
 			return nil, err

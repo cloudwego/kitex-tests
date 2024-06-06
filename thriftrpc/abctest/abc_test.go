@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
@@ -89,6 +90,9 @@ type stServiceHandler struct {
 
 // TestSTReq .
 func (h *stServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
+	if req.DefaultValue != "default" {
+		return nil, fmt.Errorf("req DefaultValue is not right, expect=default, actual=%s", req.DefaultValue)
+	}
 	if h.cli != nil {
 		// it is service b, both has transient and persist key
 		val, ok := metainfo.GetValue(ctx, transientKV)

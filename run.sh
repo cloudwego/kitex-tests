@@ -75,7 +75,7 @@ if [[ -n $LOCAL_REPO ]]; then
     go_install ${LOCAL_REPO}/tool/cmd/kitex
     cd -
 else
-    go_install github.com/cloudwego/kitex/tool/cmd/kitex@latest
+    go_install github.com/cloudwego/kitex/tool/cmd/kitex@develop
 fi
 
 go mod init github.com/cloudwego/kitex-tests

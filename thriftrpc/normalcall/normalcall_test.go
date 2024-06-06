@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
+	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
@@ -36,12 +38,12 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
+	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
+
 	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
-	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
@@ -128,21 +130,37 @@ func getNoDefSerdesKitexClient(p transport.Protocol, hostPorts []string, opts ..
 	}, opts...)
 }
 
+func testSTArgs(t *testing.T, req *stability.STRequest, resp *stability.STResponse) {
+	test.Assert(t, req.Str == resp.Str)
+	test.Assert(t, req.DefaultValue == stability.STRequest_DefaultValue_DEFAULT)
+	test.Assert(t, resp.DefaultValue == stability.STResponse_DefaultValue_DEFAULT)
+}
+
+func testObjArgs(t *testing.T, req *instparam.ObjReq, resp *instparam.ObjResp) {
+	test.Assert(t, req.FlagMsg == resp.FlagMsg)
+	for _, v := range resp.MsgMap {
+		test.Assert(t, v.DefaultValue == instparam.SubMessage_DefaultValue_DEFAULT)
+	}
+	for _, v := range resp.SubMsgs {
+		test.Assert(t, v.DefaultValue == instparam.SubMessage_DefaultValue_DEFAULT)
+	}
+}
+
 func TestStTReq(t *testing.T) {
 	cli = getKitexClient(transport.PurePayload)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testSTArgs(t, stReq, stResp)
 
 	stResp, err = cli.TestSTReq(ctx, stReq)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testSTArgs(t, stReq, stResp)
 
 	stResp, err = cli.TestSTReq(ctx, stReq)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testSTArgs(t, stReq, stResp)
 }
 
 func TestStTReqWithTTHeader(t *testing.T) {
@@ -151,7 +169,7 @@ func TestStTReqWithTTHeader(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testSTArgs(t, stReq, stResp)
 }
 
 func TestStTReqWithFramed(t *testing.T) {
@@ -160,7 +178,7 @@ func TestStTReqWithFramed(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
 	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testSTArgs(t, stReq, stResp)
 }
 
 func TestStTReqWithTTHeaderFramed(t *testing.T) {
@@ -169,7 +187,7 @@ func TestStTReqWithTTHeaderFramed(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
 	test.Assert(t, err == nil, err)
-	test.Assert(t, stReq.Str == stResp.Str)
+	testSTArgs(t, stReq, stResp)
 }
 
 func TestObjReq(t *testing.T) {
@@ -179,7 +197,7 @@ func TestObjReq(t *testing.T) {
 	objReq.FlagMsg = "ObjReq"
 	objResp, err := cli.TestObjReq(ctx, objReq)
 	test.Assert(t, err == nil, err)
-	test.Assert(t, objReq.FlagMsg == objResp.FlagMsg)
+	testObjArgs(t, objReq, objResp)
 }
 
 func TestException(t *testing.T) {

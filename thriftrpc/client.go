@@ -26,6 +26,7 @@ import (
 
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/bytedance/gopkg/cloud/metainfo"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
@@ -210,14 +211,12 @@ func CreateNoDefSerdesSTRequest(ctx context.Context) (context.Context, *stabilit
 // CreateObjReq .
 func CreateObjReq(ctx context.Context) (context.Context, *instparam.ObjReq) {
 	id := thrift.Int64Ptr(int64(rand.Intn(100)))
-	subMsg1 := &instparam.SubMessage{
-		Id:    id,
-		Value: thrift.StringPtr(utils.RandomString(100)),
-	}
-	subMsg2 := &instparam.SubMessage{
-		Id:    thrift.Int64Ptr(math.MaxInt64),
-		Value: thrift.StringPtr(utils.RandomString(10)),
-	}
+	subMsg1 := instparam.NewSubMessage()
+	subMsg1.Id = id
+	subMsg1.Value = thrift.StringPtr(utils.RandomString(100))
+	subMsg2 := instparam.NewSubMessage()
+	subMsg2.Id = thrift.Int64Ptr(math.MaxInt64)
+	subMsg2.Value = thrift.StringPtr(utils.RandomString(100))
 	subMsgList := []*instparam.SubMessage{subMsg1, subMsg2}
 
 	msg := instparam.NewMessage()
