@@ -24,8 +24,8 @@ struct Rsp {
 
 service A {
     Rsp Foo(1: Req req),
-}
+}(streaming.transport="ttheader")
 
 service B {
     Rsp Bar(1: Req req) (streaming.mode="bidirectional"),
-}
+}(streaming.transport="ttheader")

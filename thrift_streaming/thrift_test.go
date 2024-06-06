@@ -639,7 +639,10 @@ func TestTimeoutRecvSend(t *testing.T) {
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
-					err = CallWithCtx(stream.Context(), time.Millisecond*50, func() (err error) {
+					cancelFunc := func() {
+						_ = stream.Close()
+					}
+					err = streaming.CallWithTimeout(time.Millisecond*50, cancelFunc, func() (err error) {
 						_, err = stream.Recv()
 						klog.Infof("server recv: err = %v", err)
 						test.Assert(t, err != nil, err)

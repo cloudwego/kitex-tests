@@ -40,31 +40,31 @@ service EchoService {
     EchoResponse EchoPingPong (1: EchoRequest req1, 2: EchoRequest req2) throws (1: EchoException e),
     void EchoOneway(1: EchoRequest req1),
     void Ping(),
-}
+} (streaming.transport="ttheader")
 
 // for checking whether the generated code is ok
 service PingPongOnlyService {
     EchoResponse EchoPingPongNew (1: EchoRequest req1),
-}
+}(streaming.transport="ttheader")
 
 // Also streaming
 service PingPongOnlyServiceChild extends PingPongOnlyService {
     EchoResponse EchoBidirectionalExtended (1: EchoRequest req1) (streaming.mode="bidirectional"),
-}
+}(streaming.transport="ttheader")
 
 // Also streaming
-service PingPongOnlyServiceChildChild extends PingPongOnlyServiceChild {}
+service PingPongOnlyServiceChildChild extends PingPongOnlyServiceChild {}(streaming.transport="ttheader")
 
 // for checking whether the generated code is ok
 service StreamOnlyService {
     EchoResponse EchoBidirectionalNew (1: EchoRequest req1) (streaming.mode="bidirectional"),
-}
+} (streaming.transport="ttheader")
 
 // for checking services extending a service extending a service
-service StreamOnlyServiceChild extends StreamOnlyService {}
+service StreamOnlyServiceChild extends StreamOnlyService {}(streaming.transport="ttheader")
 
 // should also be a streaming service
-service StreamOnlyServiceChildChild extends StreamOnlyServiceChild {}
+service StreamOnlyServiceChildChild extends StreamOnlyServiceChild {}(streaming.transport="ttheader")
 
 service ABCService {
     a.b.c.Response Echo(1: a.b.c.Request req1, 2: a.b.c.Request req2),
@@ -72,7 +72,7 @@ service ABCService {
     a.b.c.Response EchoServer(1: a.b.c.Request req1) (streaming.mode="server"),
     a.b.c.Response EchoClient(1: a.b.c.Request req1) (streaming.mode="client"),
     a.b.c.Response EchoUnary(1: a.b.c.Request req1) (streaming.mode="unary"),
-}
+}(streaming.transport="ttheader")
 
 // test for lower case type, service, method
 
@@ -93,4 +93,4 @@ service lower_service {
 
     // KitexThrift
     lower_response echo_pingPong (1: lower_request req1),
-}
+}(streaming.transport="ttheader")
