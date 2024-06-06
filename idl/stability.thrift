@@ -47,6 +47,7 @@ struct STRequest {
     14: required string flagMsg
     15: required string framework = "kitex",
     16: optional string mockCost,
+    17: optional string defaultValue = "default";
 
     255: optional base.Base Base,
 }
@@ -55,6 +56,7 @@ struct STResponse {
     1: string str,
     2: map<string, string> mp,
     3: required string flagMsg
+    4: optional string defaultValue = "default";
     255: optional base.BaseResp BaseResp,
 }
 

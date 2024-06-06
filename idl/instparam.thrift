@@ -19,6 +19,7 @@ namespace go thrift.instparam
 struct SubMessage {
     1: optional i64 id;
     2: optional string value;
+    3: optional string defaultValue = "default";
 }
 
 struct Message {
