@@ -18,7 +18,11 @@ import (
 	"context"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service/combineservice"
+	"github.com/cloudwego/kitex/client/genericclient"
+	"github.com/cloudwego/kitex/pkg/generic"
+	"github.com/tidwall/gjson"
 	"net"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -91,6 +95,31 @@ func TestMultiService(t *testing.T) {
 
 func TestMuxMultiService(t *testing.T) {
 	testMultiService(t, "localhost:9905", server.WithMuxTransport())
+}
+
+func TestMutliServiceWithGenericClient(t *testing.T) {
+	ip := "localhost:9907"
+	svr := GetServer(ip)
+	err := servicea.RegisterService(svr, new(ServiceAImpl))
+	test.Assert(t, err == nil)
+	err = serviceb.RegisterService(svr, new(ServiceBImpl))
+	test.Assert(t, err == nil)
+	go svr.Run()
+	defer svr.Stop()
+
+	p, err := generic.NewThriftFileProvider("./idl/thrift_multi_service.thrift")
+	test.Assert(t, err == nil)
+	g, err := generic.JSONThriftGeneric(p)
+	test.Assert(t, err == nil)
+	cli, err := genericclient.NewClient("genericservice", g,
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+	test.Assert(t, err == nil)
+	resp, err := cli.GenericCall(context.Background(), "Echo1", `{"message":"generic request"}`)
+	test.Assert(t, err == nil)
+	respStr, ok := resp.(string)
+	test.Assert(t, ok)
+	test.Assert(t, reflect.DeepEqual(gjson.Get(respStr, "message").String(), "servicea Echo1"))
 }
 
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
