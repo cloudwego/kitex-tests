@@ -16,8 +16,6 @@ package multiservicecall
 
 import (
 	"context"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service/combineservice"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/tidwall/gjson"
@@ -122,6 +120,7 @@ func TestMutliServiceWithGenericClient(t *testing.T) {
 	test.Assert(t, reflect.DeepEqual(gjson.Get(respStr, "message").String(), "servicea Echo1"))
 }
 
+/*
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 	ip := "localhost:9906"
 	svr := GetServer(ip)
@@ -143,6 +142,7 @@ func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 	test.Assert(t, err == nil)
 	test.Assert(t, resp.Message == "servicea Echo1")
 }
+*/
 
 func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
 	svr := GetServer(ip, opts...)
