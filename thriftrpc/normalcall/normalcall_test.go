@@ -437,13 +437,43 @@ func TestNoDefaultSerdes(t *testing.T) {
 		desc      string
 		hostPorts []string
 		opts      []client.Option
+		expectErr bool
 	}{
+		{
+			desc:      "use FastCodec and SkipDecoder, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead | thrift.EnableSkipDecoder)),
+			},
+		},
+		{
+			desc:      "use Frugal and SkipDecoder, connect to Frugal and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFrugalAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead | thrift.EnableSkipDecoder)),
+			},
+		},
+		{
+			desc:      "use FastCodec and SkipDecoder, connect to FastCodec and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFastCodecAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead | thrift.EnableSkipDecoder)),
+			},
+		},
+		{
+			desc:      "use Frugal and SkipDecoder, connect to FastCodec and SkipDecoder enabled server",
+			hostPorts: []string{noDefSerdesFastCodecAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead | thrift.EnableSkipDecoder)),
+			},
+		},
 		{
 			desc:      "use FastCodec, connect to Frugal and SkipDecoder enabled server",
 			hostPorts: []string{noDefSerdesFrugalAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
 			},
+			expectErr: true,
 		},
 		{
 			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
@@ -451,6 +481,7 @@ func TestNoDefaultSerdes(t *testing.T) {
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
 			},
+			expectErr: true,
 		},
 		{
 			desc:      "use FastCodec, connect to FastCodec and SkipDecoder enabled server",
@@ -458,13 +489,15 @@ func TestNoDefaultSerdes(t *testing.T) {
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
 			},
+			expectErr: true,
 		},
 		{
-			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
+			desc:      "use Frugal, connect to FastCodec and SkipDecoder enabled server",
 			hostPorts: []string{noDefSerdesFastCodecAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
 			},
+			expectErr: true,
 		},
 	}
 	for _, tc := range testCases {
@@ -473,8 +506,12 @@ func TestNoDefaultSerdes(t *testing.T) {
 			ctx, stReq := thriftrpc.CreateNoDefSerdesSTRequest(context.Background())
 			for i := 0; i < 3; i++ {
 				stResp, err := cliNoDefSerdes.TestSTReq(ctx, stReq)
-				test.Assert(t, err == nil, err)
-				test.Assert(t, stReq.Str == stResp.Str)
+				if !tc.expectErr {
+					test.Assert(t, err == nil, err)
+					test.Assert(t, stReq.Str == stResp.Str)
+				} else {
+					test.Assert(t, err != nil)
+				}
 			}
 		})
 	}
