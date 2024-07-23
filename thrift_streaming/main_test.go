@@ -15,12 +15,14 @@
 package thrift_streaming
 
 import (
+	"log"
 	"net"
 	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex"
 	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
@@ -157,5 +159,7 @@ func TestMain(m *testing.M) {
 	common.WaitServer(pbAddr)
 	common.WaitServer(slimAddr)
 	common.WaitServer(combineAddr)
+	log.Printf("testing Kitex %s", kitex.Version)
+
 	m.Run()
 }
