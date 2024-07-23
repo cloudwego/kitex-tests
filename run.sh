@@ -78,6 +78,8 @@ else
     go_install github.com/cloudwego/kitex/tool/cmd/kitex@develop
 fi
 
+kitex -version
+
 go mod init github.com/cloudwego/kitex-tests
 test -d kitex_gen && rm -rf kitex_gen
 kitex -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
