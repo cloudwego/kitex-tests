@@ -31,7 +31,7 @@ import (
 func TestMain(m *testing.M) {
 	klog.SetLevel(klog.LevelFatal)
 	svc := runServer()
-	time.Sleep(time.Second)
+	time.Sleep(100 * time.Millisecond)
 	m.Run()
 	svc.Stop()
 }

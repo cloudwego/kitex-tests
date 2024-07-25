@@ -33,7 +33,7 @@ import (
 func TestMain(m *testing.M) {
 	svc := runServer()
 	gsvc := runGenericServer()
-	time.Sleep(time.Second)
+	time.Sleep(100 * time.Millisecond)
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()
