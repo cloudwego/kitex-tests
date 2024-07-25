@@ -29,7 +29,7 @@ import (
 func TestMain(m *testing.M) {
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":8002",
+		Address: "localhost:8002",
 	}, nil)
 	time.Sleep(time.Second)
 	m.Run()
@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return pbrpc.CreateKitexClient(&pbrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":8002"},
+		HostPorts:         []string{"localhost:8002"},
 		Protocol:          p,
 		ConnMode:          pbrpc.ConnectionMultiplexed,
 	})

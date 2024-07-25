@@ -30,7 +30,7 @@ import (
 func TestMain(m *testing.M) {
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":8001",
+		Address: "localhost:8001",
 	}, nil)
 	time.Sleep(time.Second)
 	m.Run()
@@ -40,7 +40,7 @@ func TestMain(m *testing.M) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return pbrpc.CreateKitexClient(&pbrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":8001"},
+		HostPorts:         []string{"localhost:8001"},
 		Protocol:          p,
 		ConnMode:          pbrpc.LongConnection,
 	})
@@ -122,7 +122,7 @@ func BenchmarkPBCallWithTTHeader(b *testing.B) {
 	}
 }
 
-//  go test -benchmem -bench=BenchmarkTTHeaderParallel ./mocks/pbrpc/normalcall/ | grep '^Benchmark' | tee -a pbbench.txt
+// go test -benchmem -bench=BenchmarkTTHeaderParallel ./mocks/pbrpc/normalcall/ | grep '^Benchmark' | tee -a pbbench.txt
 func BenchmarkTTHeaderParallel(b *testing.B) {
 	cli := getKitexClient(transport.TTHeader)
 	b.ReportAllocs()

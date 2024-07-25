@@ -34,7 +34,7 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-const address = ":9009"
+const address = "localhost:9009"
 
 func runServer() server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", address)
@@ -47,7 +47,7 @@ func runServer() server.Server {
 	return svc
 }
 
-const genericAddress = ":9010"
+const genericAddress = "localhost:9010"
 
 func runGenericServer() server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", genericAddress)

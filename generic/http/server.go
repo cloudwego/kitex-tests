@@ -34,7 +34,7 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-const address = ":9009"
+const address = "localhost:9009"
 
 func runServer() server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", address)

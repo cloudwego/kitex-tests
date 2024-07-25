@@ -40,7 +40,7 @@ var cli stservice.Client
 func TestMain(m *testing.M) {
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9001",
+		Address: "localhost:9001",
 	}, &STServiceHandler{}, server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	time.Sleep(time.Second)
 	m.Run()
@@ -222,7 +222,7 @@ func TestHandlerPanic(t *testing.T) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return pbrpc.CreateKitexClient(&pbrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":9001"},
+		HostPorts:         []string{"localhost:9001"},
 		Protocol:          p,
 		ConnMode:          pbrpc.LongConnection,
 	}, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
