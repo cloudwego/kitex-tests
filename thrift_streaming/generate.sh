@@ -37,6 +37,10 @@ idl=idl/api.thrift
 
 SAVE_PATH=$PATH
 
+kitex_cmd() {
+  kitex --no-dependency-check $@
+}
+
 # generate with old kitex and thriftgo WITHOUT thrift streaming support
 function generate_old() {
     echo -e "\n\ngenerate_old\n"
@@ -88,20 +92,20 @@ function generate_new() {
     kitex -version
 
     # Thrift
-    kitex $module $idl
-    kitex $module --combine-service idl/combine.thrift
-    kitex $module --combine-service idl/combine_extend.thrift
+    kitex_cmd $module $idl
+    kitex_cmd $module --combine-service idl/combine.thrift
+    kitex_cmd $module --combine-service idl/combine_extend.thrift
 
     # Thrift Slim
-    kitex -thrift template=slim -gen-path kitex_gen_slim $module $idl
-    kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine.thrift
-    kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine_extend.thrift
+    kitex_cmd -thrift template=slim -gen-path kitex_gen_slim $module $idl
+    kitex_cmd -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine.thrift
+    kitex_cmd -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine_extend.thrift
 
     # KitexPB
-    kitex $module idl/api.proto
+    kitex_cmd $module idl/api.proto
 
     # GRPC
-    kitex $module idl/api_no_stream.proto
+    kitex_cmd $module idl/api_no_stream.proto
 }
 
 function generate_new_thriftgo_old_kitex() {

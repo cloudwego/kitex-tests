@@ -19,21 +19,20 @@ import (
 	"io"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/multi_service"
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/multi_service/servicea"
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/multi_service/serviceb"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/servicea"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 )
 
 type ServiceAImpl struct{}
 
-func (s *ServiceAImpl) EchoA(stream multi_service.ServiceA_EchoAServer) error {
+func (s *ServiceAImpl) EchoA(stream grpc_multi_service.ServiceA_EchoAServer) error {
 	for {
 		recv, err := stream.Recv()
 		if err != nil {
@@ -42,7 +41,7 @@ func (s *ServiceAImpl) EchoA(stream multi_service.ServiceA_EchoAServer) error {
 			}
 			return err
 		}
-		resp := &multi_service.ReplyA{}
+		resp := &grpc_multi_service.ReplyA{}
 		resp.Message = recv.Name
 		err = stream.Send(resp)
 		if err != nil {
@@ -54,7 +53,7 @@ func (s *ServiceAImpl) EchoA(stream multi_service.ServiceA_EchoAServer) error {
 
 type ServiceBImpl struct{}
 
-func (s *ServiceBImpl) EchoB(stream multi_service.ServiceB_EchoBServer) error {
+func (s *ServiceBImpl) EchoB(stream grpc_multi_service.ServiceB_EchoBServer) error {
 	for {
 		recv, err := stream.Recv()
 		if err != nil {
@@ -63,7 +62,7 @@ func (s *ServiceBImpl) EchoB(stream multi_service.ServiceB_EchoBServer) error {
 			}
 			return err
 		}
-		resp := &multi_service.ReplyB{}
+		resp := &grpc_multi_service.ReplyB{}
 		resp.Message = recv.Name
 		err = stream.Send(resp)
 		if err != nil {
@@ -77,8 +76,8 @@ func GetServer(hostport string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 
 	svr := server.NewServer(server.WithServiceAddr(addr))
-	svr.RegisterService(servicea.NewServiceInfo(), new(ServiceAImpl))
-	svr.RegisterService(serviceb.NewServiceInfo(), new(ServiceBImpl))
+	servicea.RegisterService(svr, new(ServiceAImpl))
+	serviceb.RegisterService(svr, new(ServiceBImpl))
 
 	return svr
 }
@@ -89,16 +88,22 @@ func TestMultiService(t *testing.T) {
 	go svr.Run()
 	defer svr.Stop()
 
-	time.Sleep(time.Second)
 	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 
-	_, err = clientA.EchoA(context.Background())
+	streamCliA, err := clientA.EchoA(context.Background())
 	test.Assert(t, err == nil, err)
+	streamCliA.Send(&grpc_multi_service.RequestA{Name: "ServiceA"})
+	respA, err := streamCliA.Recv()
+	test.Assert(t, err == nil)
+	test.Assert(t, respA.Message == "ServiceA")
 
 	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
-
-	_, err = clientB.EchoB(context.Background())
+	streamCliB, err := clientB.EchoB(context.Background())
 	test.Assert(t, err == nil, err)
+	streamCliB.Send(&grpc_multi_service.RequestB{Name: "ServiceB"})
+	respB, err := streamCliB.Recv()
+	test.Assert(t, err == nil)
+	test.Assert(t, respB.Message == "ServiceB")
 }
