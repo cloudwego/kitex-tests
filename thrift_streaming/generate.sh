@@ -37,6 +37,10 @@ idl=idl/api.thrift
 
 SAVE_PATH=$PATH
 
+kitex_cmd() {
+  kitex --no-dependency-check $@
+}
+
 # generate with old kitex and thriftgo WITHOUT thrift streaming support
 function generate_old() {
     echo -e "\n\ngenerate_old\n"
