@@ -58,7 +58,7 @@ go_install() {
 }
 
 kitex_cmd() {
-  kitex --no-dependency-check
+  kitex --no-dependency-check $@
 }
 
 which protoc || install_protoc
