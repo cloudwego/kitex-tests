@@ -63,7 +63,7 @@ function generate_old() {
 
     # Thrift Old
     rm -rf kitex_gen_old
-    kitex_cmd -gen-path kitex_gen_old $module $idl
+    kitex -gen-path kitex_gen_old $module $idl
 }
 
 function generate_new() {
