@@ -59,7 +59,7 @@ function generate_old() {
         exit 1
     fi
 
-    kitex_cmd -version
+    kitex -version
 
     # Thrift Old
     rm -rf kitex_gen_old
@@ -89,7 +89,7 @@ function generate_new() {
     fi
 
     rm -rf kitex_gen
-    kitex_cmd -version
+    kitex -version
 
     # Thrift
     kitex_cmd $module $idl
@@ -126,7 +126,7 @@ function generate_new_thriftgo_old_kitex() {
     fi
 
     rm -rf kitex_gen_cross
-    kitex_cmd -version
+    kitex -version
     # Thrift
     kitex_cmd -gen-path kitex_gen_cross $module $idl
 }
