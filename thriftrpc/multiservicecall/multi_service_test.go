@@ -26,6 +26,8 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/combine_service/combineservice"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/serviceb"
@@ -90,33 +92,6 @@ func TestMultiService(t *testing.T) {
 func TestMuxMultiService(t *testing.T) {
 	testMultiService(t, "localhost:9905", server.WithMuxTransport())
 }
-
-/*
-func TestMutliServiceWithGenericClient(t *testing.T) {
-	ip := "localhost:9907"
-	svr := GetServer(ip)
-	err := servicea.RegisterService(svr, new(ServiceAImpl))
-	test.Assert(t, err == nil)
-	err = serviceb.RegisterService(svr, new(ServiceBImpl))
-	test.Assert(t, err == nil)
-	go svr.Run()
-	defer svr.Stop()
-
-	p, err := generic.NewThriftFileProvider("./idl/thrift_multi_service.thrift")
-	test.Assert(t, err == nil)
-	g, err := generic.JSONThriftGeneric(p)
-	test.Assert(t, err == nil)
-	cli, err := genericclient.NewClient("genericservice", g,
-		client.WithTransportProtocol(transport.TTHeader),
-		client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
-	test.Assert(t, err == nil)
-	resp, err := cli.GenericCall(context.Background(), "Echo1", `{"message":"generic request"}`)
-	test.Assert(t, err == nil)
-	respStr, ok := resp.(string)
-	test.Assert(t, ok)
-	test.Assert(t, reflect.DeepEqual(gjson.Get(respStr, "message").String(), "servicea Echo1"))
-}
-*/
 
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 	ip := "localhost:9906"
@@ -192,10 +167,10 @@ func testMultiService(t *testing.T, ip string, opts ...server.Option) {
 	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
+	time.Sleep(100 * time.Millisecond)
 
 	req := &multi_service.Request{Message: "multi_service req"}
 
-	time.Sleep(time.Second)
 	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.TTHeader), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err := clientA.Echo1(context.Background(), req)

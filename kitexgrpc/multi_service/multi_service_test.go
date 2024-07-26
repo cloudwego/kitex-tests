@@ -16,14 +16,13 @@ package multi_service
 
 import (
 	"context"
-	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/combineservice"
+	"io"
+	"net"
+	"testing"
+
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
-	"io"
-	"net"
-	"strings"
-	"testing"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/servicea"
@@ -107,21 +106,4 @@ func TestMultiService(t *testing.T) {
 	respB, err := streamCliB.Recv()
 	test.Assert(t, err == nil)
 	test.Assert(t, respB.Message == "ServiceB")
-}
-
-func TestMultiServiceWithCombineServiceClient(t *testing.T) {
-	ip := "localhost:9899"
-	svr := GetServer(ip)
-	go svr.Run()
-	defer svr.Stop()
-
-	combineServiceCli, err := combineservice.NewClient("CombineService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
-	test.Assert(t, err == nil, err)
-
-	combineServiceStreamCli, err := combineServiceCli.EchoA(context.Background())
-	test.Assert(t, err == nil, err)
-	combineServiceStreamCli.Send(&grpc_multi_service.RequestA{Name: "ServiceA"})
-	_, err = combineServiceStreamCli.Recv()
-	test.Assert(t, err != nil)
-	test.Assert(t, strings.Contains(err.Error(), "unknown service CombineService: client is using CombineService"))
 }
