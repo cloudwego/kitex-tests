@@ -43,7 +43,7 @@ var cli stservice.Client
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9002",
+		Address: "localhost:9002",
 	}, &STServiceHandler{}, server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	time.Sleep(time.Second)
 	m.Run()

@@ -84,6 +84,8 @@ fi
 
 kitex -version
 
+rm -f go.mod # go mod init fails if it already exists
+
 go mod init github.com/cloudwego/kitex-tests
 test -d kitex_gen && rm -rf kitex_gen
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
