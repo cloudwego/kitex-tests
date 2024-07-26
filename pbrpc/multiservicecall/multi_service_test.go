@@ -16,14 +16,13 @@ package multiservicecall
 
 import (
 	"context"
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/server"
 	"net"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/transmeta"
-	"github.com/cloudwego/kitex/server"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/combine_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/combine_service/combineservice"
@@ -144,10 +143,10 @@ func testMultiService(t *testing.T, svr server.Server, ip string) {
 	servicec.RegisterService(svr, new(ServiceCHandler), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
+	time.Sleep(100 * time.Millisecond)
 
 	req := &pb_multi_service.Request{Name: "pb multi_service req"}
 
-	time.Sleep(time.Second)
 	clientA, err := servicea.NewClient("ServiceA", client.WithMetaHandler(transmeta.ClientTTHeaderHandler), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
 	resp, err := clientA.Chat1(context.Background(), req)
