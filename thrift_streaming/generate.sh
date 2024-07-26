@@ -128,7 +128,7 @@ function generate_new_thriftgo_old_kitex() {
     rm -rf kitex_gen_cross
     kitex -version
     # Thrift
-    kitex_cmd -gen-path kitex_gen_cross $module $idl
+    kitex -gen-path kitex_gen_cross $module $idl
 }
 
 go get github.com/cloudwego/kitex@develop
