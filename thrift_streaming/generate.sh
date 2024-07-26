@@ -55,11 +55,11 @@ function generate_old() {
         exit 1
     fi
 
-    kitex -version
+    kitex_cmd -version
 
     # Thrift Old
     rm -rf kitex_gen_old
-    kitex -gen-path kitex_gen_old $module $idl
+    kitex_cmd -gen-path kitex_gen_old $module $idl
 }
 
 function generate_new() {
@@ -85,23 +85,23 @@ function generate_new() {
     fi
 
     rm -rf kitex_gen
-    kitex -version
+    kitex_cmd -version
 
     # Thrift
-    kitex $module $idl
-    kitex $module --combine-service idl/combine.thrift
-    kitex $module --combine-service idl/combine_extend.thrift
+    kitex_cmd $module $idl
+    kitex_cmd $module --combine-service idl/combine.thrift
+    kitex_cmd $module --combine-service idl/combine_extend.thrift
 
     # Thrift Slim
-    kitex -thrift template=slim -gen-path kitex_gen_slim $module $idl
-    kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine.thrift
-    kitex -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine_extend.thrift
+    kitex_cmd -thrift template=slim -gen-path kitex_gen_slim $module $idl
+    kitex_cmd -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine.thrift
+    kitex_cmd -thrift template=slim -gen-path kitex_gen_slim $module --combine-service idl/combine_extend.thrift
 
     # KitexPB
-    kitex $module idl/api.proto
+    kitex_cmd $module idl/api.proto
 
     # GRPC
-    kitex $module idl/api_no_stream.proto
+    kitex_cmd $module idl/api_no_stream.proto
 }
 
 function generate_new_thriftgo_old_kitex() {
@@ -122,9 +122,9 @@ function generate_new_thriftgo_old_kitex() {
     fi
 
     rm -rf kitex_gen_cross
-    kitex -version
+    kitex_cmd -version
     # Thrift
-    kitex -gen-path kitex_gen_cross $module $idl
+    kitex_cmd -gen-path kitex_gen_cross $module $idl
 }
 
 go get github.com/cloudwego/kitex@develop
