@@ -33,7 +33,7 @@ var cli stservice.Client
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  ":9001",
+		Address:  "localhost:9001",
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, &STServiceHandler{})
 	time.Sleep(time.Second)
@@ -108,7 +108,7 @@ func TestHandlerPanic(t *testing.T) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":9001"},
+		HostPorts:         []string{"localhost:9001"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
 	})

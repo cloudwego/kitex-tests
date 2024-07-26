@@ -39,15 +39,15 @@ const (
 )
 
 func TestMain(m *testing.M) {
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9002"))
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts("localhost:9002"))
 	svrb := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9001",
+		Address: "localhost:9001",
 	}, &stServiceHandler{cli: cli}, server.WithMetaHandler(testMetaHandler{}))
 
 	svrc := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9002",
+		Address: "localhost:9002",
 	}, &stServiceHandler{})
 	time.Sleep(time.Second)
 	m.Run()
@@ -56,7 +56,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestTransientKV(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(":9001"))
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts("localhost:9001"))
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx = metainfo.WithValue(ctx, transientKV, transientKV)

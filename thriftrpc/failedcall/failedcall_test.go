@@ -50,7 +50,7 @@ func (mc *mockedCodec) Name() string {
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9001",
+		Address: "localhost:9001",
 	}, nil, server.WithCodec(&mockedCodec{
 		Codec: codec.NewDefaultCodec(),
 	}))

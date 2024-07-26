@@ -38,7 +38,7 @@ var cli stservice.Client
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  ":9002",
+		Address:  "localhost:9002",
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil)
 	time.Sleep(time.Second)
@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 func getKitexMuxClient(opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":9002"},
+		HostPorts:         []string{"localhost:9002"},
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
 	}, opts...)
 }
@@ -99,7 +99,7 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	var ri rpcinfo.RPCInfo
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  ":9003",
+		Address:  "localhost:9003",
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil, server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, req, resp interface{}) error {
@@ -114,14 +114,14 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(metainfo.WithBackwardValues(context.Background()))
 
 	t.Run("reuse", func(t *testing.T) {
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9003"))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort("localhost:9003"))
 		test.Assert(t, err == nil, err)
 		test.Assert(t, ri.Invocation().MethodName() == "", ri.Invocation().MethodName()) // zeroed
 	})
 
 	t.Run("disable reuse", func(t *testing.T) {
 		rpcinfo.EnablePool(false)
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(":9003"))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort("localhost:9003"))
 		test.Assert(t, err == nil, err)
 		test.Assert(t, ri.Invocation().MethodName() != "", ri.Invocation().MethodName())
 	})

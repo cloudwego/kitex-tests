@@ -145,4 +145,14 @@ if [ ! -z "$TEST_GENERATE_OLD" ]; then
   generate_old
 fi
 
-cd exitserver && go build && mv exitserver $ROOT/binaries
+cd exitserver
+# XXX: sonic is not compatible with latest Go version...
+# but updating the pkg will cause changes of go.mod & go.sum
+cp go.mod go.mod.bak
+cp go.sum go.sum.bak
+go get -u github.com/bytedance/sonic
+go build
+# recover the change above, make sure git diff is clear
+mv go.mod.bak go.mod
+mv go.sum.bak go.sum
+mv exitserver $ROOT/binaries

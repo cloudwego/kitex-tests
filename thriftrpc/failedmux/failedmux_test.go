@@ -49,7 +49,7 @@ func (mc *mockedCodec) Name() string {
 func TestMain(m *testing.M) {
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  ":9002",
+		Address:  "localhost:9002",
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil, server.WithCodec(&mockedCodec{
 		Codec: codec.NewDefaultCodec(),
@@ -62,7 +62,7 @@ func TestMain(m *testing.M) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":9002"},
+		HostPorts:         []string{"localhost:9002"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
 	})

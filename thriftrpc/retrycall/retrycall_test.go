@@ -46,7 +46,7 @@ var retryChainStopStr = "chain stop retry"
 func TestMain(m *testing.M) {
 	svr1 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: ":9001",
+		Address: "localhost:9001",
 	}, new(STServiceHandler))
 
 	time.Sleep(time.Second)
@@ -57,7 +57,7 @@ func TestMain(m *testing.M) {
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":9001"},
+		HostPorts:         []string{"localhost:9001"},
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
 	}, opts...)
