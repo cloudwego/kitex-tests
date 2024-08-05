@@ -23,12 +23,12 @@ function check_cmd {
     local filename=$1
 
     test_cmds=(
-      "kitex -module codegen-test $filename"
-      "kitex -module codegen-test -service a.b.c $filename"
-      "kitex -module codegen-test -combine-service $filename"
-      "kitex -module codegen-test -thrift template=slim $filename"
-      "kitex -module codegen-test -thrift keep_unknown_fields $filename"
-      "kitex -module codegen-test -thrift template=slim -thrift keep_unknown_fields $filename"
+      "kitex -no-dependency-check -module codegen-test $filename"
+      "kitex -no-dependency-check -module codegen-test -service a.b.c $filename"
+      "kitex -no-dependency-check -module codegen-test -combine-service $filename"
+      "kitex -no-dependency-check -module codegen-test -thrift template=slim $filename"
+      "kitex -no-dependency-check -module codegen-test -thrift keep_unknown_fields $filename"
+      "kitex -no-dependency-check -module codegen-test -thrift template=slim -thrift keep_unknown_fields $filename"
     )
 
     skip_error_info=(
