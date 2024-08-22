@@ -36,11 +36,23 @@ message ReplyB {
   string message = 1;
 }
 
+message RequestC {
+  string name = 1;
+}
+
+message ReplyC {
+  string message = 1;
+}
+
 service ServiceA {
   rpc EchoA (stream RequestA) returns (stream ReplyA) {}
 }
 
 service ServiceB {
   rpc EchoB (stream RequestB) returns (stream ReplyB) {}
+}
+
+service ServiceC {
+  rpc EchoC (stream RequestC) returns (stream ReplyC) {}
 }
 
