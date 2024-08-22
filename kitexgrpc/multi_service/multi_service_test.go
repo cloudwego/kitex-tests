@@ -135,6 +135,7 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	go svr.Run()
 	defer svr.Stop()
 
+	// unknown service error
 	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 	streamCliC, err := clientC.EchoC(context.Background())
@@ -144,6 +145,7 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	test.Assert(t, err != nil)
 	test.DeepEqual(t, err.Error(), "rpc error: code = 20 desc = unknown service ServiceC")
 
+	// unknown method error
 	clientA, err := servicea2.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 	streamCliA, err := clientA.Echo(context.Background())

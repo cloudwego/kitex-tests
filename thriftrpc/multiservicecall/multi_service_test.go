@@ -145,6 +145,7 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	defer svr.Stop()
 	time.Sleep(100 * time.Millisecond)
 
+	// unknown service error
 	clientB, err := serviceb.NewClient("ServiceB",
 		client.WithHostPorts(hostport),
 		client.WithTransportProtocol(transport.TTHeader),
@@ -155,6 +156,7 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	fmt.Println(err)
 	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown service ServiceB, method Echo2")
 
+	// unknown method error
 	clientA, err := servicea2.NewClient("ServiceA",
 		client.WithHostPorts(hostport),
 		client.WithTransportProtocol(transport.TTHeader),
