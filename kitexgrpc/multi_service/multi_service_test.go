@@ -84,12 +84,12 @@ func GetServer(hostport string) server.Server {
 }
 
 func TestMultiService(t *testing.T) {
-	ip := "localhost:9898"
-	svr := GetServer(ip)
+	hostport := "localhost:9898"
+	svr := GetServer(hostport)
 	go svr.Run()
 	defer svr.Stop()
 
-	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 
 	streamCliA, err := clientA.EchoA(context.Background())
@@ -99,7 +99,7 @@ func TestMultiService(t *testing.T) {
 	test.Assert(t, err == nil)
 	test.Assert(t, respA.Message == "ServiceA")
 
-	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 	streamCliB, err := clientB.EchoB(context.Background())
 	test.Assert(t, err == nil, err)
@@ -110,14 +110,14 @@ func TestMultiService(t *testing.T) {
 }
 
 func TestUnknownException(t *testing.T) {
-	ip := "localhost:9899"
-	addr, _ := net.ResolveTCPAddr("tcp", ip)
+	hostport := "localhost:9899"
+	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 	svr := server.NewServer(server.WithServiceAddr(addr))
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	go svr.Run()
 	defer svr.Stop()
 
-	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 	streamCliC, err := clientC.EchoC(context.Background())
 	test.Assert(t, err == nil, err)
@@ -128,12 +128,12 @@ func TestUnknownException(t *testing.T) {
 }
 
 func TestUnknownExceptionWithMultiService(t *testing.T) {
-	ip := "localhost:9900"
-	svr := GetServer(ip)
+	hostport := "localhost:9900"
+	svr := GetServer(hostport)
 	go svr.Run()
 	defer svr.Stop()
 
-	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 	streamCliC, err := clientC.EchoC(context.Background())
 	test.Assert(t, err == nil, err)
