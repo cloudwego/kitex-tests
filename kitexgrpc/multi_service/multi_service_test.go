@@ -27,6 +27,9 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/serviceb"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service/servicec"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service_2"
+	servicea2 "github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service_2/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 )
 
@@ -83,12 +86,12 @@ func GetServer(hostport string) server.Server {
 }
 
 func TestMultiService(t *testing.T) {
-	ip := "localhost:9898"
-	svr := GetServer(ip)
+	hostport := "localhost:9898"
+	svr := GetServer(hostport)
 	go svr.Run()
 	defer svr.Stop()
 
-	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 
 	streamCliA, err := clientA.EchoA(context.Background())
@@ -98,7 +101,7 @@ func TestMultiService(t *testing.T) {
 	test.Assert(t, err == nil)
 	test.Assert(t, respA.Message == "ServiceA")
 
-	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
 	streamCliB, err := clientB.EchoB(context.Background())
 	test.Assert(t, err == nil, err)
@@ -106,4 +109,49 @@ func TestMultiService(t *testing.T) {
 	respB, err := streamCliB.Recv()
 	test.Assert(t, err == nil)
 	test.Assert(t, respB.Message == "ServiceB")
+}
+
+func TestUnknownException(t *testing.T) {
+	hostport := "localhost:9899"
+	addr, _ := net.ResolveTCPAddr("tcp", hostport)
+	svr := server.NewServer(server.WithServiceAddr(addr))
+	servicea.RegisterService(svr, new(ServiceAImpl))
+	go svr.Run()
+	defer svr.Stop()
+
+	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
+	test.Assert(t, err == nil, err)
+	streamCliC, err := clientC.EchoC(context.Background())
+	test.Assert(t, err == nil, err)
+	streamCliC.Send(&grpc_multi_service.RequestC{Name: "ServiceC"})
+	_, err = streamCliC.Recv()
+	test.Assert(t, err != nil)
+	test.DeepEqual(t, err.Error(), "rpc error: code = 20 desc = unknown service ServiceC")
+}
+
+func TestUnknownExceptionWithMultiService(t *testing.T) {
+	hostport := "localhost:9900"
+	svr := GetServer(hostport)
+	go svr.Run()
+	defer svr.Stop()
+
+	// unknown service error
+	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
+	test.Assert(t, err == nil, err)
+	streamCliC, err := clientC.EchoC(context.Background())
+	test.Assert(t, err == nil, err)
+	streamCliC.Send(&grpc_multi_service.RequestC{Name: "ServiceC"})
+	_, err = streamCliC.Recv()
+	test.Assert(t, err != nil)
+	test.DeepEqual(t, err.Error(), "rpc error: code = 20 desc = unknown service ServiceC")
+
+	// unknown method error
+	clientA, err := servicea2.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
+	test.Assert(t, err == nil, err)
+	streamCliA, err := clientA.Echo(context.Background())
+	test.Assert(t, err == nil, err)
+	streamCliA.Send(&grpc_multi_service_2.Request{Name: "ServiceA"})
+	_, err = streamCliA.Recv()
+	test.Assert(t, err != nil)
+	test.DeepEqual(t, err.Error(), "rpc error: code = 1 desc = unknown method Echo")
 }

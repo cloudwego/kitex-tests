@@ -16,6 +16,8 @@ package multiservicecall
 
 import (
 	"context"
+	"fmt"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service2"
 	"net"
 	"strings"
 	"testing"
@@ -32,6 +34,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicec"
+	servicea2 "github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service2/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 )
 
@@ -113,6 +116,55 @@ func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 	resp, err := combineServiceClient.Echo1(context.Background(), req)
 	test.Assert(t, err == nil)
 	test.Assert(t, resp.Message == "servicea Echo1")
+}
+
+func TestUnknownException(t *testing.T) {
+	ip := "localhost:9907"
+	svr := GetServer(ip)
+	servicea.RegisterService(svr, new(ServiceAImpl))
+	go svr.Run()
+	defer svr.Stop()
+	time.Sleep(100 * time.Millisecond)
+
+	clientB, err := serviceb.NewClient("ServiceB",
+		client.WithHostPorts(ip),
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+	test.Assert(t, err == nil, err)
+	_, err = clientB.Echo2(context.Background(), &multi_service.Request{Message: "multi_service req"})
+	test.Assert(t, err != nil)
+	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown method Echo2")
+}
+
+func TestUnknownExceptionWithMultiService(t *testing.T) {
+	hostport := "localhost:9908"
+	svr := GetServer(hostport)
+	servicea.RegisterService(svr, new(ServiceAImpl))
+	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
+	go svr.Run()
+	defer svr.Stop()
+	time.Sleep(100 * time.Millisecond)
+
+	// unknown service error
+	clientB, err := serviceb.NewClient("ServiceB",
+		client.WithHostPorts(hostport),
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+	test.Assert(t, err == nil, err)
+	_, err = clientB.Echo2(context.Background(), &multi_service.Request{Message: "multi_service req"})
+	test.Assert(t, err != nil)
+	fmt.Println(err)
+	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown service ServiceB, method Echo2")
+
+	// unknown method error
+	clientA, err := servicea2.NewClient("ServiceA",
+		client.WithHostPorts(hostport),
+		client.WithTransportProtocol(transport.TTHeader),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+	test.Assert(t, err == nil, err)
+	_, err = clientA.EchoA(context.Background(), &multi_service2.Request{Message: "multi_service req"})
+	test.Assert(t, err != nil)
+	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown method EchoA (service ServiceA)")
 }
 
 func testRegisterService(t *testing.T, ip string, opts ...server.Option) {

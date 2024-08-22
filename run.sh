@@ -93,10 +93,12 @@ kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests -combine-service ./idl/combine_service.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service.thrift
+kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service_2.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/stability.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/unknown_handler.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_demo.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl/grpc_multi_service.proto
+kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_multi_service_2.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/pb_multi_service.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl/combine_service.proto
 
