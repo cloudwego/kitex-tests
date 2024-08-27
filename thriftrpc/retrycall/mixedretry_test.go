@@ -23,9 +23,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -34,6 +31,10 @@ import (
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
 // Assuming the first request returns at 300ms, the second request costs 150ms
