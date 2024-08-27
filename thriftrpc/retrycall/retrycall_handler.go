@@ -31,6 +31,7 @@ const (
 	retryMsg            = "retry"
 	sleepTimeMsKey      = "TIME_SLEEP_TIME_MS"
 	skipCounterSleepKey = "TIME_SKIP_COUNTER_SLEEP"
+	respFlagMsgKey      = "CUSTOMIZED_RESP_MSG"
 )
 
 var _ stability.STService = &STServiceHandler{}
@@ -49,6 +50,7 @@ const (
 	mockTypeNonRetryReturnError mockType = "1"
 	mockTypeCustomizedResp      mockType = "2"
 	mockTypeSleepWithMetainfo   mockType = "3"
+	mockTypeBizStatus           mockType = "4"
 )
 
 // STServiceHandler .
@@ -62,12 +64,20 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		FlagMsg: req.FlagMsg,
 	}
 	if req.FlagMsg == mockTypeCustomizedResp {
-		// use ttheader
-		// first request(non retry request) will return the resp with retry message , then retry request return resp directly
+		// should use ttheader
+
+		// test case1: set FlagMsg with the msg transmit through metainfo
+		if respFM := getRespFlagMsg(ctx); respFM != "" {
+			resp.FlagMsg = respFM
+		}
+		// test case2: first request(non retry request) will return the resp with retry message , then retry request return resp directly
 		if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
 			resp.FlagMsg = retryMsg
 		} else {
 			resp.FlagMsg = "success"
+		}
+		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
+			time.Sleep(sleepTime)
 		}
 	} else if req.FlagMsg == mockTypeSleepWithMetainfo {
 		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
@@ -194,4 +204,14 @@ func getSleepTimeMS(ctx context.Context) time.Duration {
 		}
 	}
 	return 0
+}
+
+func getRespFlagMsg(ctx context.Context) string {
+	if value, exist := metainfo.GetPersistentValue(ctx, respFlagMsgKey); exist {
+		return value
+	}
+	if value, exist := metainfo.GetValue(ctx, respFlagMsgKey); exist {
+		return value
+	}
+	return ""
 }
