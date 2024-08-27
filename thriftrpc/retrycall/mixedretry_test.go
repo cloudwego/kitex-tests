@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/retry"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/transport"
@@ -259,33 +261,6 @@ func TestMockCase3WithDiffRetry(t *testing.T) {
 // - Failure Retry: Success, cost 750ms
 // - Backup Retry: Biz Error, cost 250ms
 func TestMockCase4WithDiffRetry(t *testing.T) {
-	controlRespMW := func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, args, result interface{}) (err error) {
-			ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250") //ms
-			retryCount, exit := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
-			if !exit {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11111") //ms
-			} else {
-				if retryCount == "2" {
-					ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0") //ms
-				} else {
-					ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11112") //ms
-				}
-			}
-			return next(ctx, args, result)
-		}
-	}
-
-	resultRetry := &retry.ShouldResultRetry{RespRetryWithCtx: func(ctx context.Context, resp interface{}, ri rpcinfo.RPCInfo) bool {
-		if respI, ok1 := resp.(interface{ GetResult() interface{} }); ok1 {
-			if r, ok2 := respI.GetResult().(*stability.STResponse); ok2 {
-				if r.FlagMsg == "11111" || r.FlagMsg == "11112" {
-					return true
-				}
-			}
-		}
-		return false
-	}}
 	// mixed retry will success, cost is least
 	t.Run("mixed retry", func(t *testing.T) {
 		mp := retry.NewMixedPolicy(100)
@@ -293,17 +268,17 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 		rCli := getKitexClient(
 			transport.TTHeader,
 			client.WithSpecifiedResultRetry(resultRetry),
-			// this won't take effect, because callopt policy is high priority
-			client.WithFailureRetry(retry.NewFailurePolicy()),
+			client.WithMixedRetry(mp),
 			client.WithMiddleware(controlRespMW),
 		)
 
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-		stReq.FlagMsg = mockTypeSleepWithMetainfo
+		stReq.FlagMsg = mockTypeCustomizedResp
 		start := time.Now()
-		_, err := rCli.TestSTReq(ctx, stReq, callopt.WithRetryPolicy(retry.BuildMixedPolicy(mp)))
+		resp, err := rCli.TestSTReq(ctx, stReq)
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
 		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
 	})
 
@@ -314,17 +289,17 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 		rCli := getKitexClient(
 			transport.TTHeader,
 			client.WithSpecifiedResultRetry(resultRetry),
-			// this won't take effect, because callopt policy is high priority
-			client.WithBackupRequest(retry.NewBackupPolicy(10)),
+			client.WithFailureRetry(fp),
 			client.WithMiddleware(controlRespMW),
 		)
 
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-		stReq.FlagMsg = mockTypeSleepWithMetainfo
+		stReq.FlagMsg = mockTypeCustomizedResp
 		start := time.Now()
-		_, err := rCli.TestSTReq(ctx, stReq, callopt.WithRetryPolicy(retry.BuildFailurePolicy(fp)))
+		resp, err := rCli.TestSTReq(ctx, stReq)
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
 		test.Assert(t, math.Abs(float64(cost.Milliseconds())-750.0) < 50.0, cost.Milliseconds())
 	})
 
@@ -335,16 +310,103 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 		rCli := getKitexClient(
 			transport.TTHeader,
 			// this won't take effect, because callopt policy is high priority
+			client.WithSpecifiedResultRetry(resultRetry),
 			client.WithFailureRetry(retry.NewFailurePolicy()),
 			client.WithMiddleware(controlRespMW),
 		)
 
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-		stReq.FlagMsg = mockTypeSleepWithMetainfo
+		stReq.FlagMsg = mockTypeCustomizedResp
 		start := time.Now()
-		_, err := rCli.TestSTReq(ctx, stReq, callopt.WithRetryPolicy(retry.BuildBackupRequest(bp)))
+		resp, err := rCli.TestSTReq(ctx, stReq, callopt.WithRetryPolicy(retry.BuildBackupRequest(bp)))
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg != "0")
 		test.Assert(t, math.Abs(float64(cost.Milliseconds())-250.0) < 50.0, cost.Milliseconds())
 	})
 }
+
+func BenchmarkMixedRetry(b *testing.B) {
+	mp := retry.NewMixedPolicy(100)
+	mp.WithMaxRetryTimes(3)
+	rCli := getKitexClient(
+		transport.TTHeader,
+		client.WithSpecifiedResultRetry(errRetry),
+		client.WithMixedRetry(mp),
+		client.WithMiddleware(controlErrMW),
+	)
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+			stReq.FlagMsg = mockTypeReturnTransErr
+			start := time.Now()
+			resp, err := rCli.TestSTReq(ctx, stReq)
+			cost := time.Since(start)
+			if err != nil {
+				// mock retry will trigger retry circuit break
+				test.Assert(b, strings.Contains(err.Error(), "retry circuit break"))
+			} else {
+				test.Assert(b, err == nil, err)
+				test.Assert(b, resp.FlagMsg == "0", resp.FlagMsg, cost.Milliseconds())
+			}
+		}
+	})
+}
+
+var controlRespMW = func(next endpoint.Endpoint) endpoint.Endpoint {
+	return func(ctx context.Context, args, result interface{}) (err error) {
+		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250") //ms
+		retryCount, exit := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
+		if !exit {
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11111") //ms
+		} else {
+			if retryCount == "2" {
+				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0") //ms
+			} else {
+				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11112") //ms
+			}
+		}
+		err = next(ctx, args, result)
+		return
+	}
+}
+
+var resultRetry = &retry.ShouldResultRetry{RespRetryWithCtx: func(ctx context.Context, resp interface{}, ri rpcinfo.RPCInfo) bool {
+	if respI, ok1 := resp.(interface{ GetResult() interface{} }); ok1 {
+		if r, ok2 := respI.GetResult().(*stability.STResponse); ok2 {
+			if r.FlagMsg == "11111" || r.FlagMsg == "11112" {
+				return true
+			}
+		}
+	}
+	return false
+}}
+
+var controlErrMW = func(next endpoint.Endpoint) endpoint.Endpoint {
+	return func(ctx context.Context, args, result interface{}) (err error) {
+		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250") //ms
+		retryCount, exit := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
+		if !exit {
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg) //ms
+		} else {
+			if retryCount == "2" {
+				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0") //ms
+			} else {
+				ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg) //ms
+			}
+		}
+		err = next(ctx, args, result)
+		return
+	}
+}
+
+var errRetry = &retry.ShouldResultRetry{ErrorRetryWithCtx: func(ctx context.Context, err error, ri rpcinfo.RPCInfo) bool {
+	var te *remote.TransError
+	ok := errors.As(err, &te)
+	if ok && te.TypeID() == retryTransErrCode {
+		return true
+	}
+	return false
+}}

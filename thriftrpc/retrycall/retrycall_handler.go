@@ -51,6 +51,9 @@ const (
 	mockTypeCustomizedResp      mockType = "2"
 	mockTypeSleepWithMetainfo   mockType = "3"
 	mockTypeBizStatus           mockType = "4"
+	mockTypeReturnTransErr      mockType = "5"
+
+	retryTransErrCode = 1000
 )
 
 // STServiceHandler .
@@ -66,15 +69,16 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 	if req.FlagMsg == mockTypeCustomizedResp {
 		// should use ttheader
 
-		// test case1: set FlagMsg with the msg transmit through metainfo
 		if respFM := getRespFlagMsg(ctx); respFM != "" {
+			// test case1: set FlagMsg with the msg transmit through metainfo
 			resp.FlagMsg = respFM
-		}
-		// test case2: first request(non retry request) will return the resp with retry message , then retry request return resp directly
-		if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
-			resp.FlagMsg = retryMsg
 		} else {
-			resp.FlagMsg = "success"
+			// test case2: first request(non retry request) will return the resp with retry message , then retry request return resp directly
+			if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
+				resp.FlagMsg = retryMsg
+			} else {
+				resp.FlagMsg = "success"
+			}
 		}
 		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
 			time.Sleep(sleepTime)
@@ -83,12 +87,28 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
 			time.Sleep(sleepTime)
 		}
+	} else if req.FlagMsg == mockTypeReturnTransErr {
+		// should use ttheader
+
+		if respFM := getRespFlagMsg(ctx); respFM == retryMsg {
+			// test case1: set FlagMsg with the msg transmit through metainfo
+			err = remote.NewTransErrorWithMsg(retryTransErrCode, "mock error")
+		} else {
+			resp.FlagMsg = respFM
+			// test case2: first request(non retry request) will return the resp with retry message , then retry request return resp directly
+			if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
+				err = remote.NewTransErrorWithMsg(retryTransErrCode, "mock error")
+			}
+		}
+		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
+			time.Sleep(sleepTime)
+		}
 	} else {
 		if v := atomic.AddInt32(&testSTReqCount, 1); v%10 == 0 {
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
-	return resp, nil
+	return resp, err
 }
 
 // TestObjReq .
