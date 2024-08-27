@@ -404,12 +404,12 @@ var controlErrMW = func(next endpoint.Endpoint) endpoint.Endpoint {
 		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250") //ms
 		retryCount, exit := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
 		if !exit {
-			ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg) //ms
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg)
 		} else {
 			if retryCount == "2" {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0") //ms
+				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0")
 			} else {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg) //ms
+				ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg)
 			}
 		}
 		err = next(ctx, args, result)
