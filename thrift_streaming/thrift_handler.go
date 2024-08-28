@@ -63,7 +63,7 @@ func (e EchoServiceImpl) EchoClient(stream echo.EchoService_EchoClientServer) (e
 	case doGetServerConn:
 		_, err = nphttp2.GetServerConn(stream)
 		if err != nil {
-			klog.Errorf("EchoClient: GetServerConn failed, error = %v", err)
+			klog.Infof("EchoClient: GetServerConn failed, error = %v", err)
 			return
 		}
 		resp.Message = "GetServerConn Succeeded"
@@ -71,7 +71,7 @@ func (e EchoServiceImpl) EchoClient(stream echo.EchoService_EchoClientServer) (e
 		val, ok := stream.Context().Value("key").(string)
 		if !ok || val != "val" {
 			err = errors.New("can not get ctx value set in server MW")
-			klog.Errorf("EchoClient: InspectMWCtx failed, error = %v", err)
+			klog.Infof("EchoClient: InspectMWCtx failed, error = %v", err)
 			return
 		}
 		resp.Message = "InspectMWCtx Succeeded"
