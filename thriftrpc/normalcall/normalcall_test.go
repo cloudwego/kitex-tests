@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cloudwego/kitex/pkg/remote/codec"
 	"reflect"
 	"strconv"
 	"strings"
@@ -60,6 +61,7 @@ var (
 	serverTimeoutAddr        = "127.0.0.1:9006"
 	noDefSerdesFrugalAddr    = "127.0.0.1:9007"
 	noDefSerdesFastCodecAddr = "127.0.0.1:9008"
+	serverWithCRCAddr        = "127.0.0.1:9009"
 )
 
 func TestMain(m *testing.M) {
@@ -515,6 +517,34 @@ func TestNoDefaultSerdes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCRC32PayloadValidator(t *testing.T) {
+	codecOpt := client.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true}))
+	crcClient := getKitexClient(transport.TTHeaderFramed, codecOpt)
+
+	t.Run("serverWithoutCRC", func(t *testing.T) {
+		// request server without crc32 check config
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		for i := 0; i < 10; i++ {
+			_, err := crcClient.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
+			test.Assert(t, err == nil, err)
+		}
+	})
+
+	t.Run("serverWithCRC", func(t *testing.T) {
+		// request server with crc config
+		svrCodecOpt := server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true}))
+		svrWithCRC := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverWithCRCAddr}, nil, svrCodecOpt)
+		common.WaitServer(serverWithCRCAddr)
+		defer svrWithCRC.Stop()
+
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		for i := 0; i < 10; i++ {
+			_, err := crcClient.TestSTReq(ctx, stReq, callopt.WithHostPort(serverWithCRCAddr))
+			test.Assert(t, err == nil, err)
+		}
+	})
 }
 
 func BenchmarkThriftCall(b *testing.B) {
