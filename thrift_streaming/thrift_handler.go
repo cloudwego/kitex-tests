@@ -17,6 +17,7 @@ package thrift_streaming
 import (
 	"context"
 	"errors"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2"
 	"strconv"
 
 	"github.com/cloudwego/kitex/pkg/klog"
@@ -55,19 +56,39 @@ func (e EchoServiceImpl) EchoBidirectional(stream echo.EchoService_EchoBidirecti
 
 func (e EchoServiceImpl) EchoClient(stream echo.EchoService_EchoClientServer) (err error) {
 	klog.Infof("EchoClient: start")
-	count := GetInt(stream.Context(), KeyCount, 0)
-	var req *echo.EchoRequest
-	for i := 0; i < count; i++ {
-		req, err = stream.Recv()
+	resp := &echo.EchoResponse{}
+	doGetServerConn := GetBool(stream.Context(), KeyGetServerConn, false)
+	doInspectMWCtx := GetBool(stream.Context(), KeyInspectMWCtx, false)
+	switch {
+	case doGetServerConn:
+		_, err = nphttp2.GetServerConn(stream)
 		if err != nil {
-			klog.Infof("EchoClient: recv error = %v", err)
+			klog.Errorf("EchoClient: GetServerConn failed, error = %v", err)
 			return
 		}
-		klog.Infof("EchoClient: recv req = %v", req)
+		resp.Message = "GetServerConn Succeeded"
+	case doInspectMWCtx:
+		val, ok := stream.Context().Value("key").(string)
+		if !ok || val != "val" {
+			err = errors.New("can not get ctx value set in server MW")
+			klog.Errorf("EchoClient: InspectMWCtx failed, error = %v", err)
+			return
+		}
+		resp.Message = "InspectMWCtx Succeeded"
+	default:
+		count := GetInt(stream.Context(), KeyCount, 0)
+		var req *echo.EchoRequest
+		for i := 0; i < count; i++ {
+			req, err = stream.Recv()
+			if err != nil {
+				klog.Infof("EchoClient: recv error = %v", err)
+				return
+			}
+			klog.Infof("EchoClient: recv req = %v", req)
+		}
+		resp.Message = strconv.Itoa(count)
 	}
-	resp := &echo.EchoResponse{
-		Message: strconv.Itoa(count),
-	}
+
 	if err = stream.SendAndClose(resp); err != nil {
 		klog.Infof("EchoClient: send&close error = %v", err)
 		return

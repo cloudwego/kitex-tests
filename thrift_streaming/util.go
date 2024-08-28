@@ -29,6 +29,8 @@ const (
 	KeyCount               = "COUNT"
 	KeyServerRecvTimeoutMS = "RECV_TIMEOUT_MS"
 	KeyServerSendTimeoutMS = "SEND_TIMEOUT_MS"
+	KeyGetServerConn       = "GET_SERVER_CONN"
+	KeyInspectMWCtx        = "INSPECT_MW_CTX"
 )
 
 func GetError(ctx context.Context) error {
@@ -80,4 +82,11 @@ func GetInt(ctx context.Context, key string, defaultValue int) int {
 		return i
 	}
 	return defaultValue
+}
+
+func GetBool(ctx context.Context, key string, defaultBool bool) bool {
+	if b, err := strconv.ParseBool(GetValue(ctx, key, "")); err == nil {
+		return b
+	}
+	return defaultBool
 }
