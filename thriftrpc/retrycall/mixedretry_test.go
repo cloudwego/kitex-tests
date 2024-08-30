@@ -33,6 +33,7 @@ import (
 	"github.com/cloudwego/kitex/transport"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
@@ -341,12 +342,128 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 	})
 }
 
+func TestMixedRetryWithDiffConfigurationMethod(t *testing.T) {
+	rpcCall := func(cli stservice.Client) {
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		stReq.FlagMsg = mockTypeCustomizedResp
+		start := time.Now()
+		resp, err := cli.TestSTReq(ctx, stReq)
+		cost := time.Since(start)
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
+		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+	}
+
+	t.Run("mixed retry with NewMixedPolicy", func(t *testing.T) {
+		mp := retry.NewMixedPolicy(100)
+		mp.WithMaxRetryTimes(3)
+
+		rCli := getKitexClient(
+			transport.TTHeader,
+			client.WithMixedRetry(mp),
+			client.WithSpecifiedResultRetry(resultRetry),
+			client.WithMiddleware(controlRespMW),
+		)
+		rpcCall(rCli)
+	})
+
+	t.Run("mixed retry with NewMixedPolicyWithResultRetry", func(t *testing.T) {
+		mp := retry.NewMixedPolicyWithResultRetry(100, resultRetry)
+		mp.WithMaxRetryTimes(3)
+
+		rCli := getKitexClient(
+			transport.TTHeader,
+			client.WithMixedRetry(mp),
+			client.WithMiddleware(controlRespMW),
+		)
+		rpcCall(rCli)
+	})
+
+	t.Run("mixed retry with callop", func(t *testing.T) {
+		mp := retry.NewMixedPolicyWithResultRetry(100, resultRetry)
+		mp.WithMaxRetryTimes(3)
+
+		rCli := getKitexClient(
+			transport.TTHeader,
+			client.WithMiddleware(controlRespMW),
+		)
+
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		stReq.FlagMsg = mockTypeCustomizedResp
+		start := time.Now()
+		resp, err := rCli.TestSTReq(ctx, stReq, callopt.WithRetryPolicy(retry.BuildMixedPolicy(mp)))
+		cost := time.Since(start)
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
+		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+	})
+
+	t.Run("mixed retry with NotifyPolicyChange", func(t *testing.T) {
+		mp := retry.NewMixedPolicy(100)
+		mp.WithMaxRetryTimes(3)
+		rc := retry.NewRetryContainer()
+		rc.NotifyPolicyChange("*", retry.BuildMixedPolicy(mp))
+
+		rCli := getKitexClient(
+			transport.TTHeader,
+			client.WithRetryContainer(rc),
+			client.WithSpecifiedResultRetry(resultRetry),
+			client.WithMiddleware(controlRespMW),
+		)
+		rpcCall(rCli)
+	})
+}
+
+func TestMixedRetryWithNotifyPolicyChange(t *testing.T) {
+	t.Run("mixed retry with result retry", func(t *testing.T) {
+		mp := retry.NewMixedPolicy(100)
+		mp.WithMaxRetryTimes(3)
+		rc := retry.NewRetryContainer()
+		rc.NotifyPolicyChange("*", retry.BuildMixedPolicy(mp))
+
+		rCli := getKitexClient(
+			transport.TTHeader,
+			client.WithRetryContainer(rc),
+			client.WithSpecifiedResultRetry(resultRetry),
+			client.WithMiddleware(controlRespMW),
+		)
+
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		stReq.FlagMsg = mockTypeCustomizedResp
+		start := time.Now()
+		resp, err := rCli.TestSTReq(ctx, stReq)
+		cost := time.Since(start)
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
+		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+	})
+
+	t.Run("mixed retry with error retry", func(t *testing.T) {
+		mp := retry.NewMixedPolicy(100)
+		mp.WithMaxRetryTimes(3)
+		rc := retry.NewRetryContainer()
+		rc.NotifyPolicyChange("testSTReq", retry.BuildMixedPolicy(mp))
+
+		rCli := getKitexClient(
+			transport.TTHeader,
+			client.WithRetryContainer(rc),
+			client.WithSpecifiedResultRetry(errRetry),
+			client.WithMiddleware(controlErrMW),
+		)
+
+		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
+		stReq.FlagMsg = mockTypeReturnTransErr
+		resp, err := rCli.TestSTReq(ctx, stReq)
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
+	})
+}
+
 func BenchmarkMixedRetry(b *testing.B) {
-	mp := retry.NewMixedPolicy(100)
+	mp := retry.NewMixedPolicyWithResultRetry(100, errRetry)
 	mp.WithMaxRetryTimes(3)
 	rCli := getKitexClient(
 		transport.TTHeader,
-		client.WithSpecifiedResultRetry(errRetry),
 		client.WithMixedRetry(mp),
 		client.WithMiddleware(controlErrMW),
 	)
