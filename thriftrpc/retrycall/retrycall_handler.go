@@ -31,6 +31,7 @@ const (
 	retryMsg            = "retry"
 	sleepTimeMsKey      = "TIME_SLEEP_TIME_MS"
 	skipCounterSleepKey = "TIME_SKIP_COUNTER_SLEEP"
+	respFlagMsgKey      = "CUSTOMIZED_RESP_MSG"
 )
 
 var _ stability.STService = &STServiceHandler{}
@@ -49,6 +50,10 @@ const (
 	mockTypeNonRetryReturnError mockType = "1"
 	mockTypeCustomizedResp      mockType = "2"
 	mockTypeSleepWithMetainfo   mockType = "3"
+	mockTypeBizStatus           mockType = "4"
+	mockTypeReturnTransErr      mockType = "5"
+
+	retryTransErrCode = 1000
 )
 
 // STServiceHandler .
@@ -62,14 +67,39 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		FlagMsg: req.FlagMsg,
 	}
 	if req.FlagMsg == mockTypeCustomizedResp {
-		// use ttheader
-		// first request(non retry request) will return the resp with retry message , then retry request return resp directly
-		if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
-			resp.FlagMsg = retryMsg
+		// should use ttheader
+
+		if respFM := getRespFlagMsg(ctx); respFM != "" {
+			// test case1: set FlagMsg with the msg transmit through metainfo
+			resp.FlagMsg = respFM
 		} else {
-			resp.FlagMsg = "success"
+			// test case2: first request(non retry request) will return the resp with retry message , then retry request return resp directly
+			if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
+				resp.FlagMsg = retryMsg
+			} else {
+				resp.FlagMsg = "success"
+			}
+		}
+		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
+			time.Sleep(sleepTime)
 		}
 	} else if req.FlagMsg == mockTypeSleepWithMetainfo {
+		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
+			time.Sleep(sleepTime)
+		}
+	} else if req.FlagMsg == mockTypeReturnTransErr {
+		// should use ttheader
+
+		if respFM := getRespFlagMsg(ctx); respFM == retryMsg {
+			// test case1: set FlagMsg with the msg transmit through metainfo
+			err = remote.NewTransErrorWithMsg(retryTransErrCode, "mock error")
+		} else {
+			resp.FlagMsg = respFM
+			// test case2: first request(non retry request) will return the resp with retry message , then retry request return resp directly
+			if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
+				err = remote.NewTransErrorWithMsg(retryTransErrCode, "mock error")
+			}
+		}
 		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
 			time.Sleep(sleepTime)
 		}
@@ -78,7 +108,7 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 			time.Sleep(50 * time.Millisecond)
 		}
 	}
-	return resp, nil
+	return resp, err
 }
 
 // TestObjReq .
@@ -194,4 +224,14 @@ func getSleepTimeMS(ctx context.Context) time.Duration {
 		}
 	}
 	return 0
+}
+
+func getRespFlagMsg(ctx context.Context) string {
+	if value, exist := metainfo.GetPersistentValue(ctx, respFlagMsgKey); exist {
+		return value
+	}
+	if value, exist := metainfo.GetValue(ctx, respFlagMsgKey); exist {
+		return value
+	}
+	return ""
 }
