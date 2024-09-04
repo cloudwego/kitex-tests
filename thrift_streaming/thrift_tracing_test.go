@@ -20,6 +20,7 @@ import (
 	"io"
 	"os/exec"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -63,6 +64,7 @@ type testTracer struct {
 	finishSendSize uint64
 	finishRecvSize uint64
 	finishCalled   bool
+	wg             sync.WaitGroup
 }
 
 func (t *testTracer) Reset() {
@@ -73,6 +75,7 @@ func (t *testTracer) Reset() {
 	t.finishSendSize = 0
 	t.finishRecvSize = 0
 	t.finishCalled = false
+	t.wg = sync.WaitGroup{}
 }
 
 func (t *testTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo, event rpcinfo.Event) {
@@ -97,6 +100,7 @@ func (t *testTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo, 
 }
 
 func (t *testTracer) Start(ctx context.Context) context.Context {
+	t.wg.Add(1)
 	return ctx
 }
 
@@ -105,10 +109,12 @@ func (t *testTracer) Finish(ctx context.Context) {
 	t.finishSendSize = ri.Stats().SendSize()
 	t.finishRecvSize = ri.Stats().RecvSize()
 	t.finishCalled = true
+	t.wg.Done()
 	return
 }
 
 func (tr *testTracer) finishCheck(t *testing.T, info string) {
+	tr.wg.Wait()
 	test.Assert(t, tr.finishCalled, tr)
 	test.Assert(t, tr.sendSize == tr.finishSendSize, tr.sendSize, tr.finishSendSize, info)
 	test.Assert(t, tr.recvSize == tr.finishRecvSize, tr.recvSize, tr.finishRecvSize, info)
