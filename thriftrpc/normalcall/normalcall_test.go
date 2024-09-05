@@ -520,7 +520,11 @@ func TestNoDefaultSerdes(t *testing.T) {
 }
 
 func TestCRC32PayloadValidator(t *testing.T) {
-	codecOpt := client.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true}))
+	codecOpt := client.WithCodec(
+		codec.NewDefaultCodecWithConfig(
+			codec.CodecConfig{CRC32Check: true},
+		),
+	)
 	crcClient := getKitexClient(transport.TTHeaderFramed, codecOpt)
 
 	t.Run("serverWithoutCRC", func(t *testing.T) {

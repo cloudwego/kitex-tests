@@ -17,6 +17,8 @@ package servicea
 import (
 	"context"
 	"fmt"
+	"github.com/cloudwego/kitex-tests/kitexgrpc/failure/common"
+	"github.com/cloudwego/kitex/pkg/streaming"
 	"io"
 	"time"
 
@@ -28,7 +30,7 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
-func myMiddleware(next endpoint.Endpoint) endpoint.Endpoint {
+func ServiceAMiddleware(next endpoint.Endpoint) endpoint.Endpoint {
 	return func(ctx context.Context, req, resp interface{}) (err error) {
 		err = next(ctx, req, resp)
 		return err
@@ -39,7 +41,7 @@ func InitServiceAClient() (servicea.Client, error) {
 	cli, err := servicea.NewClient("serviceB",
 		client.WithRPCTimeout(1000*time.Millisecond),
 		client.WithHostPorts(consts.ServiceBAddr), client.WithTransportProtocol(transport.GRPC),
-		client.WithMiddleware(myMiddleware))
+		client.WithMiddleware(ServiceAMiddleware))
 	return cli, err
 }
 
@@ -54,35 +56,51 @@ func SendUnary(cli servicea.Client) error {
 func SendClientStreaming(cli servicea.Client) error {
 	// case 2: client streaming
 	req := &grpc_demo.Request{Name: "service_a_CallClientStream"}
-	stream1, err := cli.CallClientStream(context.Background())
+	s, err := cli.CallClientStream(context.Background())
 	if err != nil {
 		return err
 	}
+
+	// use wrapStream to request
+	ws := common.WrapClientStream[grpc_demo.Request, grpc_demo.Reply]{
+		Mode: common.StreamingClient,
+		CSC:  s,
+	}
+
 	for i := 0; i < 3; i++ {
-		if err := stream1.Send(req); err != nil {
+		if err := ws.Send(context.Background(), req); err != nil {
 			return err
 		}
 	}
-	_, err = stream1.CloseAndRecv()
+	_, err = ws.CloseAndRecv(context.Background())
 	return err
 }
 
-func SendServerStreaming(cli servicea.Client) error {
+func SendServerStreaming(cli servicea.Client, injector common.Injector) error {
 	// case 3: server streaming
 	req := &grpc_demo.Request{Name: "service_a_CallServerStream"}
-	stream2, err := cli.CallServerStream(context.Background(), req)
+	s, err := cli.CallServerStream(context.Background(), req)
 	if err != nil {
 		return err
 	}
+
+	// use wrapStream to request
+	ws := common.WrapClientStream[grpc_demo.Request, grpc_demo.Reply]{
+		Mode:     common.StreamingServer,
+		SSC:      s,
+		Injector: injector,
+	}
+
+	ctx := streaming.NewCtxWithStream(s.Context(), s)
 	for {
-		reply, err := stream2.Recv()
+		reply, err := ws.Recv(ctx)
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return err
 		}
-		fmt.Printf("ServiceA received reply: %s\n", reply)
+		fmt.Println(reply)
 	}
 	return err
 }
@@ -90,18 +108,23 @@ func SendServerStreaming(cli servicea.Client) error {
 func SendBidiStreaming(cli servicea.Client) error {
 	// case 4: bidi streaming
 	req := &grpc_demo.Request{Name: "service_a_CallBidiStream"}
-	stream3, err := cli.CallBidiStream(context.Background())
+	s, err := cli.CallBidiStream(context.Background())
 	if err != nil {
 		return err
 	}
+	ws := common.WrapClientStream[grpc_demo.Request, grpc_demo.Reply]{
+		Mode: common.StreamingBidirectional,
+		BSC:  s,
+	}
+
 	for i := 0; i < 3; i++ {
-		if err := stream3.Send(req); err != nil {
+		if err := ws.Send(context.Background(), req); err != nil {
 			return err
 		}
 	}
-	stream3.Close()
+	ws.Close(context.Background())
 	for {
-		reply, err := stream3.Recv()
+		reply, err := ws.Recv(context.Background())
 		if err != nil {
 			if err == io.EOF {
 				break
