@@ -18,6 +18,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"time"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
@@ -55,10 +56,11 @@ func (s ServiceCImpl) CallClientStream(stream grpc_demo.ServiceA_CallClientStrea
 }
 
 func (s ServiceCImpl) CallServerStream(req *grpc_demo.Request, stream grpc_demo.ServiceA_CallServerStreamServer) (err error) {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		if err = stream.Send(&grpc_demo.Reply{Message: req.Name}); err != nil {
 			return err
 		}
+		time.Sleep(time.Second)
 	}
 	return
 }

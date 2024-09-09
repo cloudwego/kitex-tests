@@ -17,9 +17,6 @@ package serviceb
 import (
 	"context"
 	"fmt"
-	"io"
-	"net"
-
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/kitexgrpc/abc/consts"
@@ -28,6 +25,9 @@ import (
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
+	"io"
+	"net"
+	"time"
 )
 
 func ServiceBMiddleware(next endpoint.Endpoint) endpoint.Endpoint {
@@ -64,71 +64,63 @@ func (s ServiceBImpl) CallUnary(ctx context.Context, req *grpc_demo.Request) (re
 }
 
 func (s ServiceBImpl) CallClientStream(stream grpc_demo.ServiceA_CallClientStreamServer) (err error) {
-	svcCStream, err := s.cli.CallClientStream(stream.Context())
-	if err != nil {
-		return err
-	}
+	defer func() {
+		if err != nil {
+			fmt.Printf("[ServiceB] ClientStream, error=%v\n", err)
+		}
+	}()
 	for {
-		msg, err := stream.Recv()
+		_, err = stream.Recv()
 		if err != nil {
 			if err == io.EOF {
 				break
 			}
 			return err
 		}
-		if err = svcCStream.Send(msg); err != nil {
-			return err
-		}
 	}
-	reply, err := svcCStream.CloseAndRecv()
-	if err != nil {
-		return err
+	time.Sleep(time.Second)
+	reply := &grpc_demo.Reply{
+		Message: "serviceB reply",
 	}
 	return stream.SendAndClose(reply)
 }
 
 func (s ServiceBImpl) CallServerStream(req *grpc_demo.Request, stream grpc_demo.ServiceA_CallServerStreamServer) (err error) {
-	svcCStream, err := s.cli.CallServerStream(stream.Context(), req)
-	if err != nil {
-		return err
-	}
-	for {
-		msg, err := svcCStream.Recv()
+	defer func() {
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
+			fmt.Printf("[ServiceB] ServerStream, error=%v\n", err)
+		}
+	}()
+	for {
+		reply := &grpc_demo.Reply{Message: fmt.Sprintf("reply")}
+		if sErr := stream.Send(reply); err != nil {
+			err = sErr
 			return err
 		}
-		if err = stream.Send(msg); err != nil {
-			return err
-		}
+		time.Sleep(time.Second)
 	}
 	return
 }
 
-func (s ServiceBImpl) CallBidiStream(stream grpc_demo.ServiceA_CallBidiStreamServer) error {
-	svcCStream, err := s.cli.CallBidiStream(stream.Context())
-	if err != nil {
-		return err
-	}
+func (s ServiceBImpl) CallBidiStream(stream grpc_demo.ServiceA_CallBidiStreamServer) (err error) {
+	defer func() {
+		if err != nil {
+			fmt.Printf("[ServiceB] BidiStream error=%v\n", err)
+		}
+	}()
 	for {
 		msg, rErr := stream.Recv()
 		if rErr != nil {
 			if rErr == io.EOF {
 				break
 			}
-			return rErr
+			err = rErr
+			return err
 		}
-		if sErr := svcCStream.Send(msg); sErr != nil {
-			return sErr
-		}
-		reply, rErr := svcCStream.Recv()
-		if rErr != nil {
-			return rErr
-		}
+		reply := &grpc_demo.Reply{Message: fmt.Sprintf("B received [%s], reply", msg)}
 		if sErr := stream.Send(reply); sErr != nil {
-			return sErr
+			err = sErr
+			return err
 		}
 	}
 	return nil

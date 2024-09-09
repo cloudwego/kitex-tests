@@ -3,8 +3,12 @@ package common
 import (
 	"context"
 	"fmt"
+	"github.com/cloudwego/kitex/pkg/remote"
+	"github.com/cloudwego/kitex/pkg/remote/trans/netpoll"
 	"github.com/cloudwego/kitex/pkg/serviceinfo"
 	"github.com/cloudwego/kitex/pkg/streaming"
+	"net"
+	"time"
 	_ "unsafe"
 )
 
@@ -232,17 +236,102 @@ func (s Setting) Execute(ctx context.Context) error {
 	return nil
 }
 
-func NewDummySetting() Setting {
+func NewDummyInjector() Injector {
+	return Injector{
+		Settings: []Setting{
+			NewDummylSetting(),
+		},
+	}
+}
+
+func NewDummylSetting() Setting {
+	return Setting{}
+}
+
+func NewSelfCancelSetting(cancelFunc context.CancelFunc) Setting {
 	return Setting{
 		Match: func(ctx context.Context) (bool, error) {
 			return true, nil
 		},
 		Action: func(ctx context.Context) error {
-			if s := streaming.GetStream(ctx); s != nil {
-				s.Close()
+			if cnt := ctx.Value("cnt"); cnt != nil {
+				if cnt.(int) == 1 {
+					cancelFunc()
+					return nil
+				}
 			}
-			fmt.Println("close")
 			return nil
 		},
 	}
+}
+
+func NewCloseConnSetting() Setting {
+	return Setting{
+		Match: func(ctx context.Context) (bool, error) {
+			return true, nil
+		},
+		Action: func(ctx context.Context) error {
+			if cnt := ctx.Value("cnt"); cnt != nil {
+				if cnt.(int) == 1 {
+					if conn, err := controller.GetConn(""); err == nil {
+						conn.Close()
+						return nil
+					}
+				}
+			}
+			return nil
+		},
+	}
+}
+
+var controller = &ConnController{
+	ConnMap: map[string]net.Conn{},
+}
+
+type ConnController struct {
+	ConnMap map[string]net.Conn
+}
+
+func (c *ConnController) GetConn(key string) (net.Conn, error) {
+	for s := range c.ConnMap {
+		if c.ConnMap[s] != nil {
+			return c.ConnMap[s], nil
+		}
+	}
+	return nil, fmt.Errorf("no such connection")
+}
+
+func (c *ConnController) PutConn(conn net.Conn) error {
+	key := c.connKey(conn)
+	c.ConnMap[key] = conn
+	return nil
+}
+
+func (c *ConnController) connKey(conn net.Conn) string {
+	return conn.LocalAddr().String() + "|" + conn.RemoteAddr().String()
+}
+
+var _ remote.Dialer = &WrapDialer{}
+
+type WrapDialer struct {
+	remote.Dialer
+	connController *ConnController
+}
+
+func NewWrapDialer() *WrapDialer {
+	npDialer := netpoll.NewDialer()
+	return &WrapDialer{
+		Dialer:         npDialer,
+		connController: controller,
+	}
+}
+
+func (d *WrapDialer) DialTimeout(network string, address string, timeout time.Duration) (net.Conn, error) {
+	conn, err := d.Dialer.DialTimeout(network, address, timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	d.connController.PutConn(conn)
+	return conn, nil
 }
