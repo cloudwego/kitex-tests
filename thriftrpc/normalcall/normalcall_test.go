@@ -628,7 +628,6 @@ func BenchmarkThriftWithComplexData(b *testing.B) {
 	})
 }
 
-// CreateObjReq .
 func createComplexObjReq(ctx context.Context) (context.Context, *instparam.ObjReq) {
 	id := int64(fastrand.Int31n(100))
 	smallSubMsg := &instparam.SubMessage{
