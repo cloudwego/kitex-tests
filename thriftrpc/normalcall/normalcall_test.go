@@ -18,13 +18,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/cloudwego/kitex/pkg/remote/codec"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/bytedance/gopkg/lang/fastrand"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/pkg/test"
@@ -33,18 +35,19 @@ import (
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/remote/codec"
 	"github.com/cloudwego/kitex/pkg/remote/codec/thrift"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/utils"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
-	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
-
 	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
+	tutils "github.com/cloudwego/kitex-tests/pkg/utils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
@@ -611,3 +614,57 @@ func BenchmarkTTHeaderParallel(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkThriftWithComplexData(b *testing.B) {
+	cli = getKitexClient(transport.Framed)
+	ctx, objReq := createComplexObjReq(context.Background())
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			cli.TestObjReq(ctx, objReq)
+		}
+	})
+}
+
+func createComplexObjReq(ctx context.Context) (context.Context, *instparam.ObjReq) {
+	id := int64(fastrand.Int31n(100))
+	smallSubMsg := &instparam.SubMessage{
+		Id:    &id,
+		Value: stringPtr(tutils.RandomString(10)),
+	}
+	subMsg1K := &instparam.SubMessage{
+		Id:    &id,
+		Value: stringPtr(tutils.RandomString(1024)),
+	}
+
+	subMsgList2Items := []*instparam.SubMessage{smallSubMsg, smallSubMsg}
+
+	msg := instparam.NewMessage()
+	msg.Id = &id
+	msg.Value = stringPtr(tutils.RandomString(1024))
+	msg.SubMessages = subMsgList2Items
+
+	msgMap := make(map[*instparam.Message]*instparam.SubMessage)
+	for i := 0; i < 5; i++ {
+		msgMap[instparam.NewMessage()] = subMsg1K
+	}
+
+	subMsgList100Items := make([]*instparam.SubMessage, 100)
+	for i := 0; i < len(subMsgList100Items); i++ {
+		subMsgList100Items[i] = smallSubMsg
+	}
+
+	req := instparam.NewObjReq()
+	req.Msg = msg
+	req.MsgMap = msgMap
+	req.SubMsgs = subMsgList100Items
+	req.MsgSet = []*instparam.Message{msg}
+
+	ctx = metainfo.WithValue(ctx, "TK", "TV")
+	ctx = metainfo.WithPersistentValue(ctx, "PK", "PV")
+	return ctx, req
+}
+
+func stringPtr(v string) *string { return &v }
