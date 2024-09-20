@@ -151,6 +151,7 @@ cd exitserver
 cp go.mod go.mod.bak
 cp go.sum go.sum.bak
 go get -u github.com/bytedance/sonic
+go get -u github.com/choleraehyq/pid
 go build
 # recover the change above, make sure git diff is clear
 mv go.mod.bak go.mod

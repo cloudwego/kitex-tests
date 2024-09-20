@@ -34,6 +34,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils"
 )
 
 type ServerAHandler struct {
@@ -87,10 +88,11 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 			panic(err)
 		}
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 	defer svr.Stop()
 
 	cli := servicea.MustNewClient("servicea", client.WithHostPorts("127.0.0.1:9005"))
+	defer utils.CallClose(cli)
 
 	ctx := context.Background()
 
@@ -120,7 +122,7 @@ func TestShortConnection(t *testing.T) {
 			panic(err)
 		}
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 	defer svr.Stop()
 
 	cli, err := servicea.NewClient("servicea",
@@ -135,7 +137,7 @@ func TestShortConnection(t *testing.T) {
 	test.Assert(t, err == nil)
 	_, err = clientStream.CloseAndRecv()
 	test.Assert(t, err == nil)
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 
 	// the connection should not exist after the call
 	exist, err := checkEstablishedConnection(svrIP, svrPort)
