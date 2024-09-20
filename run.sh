@@ -16,6 +16,10 @@
 set -e
 set -x
 
+
+# add time for each command for timing
+export PS4='[$(date "+%F %T")] '
+
 export GO111MODULE=on
 
 bits=$(getconf LONG_BIT)
