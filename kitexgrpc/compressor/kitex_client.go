@@ -16,13 +16,14 @@ package compressor
 
 import (
 	"context"
+	"io"
+	"strconv"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/transport"
-	"io"
-	"strconv"
 )
 
 type ClientWrapper struct {
@@ -45,7 +46,6 @@ func (c *ClientWrapper) RunUnary(callOptions ...callopt.Option) (*grpc_demo.Repl
 }
 
 func (c *ClientWrapper) RunClientStream(callOptions ...callopt.Option) (*grpc_demo.Reply, error) {
-
 	ctx := context.Background()
 	streamCli, err := c.client.CallClientStream(ctx)
 	if err != nil {

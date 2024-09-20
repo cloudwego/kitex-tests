@@ -23,6 +23,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils"
 	client_opt "github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -42,9 +43,10 @@ func TestKitexWithoutCompressor(t *testing.T) {
 		test.Assert(t, err == nil, err)
 	}()
 	defer svr.Stop()
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
+	defer utils.CallClose(client)
 	resp, err := client.RunUnary()
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Kitex Hello!")
@@ -68,9 +70,11 @@ func TestKitexCompressor(t *testing.T) {
 		test.Assert(t, err == nil, err)
 	}()
 	defer svr.Stop()
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
+	defer utils.CallClose(client)
+
 	resp, err := client.RunUnary(callopt.WithGRPCCompressor(kitex_gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Kitex Hello!")
@@ -94,13 +98,15 @@ func TestKitexCompressorWithGRPCClient(t *testing.T) {
 		test.Assert(t, err == nil, err)
 	}()
 	defer svr.Stop()
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 
 	conn, err := grpc.Dial(hostport, grpc.WithInsecure(), grpc.WithBlock())
 	test.Assert(t, err == nil, err)
 	defer conn.Close()
 	client, err := GetGRPCClient(hostport)
 	test.Assert(t, err == nil, err)
+	defer utils.CallClose(client)
+
 	resp, err := client.RunUnary(grpc.UseCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Grpc Hello!")
@@ -135,10 +141,12 @@ func TestKitexCompressorWithGRPCServer(t *testing.T) {
 		err := RunGRPCServer(hostport)
 		test.Assert(t, err == nil, err)
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(50 * time.Millisecond)
 
 	client, err := GetClient(hostport, client_opt.WithMiddleware(ServiceNameMW))
 	test.Assert(t, err == nil, err)
+	defer utils.CallClose(client)
+
 	resp, err := client.RunUnary(callopt.WithGRPCCompressor(kitex_gzip.Name))
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Kitex Hello!")
