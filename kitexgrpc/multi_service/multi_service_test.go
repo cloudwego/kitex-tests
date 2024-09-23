@@ -31,7 +31,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service_2"
 	servicea2 "github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_multi_service_2/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/clientutils"
 )
 
 type ServiceAImpl struct{}
@@ -94,7 +94,7 @@ func TestMultiService(t *testing.T) {
 
 	clientA, err := servicea.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(clientA)
+	defer clientutils.CallClose(clientA)
 
 	streamCliA, err := clientA.EchoA(context.Background())
 	test.Assert(t, err == nil, err)
@@ -106,7 +106,7 @@ func TestMultiService(t *testing.T) {
 
 	clientB, err := serviceb.NewClient("ServiceB", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(clientB)
+	defer clientutils.CallClose(clientB)
 
 	streamCliB, err := clientB.EchoB(context.Background())
 	test.Assert(t, err == nil, err)
@@ -127,7 +127,7 @@ func TestUnknownException(t *testing.T) {
 
 	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(clientC)
+	defer clientutils.CallClose(clientC)
 
 	streamCliC, err := clientC.EchoC(context.Background())
 	test.Assert(t, err == nil, err)
@@ -146,7 +146,7 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	// unknown service error
 	clientC, err := servicec.NewClient("ServiceC", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(clientC)
+	defer clientutils.CallClose(clientC)
 
 	streamCliC, err := clientC.EchoC(context.Background())
 	test.Assert(t, err == nil, err)
@@ -158,7 +158,7 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	// unknown method error
 	clientA, err := servicea2.NewClient("ServiceA", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(hostport))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(clientA)
+	defer clientutils.CallClose(clientA)
 
 	streamCliA, err := clientA.Echo(context.Background())
 	test.Assert(t, err == nil, err)

@@ -31,6 +31,8 @@ import (
 )
 
 func TestPercentageLimit(t *testing.T) {
+	t.Parallel()
+
 	backupPolicy := &retry.BackupPolicy{
 		RetryDelayMS: 10,
 		StopPolicy: retry.StopPolicy{
@@ -59,13 +61,13 @@ func TestPercentageLimit(t *testing.T) {
 			}
 		}),
 	)
-	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	stReq.FlagMsg = CircuitBreakRetrySleep
-	ctx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "20") //ms
+	ctx, stReq := thriftrpc.CreateSTRequest(counterNamespace(t))
+	stReq.FlagMsg = circuitBreakRetrySleep
+	ctx = withSleepTime(ctx, defaultSleepTime)
 
 	for i := 0; i < 5; i++ {
-		// CircuitBreakTest will sleep 200ms
-		_, err := cli.CircuitBreakTest(ctx, stReq, callopt.WithRPCTimeout(time.Second))
+		// CircuitBreakTest will 50% sleep defaultSleepTime
+		_, err := cli.CircuitBreakTest(ctx, stReq, callopt.WithRPCTimeout(defaultRPCTimeout))
 		// first 10 requests will always success
 		test.Assert(t, err == nil, err)
 	}
@@ -94,6 +96,8 @@ func TestPercentageLimit(t *testing.T) {
 }
 
 func TestPercentageLimitAfterUpdate(t *testing.T) {
+	t.Parallel()
+
 	backupPolicy := &retry.BackupPolicy{
 		RetryDelayMS: 10,
 		StopPolicy: retry.StopPolicy{
@@ -122,8 +126,8 @@ func TestPercentageLimitAfterUpdate(t *testing.T) {
 			}
 		}),
 	)
-	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-	stReq.FlagMsg = CircuitBreakRetrySleep
+	ctx, stReq := thriftrpc.CreateSTRequest(counterNamespace(t))
+	stReq.FlagMsg = circuitBreakRetrySleep
 	ctx = metainfo.WithPersistentValue(ctx, sleepTimeMsKey, "20") //ms
 
 	for i := 0; i < 46; i++ {

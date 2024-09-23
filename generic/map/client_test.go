@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
@@ -29,10 +30,13 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
+var testaddr string
+
 func TestMain(m *testing.M) {
-	svc := runServer()
+	testaddr = serverutils.NextListenAddr()
+	svc := runServer(testaddr)
 	gsvc := runGenericServer()
-	time.Sleep(100 * time.Millisecond)
+	serverutils.Wait(testaddr)
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()
@@ -44,7 +48,7 @@ func TestClient(t *testing.T) {
 	g, err := generic.MapThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(address))
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{
@@ -95,7 +99,7 @@ func TestGeneric(t *testing.T) {
 	g, err := generic.MapThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(address))
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{

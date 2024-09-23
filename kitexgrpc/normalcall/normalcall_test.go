@@ -16,6 +16,7 @@ package normalcall
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -34,7 +35,8 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/clientutils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 type ServerAHandler struct {
@@ -72,10 +74,12 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	backupState := rpcinfo.PoolEnabled()
 	defer rpcinfo.EnablePool(backupState)
 
+	addr := serverutils.NextListenAddr()
+
 	var ri rpcinfo.RPCInfo
 	svr := servicea.NewServer(
 		&ServerAHandler{},
-		server.WithServiceAddr(serverAddr("127.0.0.1:9005")),
+		server.WithServiceAddr(serverAddr(addr)),
 		server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) error {
 				ri = rpcinfo.GetRPCInfo(ctx)
@@ -91,8 +95,8 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	defer svr.Stop()
 
-	cli := servicea.MustNewClient("servicea", client.WithHostPorts("127.0.0.1:9005"))
-	defer utils.CallClose(cli)
+	cli := servicea.MustNewClient("servicea", client.WithHostPorts(addr))
+	defer clientutils.CallClose(cli)
 
 	ctx := context.Background()
 
@@ -111,8 +115,7 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 }
 
 func TestShortConnection(t *testing.T) {
-	svrIP, svrPort := "127.0.0.1", "19005"
-	svrAddrStr := svrIP + ":" + svrPort
+	svrAddrStr := serverutils.NextListenAddr()
 	svr := servicea.NewServer(
 		&ServerAHandler{},
 		server.WithServiceAddr(serverAddr(svrAddrStr)),
@@ -122,7 +125,7 @@ func TestShortConnection(t *testing.T) {
 			panic(err)
 		}
 	}()
-	time.Sleep(50 * time.Millisecond)
+	serverutils.Wait(svrAddrStr)
 	defer svr.Stop()
 
 	cli, err := servicea.NewClient("servicea",
@@ -130,17 +133,17 @@ func TestShortConnection(t *testing.T) {
 		client.WithShortConnection(),
 	)
 	test.Assert(t, err == nil)
-
 	clientStream, err := cli.CallClientStream(context.Background())
 	test.Assert(t, err == nil)
 	err = clientStream.Send(&grpc_demo.Request{Name: "1"})
 	test.Assert(t, err == nil)
 	_, err = clientStream.CloseAndRecv()
 	test.Assert(t, err == nil)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	// the connection should not exist after the call
-	exist, err := checkEstablishedConnection(svrIP, svrPort)
+	_, port, _ := net.SplitHostPort(svrAddrStr)
+	exist, err := checkEstablishedConnection(port)
 	if err != nil {
 		klog.Warnf("check established connection failed, error=%v", err)
 	} else {
@@ -150,16 +153,17 @@ func TestShortConnection(t *testing.T) {
 }
 
 // return true if current pid established connection with the input remote ip and port
-func checkEstablishedConnection(ip, port string) (bool, error) {
+func checkEstablishedConnection(port string) (bool, error) {
 	pid := os.Getpid()
 	conns, err := netutil.ConnectionsPid("all", int32(pid))
 	if err != nil {
 		return false, err
 	}
-
 	for _, c := range conns {
 		if c.Status == "ESTABLISHED" {
-			if strconv.Itoa(int(c.Raddr.Port)) == port && c.Raddr.IP == ip {
+			if strconv.Itoa(int(c.Raddr.Port)) == port &&
+				net.ParseIP(c.Raddr.IP).IsLoopback() { // only need to check IsLoopback for localhost
+				fmt.Println(c.Laddr, c.Raddr)
 				return true, nil
 			}
 		}

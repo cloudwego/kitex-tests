@@ -34,10 +34,8 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-const address = "localhost:9009"
-
-func runServer() server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", address)
+func runServer(listenaddr string) server.Server {
+	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
 	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithServiceAddr(addr))
 	go func() {
 		if err := svc.Run(); err != nil {
@@ -47,10 +45,8 @@ func runServer() server.Server {
 	return svc
 }
 
-const genericAddress = "localhost:9010"
-
-func runGenericServer() server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", genericAddress)
+func runGenericServer(listenaddr string) server.Server {
+	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	if err != nil {
 		panic(err)

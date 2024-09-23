@@ -17,13 +17,11 @@ package thrift_streaming
 import (
 	"log"
 	"net"
-	"strconv"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/cloudwego/kitex"
-	"github.com/cloudwego/kitex-tests/common"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
@@ -53,7 +51,7 @@ func RunThriftServer(handler echo.EchoService, addr string, opts ...server.Optio
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
@@ -66,7 +64,7 @@ func RunCombineThriftServer(handler combineservice.CombineService, addr string, 
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
@@ -79,7 +77,7 @@ func RunThriftCrossServer(handler cross_echo.EchoService, addr string, opts ...s
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
@@ -92,7 +90,7 @@ func RunGRPCPBServer(handler grpc_pb.PBService, addr string, opts ...server.Opti
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
@@ -105,27 +103,26 @@ func RunKitexPBServer(handler kitex_pb.PBService, addr string, opts ...server.Op
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
 var (
-	initialPort = int32(9000)
-	thriftAddr  = addrAllocator()
-	crossAddr   = addrAllocator()
-	slimAddr    = addrAllocator()
-	grpcAddr    = addrAllocator()
-	pbAddr      = addrAllocator()
-	combineAddr = addrAllocator()
+	thriftAddr  string
+	crossAddr   string
+	slimAddr    string
+	grpcAddr    string
+	pbAddr      string
+	combineAddr string
 )
 
-func addrAllocator() string {
-	addr := "127.0.0.1:" + strconv.Itoa(int(atomic.LoadInt32(&initialPort)))
-	atomic.AddInt32(&initialPort, 1)
-	return addr
-}
-
 func TestMain(m *testing.M) {
+	thriftAddr = serverutils.NextListenAddr()
+	crossAddr = serverutils.NextListenAddr()
+	slimAddr = serverutils.NextListenAddr()
+	grpcAddr = serverutils.NextListenAddr()
+	pbAddr = serverutils.NextListenAddr()
+	combineAddr = serverutils.NextListenAddr()
 	var thriftSvr, thriftCrossSvr, slimServer, grpcServer, pbServer, combineServer server.Server
 	go func() { thriftSvr = RunThriftServer(&EchoServiceImpl{}, thriftAddr) }()
 	go func() { thriftCrossSvr = RunThriftCrossServer(&CrossEchoServiceImpl{}, crossAddr) }()
@@ -153,13 +150,6 @@ func TestMain(m *testing.M) {
 			combineServer.Stop()
 		}
 	}()
-	common.WaitServer(thriftAddr)
-	common.WaitServer(crossAddr)
-	common.WaitServer(grpcAddr)
-	common.WaitServer(pbAddr)
-	common.WaitServer(slimAddr)
-	common.WaitServer(combineAddr)
 	log.Printf("testing Kitex %s", kitex.Version)
-
 	m.Run()
 }

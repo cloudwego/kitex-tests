@@ -23,7 +23,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/clientutils"
 	client_opt "github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -46,7 +46,7 @@ func TestKitexWithoutCompressor(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(client)
+	defer clientutils.CallClose(client)
 	resp, err := client.RunUnary()
 	test.Assert(t, err == nil, err)
 	test.Assert(t, resp != nil && resp.Message == "Kitex Hello!")
@@ -73,7 +73,7 @@ func TestKitexCompressor(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(client)
+	defer clientutils.CallClose(client)
 
 	resp, err := client.RunUnary(callopt.WithGRPCCompressor(kitex_gzip.Name))
 	test.Assert(t, err == nil, err)
@@ -105,7 +105,7 @@ func TestKitexCompressorWithGRPCClient(t *testing.T) {
 	defer conn.Close()
 	client, err := GetGRPCClient(hostport)
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(client)
+	defer clientutils.CallClose(client)
 
 	resp, err := client.RunUnary(grpc.UseCompressor(gzip.Name))
 	test.Assert(t, err == nil, err)
@@ -145,7 +145,7 @@ func TestKitexCompressorWithGRPCServer(t *testing.T) {
 
 	client, err := GetClient(hostport, client_opt.WithMiddleware(ServiceNameMW))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(client)
+	defer clientutils.CallClose(client)
 
 	resp, err := client.RunUnary(callopt.WithGRPCCompressor(kitex_gzip.Name))
 	test.Assert(t, err == nil, err)

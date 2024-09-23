@@ -16,13 +16,14 @@ package multiservicecall
 
 import (
 	"context"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/transmeta"
-	"github.com/cloudwego/kitex/server"
 	"net"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/server"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/combine_service"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/combine_service/combineservice"
@@ -31,6 +32,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pb_multi_service/servicec"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 type ServiceAHandler struct{}
@@ -56,36 +58,38 @@ func (*ServiceCHandler) Chat1(ctx context.Context, req *pb_multi_service.Request
 
 func GetServer(hostport string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-
-	return server.NewServer(server.WithServiceAddr(addr))
+	return server.NewServer(server.WithServiceAddr(addr),
+		server.WithExitWaitTime(20*time.Millisecond),
+	)
 }
 
 func GetMuxServer(hostport string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-
-	return server.NewServer(server.WithServiceAddr(addr), server.WithMuxTransport())
+	return server.NewServer(server.WithServiceAddr(addr),
+		server.WithExitWaitTime(20*time.Millisecond),
+		server.WithMuxTransport())
 }
 
 func TestRegisterService(t *testing.T) {
-	testRegisterService(t, GetServer, "localhost:9901")
+	testRegisterService(t, GetServer, serverutils.NextListenAddr())
 }
 
 func TestMuxRegisterService(t *testing.T) {
-	testRegisterService(t, GetMuxServer, "localhost:9902")
+	testRegisterService(t, GetMuxServer, serverutils.NextListenAddr())
 }
 
 func TestMultiService(t *testing.T) {
-	ip := "localhost:9903"
+	ip := serverutils.NextListenAddr()
 	testMultiService(t, GetServer(ip), ip)
 }
 
 func TestMuxMultiService(t *testing.T) {
-	ip := "localhost:9904"
+	ip := serverutils.NextListenAddr()
 	testMultiService(t, GetMuxServer(ip), ip)
 }
 
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
-	ip := "localhost:9905"
+	ip := serverutils.NextListenAddr()
 	svr := GetServer(ip)
 	err := servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
 	test.Assert(t, err == nil)
@@ -143,7 +147,7 @@ func testMultiService(t *testing.T, svr server.Server, ip string) {
 	servicec.RegisterService(svr, new(ServiceCHandler), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
-	time.Sleep(100 * time.Millisecond)
+	serverutils.Wait(ip)
 
 	req := &pb_multi_service.Request{Name: "pb multi_service req"}
 

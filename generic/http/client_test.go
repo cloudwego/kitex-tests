@@ -23,15 +23,19 @@ import (
 	"time"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/klog"
 )
 
+var testaddr string
+
 func TestMain(m *testing.M) {
+	testaddr = serverutils.NextListenAddr()
 	klog.SetLevel(klog.LevelFatal)
-	svc := runServer()
-	time.Sleep(100 * time.Millisecond)
+	svc := runServer(testaddr)
+	serverutils.Wait(testaddr)
 	m.Run()
 	svc.Stop()
 }
@@ -41,7 +45,7 @@ func TestClient(t *testing.T) {
 	test.Assert(t, err == nil, err)
 	g, err := generic.HTTPThriftGeneric(p)
 	test.Assert(t, err == nil, err)
-	cli := newGenericClient("a.b.c", g, address)
+	cli := newGenericClient("a.b.c", g, testaddr)
 
 	body := map[string]interface{}{
 		"text": "text",

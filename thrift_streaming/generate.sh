@@ -17,6 +17,8 @@
 
 # Regenerate kitex_gen* directories when there's any related change to codegen (both kitex&thriftgo)
 
+export PS4='[thrift_streaming][$(date "+%F %T")] '
+
 cd `dirname $0`
 ROOT=`pwd`
 
@@ -43,7 +45,7 @@ kitex_cmd() {
 
 # generate with old kitex and thriftgo WITHOUT thrift streaming support
 function generate_old() {
-    echo -e "\n\ngenerate_old\n"
+    echo -e "\ngenerate_old\n"
     dir=$OLD
     export PATH=$OLD:$SAVE_PATH
 
@@ -67,7 +69,7 @@ function generate_old() {
 }
 
 function generate_new() {
-    echo -e "\n\ngenerate_new\n"
+    echo -e "\ngenerate_new\n"
     dir=$NEW
     export PATH=$dir:$SAVE_PATH
 
@@ -109,7 +111,7 @@ function generate_new() {
 }
 
 function generate_new_thriftgo_old_kitex() {
-    echo -e "\n\ngenerate_new_thriftgo_old_kitex\n"
+    echo -e "\ngenerate_new_thriftgo_old_kitex\n"
     dir=$NEW_THRIFTGO_OLD_KITEX
     export PATH=$dir:$SAVE_PATH
 
@@ -146,14 +148,6 @@ if [ ! -z "$TEST_GENERATE_OLD" ]; then
 fi
 
 cd exitserver
-# XXX: sonic is not compatible with latest Go version...
-# but updating the pkg will cause changes of go.mod & go.sum
-cp go.mod go.mod.bak
-cp go.sum go.sum.bak
-go get -u github.com/bytedance/sonic
-go get -u github.com/choleraehyq/pid
+echo -e "\nbuilding exitserver @ $PWD\nPlease run ./update_go_mod.sh if any Go compatibility issue\n"
 go build
-# recover the change above, make sure git diff is clear
-mv go.mod.bak go.mod
-mv go.sum.bak go.sum
 mv exitserver $ROOT/binaries

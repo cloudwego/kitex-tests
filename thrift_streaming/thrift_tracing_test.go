@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
 	"github.com/cloudwego/kitex/client/streamclient"
@@ -173,7 +173,7 @@ func (w *wrapStreamWithDoFinish) DoFinish(err error) {
 }
 
 func TestTracerNormalEndOfStream(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 
 	serverTracer := &testTracer{}
 	svr := RunThriftServer(
@@ -427,7 +427,7 @@ func TestTracingSendError(t *testing.T) {
 
 func TestTracingServerReturnError(t *testing.T) {
 	mockError := fmt.Errorf("mock error")
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	serverTracer := &testTracer{}
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoUnary: func(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
@@ -512,7 +512,7 @@ func TestTracingServerReturnError(t *testing.T) {
 
 func TestTracingServerReturnBizError(t *testing.T) {
 	mockError := kerrors.NewGRPCBizStatusError(100, "biz error")
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	serverTracer := &testTracer{}
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoUnary: func(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
@@ -600,7 +600,7 @@ func TestTracingServerReturnBizError(t *testing.T) {
 }
 
 func TestTracingClientTimeout(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoUnary: func(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
 			time.Sleep(time.Millisecond * 100)
@@ -679,7 +679,7 @@ func TestTracingClientTimeout(t *testing.T) {
 }
 
 func TestTracingServerStop(t *testing.T) {
-	addr := "127.0.0.1:9999"
+	addr := serverutils.NextListenAddr()
 	clientTracer := &testTracer{}
 	cli := echoservice.MustNewStreamClient("server",
 		streamclient.WithHostPorts(addr),
@@ -689,7 +689,7 @@ func TestTracingServerStop(t *testing.T) {
 		cmd := exec.Command("binaries/exitserver", "-addr", addr)
 		err := cmd.Start()
 		test.Assert(t, err == nil, err)
-		common.WaitServer(addr)
+		serverutils.Wait(addr)
 		return cmd
 	}
 
@@ -778,7 +778,7 @@ func (c *customTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo
 }
 
 func TestTracerStreamEventEOF(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoServer: func(request *echo.EchoRequest, st echo.EchoService_EchoServerServer) error {
 			_ = st.Send(&echo.EchoResponse{Message: request.Message})
@@ -812,7 +812,7 @@ func TestTracerStreamEventEOF(t *testing.T) {
 }
 
 func TestTracerFinishStream(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoServer: func(request *echo.EchoRequest, st echo.EchoService_EchoServerServer) error {
 			_ = st.Send(&echo.EchoResponse{Message: request.Message})

@@ -18,31 +18,32 @@ import (
 	"context"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/transport"
 )
 
-var cli stservice.Client
+var testaddr string
 
 func TestMain(m *testing.M) {
+	testaddr = serverutils.NextListenAddr()
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  "localhost:9001",
+		Address:  testaddr,
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, &STServiceHandler{})
-	time.Sleep(time.Second)
+	serverutils.Wait(testaddr)
 	m.Run()
 	svr.Stop()
 }
 
 func TestHandlerReturnNormalError(t *testing.T) {
-	cli = getKitexClient(transport.PurePayload)
+	cli := getKitexClient(transport.PurePayload)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = normalErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -58,7 +59,7 @@ func TestHandlerReturnNormalError(t *testing.T) {
 }
 
 func TestHandlerReturnTransError(t *testing.T) {
-	cli = getKitexClient(transport.Framed)
+	cli := getKitexClient(transport.Framed)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = kitexTransErr.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -74,7 +75,7 @@ func TestHandlerReturnTransError(t *testing.T) {
 }
 
 func TestHandlerReturnStatusError(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = grpcStatus.Error()
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -90,7 +91,7 @@ func TestHandlerReturnStatusError(t *testing.T) {
 }
 
 func TestHandlerPanic(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stReq.Name = panicStr
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -108,7 +109,7 @@ func TestHandlerPanic(t *testing.T) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{"localhost:9001"},
+		HostPorts:         []string{testaddr},
 		Protocol:          p,
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
 	})
