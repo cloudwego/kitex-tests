@@ -17,6 +17,6 @@ namespace go combine_extend
 include "api.thrift"
 
 
-service A extends api.PingPongOnlyService {}
+service A extends api.PingPongOnlyService {}(streaming.transport="ttheader")
 
-service B extends api.StreamOnlyServiceChildChild {}
+service B extends api.StreamOnlyServiceChildChild {}(streaming.transport="ttheader")

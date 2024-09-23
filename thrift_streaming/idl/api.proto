@@ -25,6 +25,7 @@ message Response {
   string message = 1;
 }
 
+// @streaming.transport=ttheader
 service PBService {
   rpc Echo (stream Request) returns (stream Response) {}
   rpc EchoClient (stream Request) returns (Response) {}
