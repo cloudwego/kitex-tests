@@ -31,10 +31,15 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
-	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
+)
+
+var (
+	rpcTimeout = 10 * time.Millisecond
+	sleepTime  = 20 * time.Millisecond
 )
 
 type timeoutHandler struct {
@@ -76,131 +81,131 @@ func (t *timeoutMetaHandler) ReadMeta(ctx context.Context, msg remote.Message) (
 
 func TestServerProcessingTimeout(t *testing.T) {
 	t.Run("both-ttheader-meta-handler/not-enabled", func(t *testing.T) {
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverTimeoutAddr},
+		addr := serverutils.NextListenAddr()
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr},
 			&timeoutHandler{
 				testSTReq: func(ctx context.Context, request *stability.STRequest) (*stability.STResponse, error) {
 					_, ok := ctx.Deadline()
 					test.Assert(t, !ok)
-
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(sleepTime)
 					return &stability.STResponse{Str: request.Str}, nil
 				},
 			},
 			server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 			// server.WithEnableContextTimeout(false), // disable by default
 		)
-		common.WaitServer(serverTimeoutAddr)
+		serverutils.Wait(addr)
 		defer svr.Stop()
 
 		cli := getKitexClient(transport.TTHeaderFramed, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(serverTimeoutAddr))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err)
 	})
 
 	t.Run("both-ttheader-meta-handler/enabled", func(t *testing.T) {
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverTimeoutAddr},
+		addr := serverutils.NextListenAddr()
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr},
 			&timeoutHandler{
 				testSTReq: func(ctx context.Context, request *stability.STRequest) (*stability.STResponse, error) {
 					ddl, ok := ctx.Deadline()
 					test.Assert(t, ok)
 					test.Assert(t, ddl.After(time.Now()))
-
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(sleepTime)
 					return &stability.STResponse{Str: request.Str}, nil
 				},
 			},
 			server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 			server.WithEnableContextTimeout(true),
 		)
-		common.WaitServer(serverTimeoutAddr)
+		serverutils.Wait(addr)
 		defer svr.Stop()
 
 		cli := getKitexClient(transport.TTHeaderFramed, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(serverTimeoutAddr), callopt.WithRPCTimeout(time.Millisecond*10))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr), callopt.WithRPCTimeout(rpcTimeout))
 		test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout), err)
 	})
 
 	t.Run("client-set-ttheader/server-ttheader-meta-handler/not-enabled", func(t *testing.T) {
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverTimeoutAddr},
+		addr := serverutils.NextListenAddr()
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr},
 			&timeoutHandler{
 				testSTReq: func(ctx context.Context, request *stability.STRequest) (*stability.STResponse, error) {
 					_, ok := ctx.Deadline()
 					test.Assert(t, !ok)
-
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(sleepTime)
 					return &stability.STResponse{Str: request.Str}, nil
 				},
 			},
 			server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 			// server.WithEnableContextTimeout(false), // default is false
 		)
-		common.WaitServer(serverTimeoutAddr)
+		serverutils.Wait(addr)
 		defer svr.Stop()
 
 		cli := getKitexClient(transport.TTHeaderFramed, client.WithMetaHandler(&timeoutMetaHandler{
-			timeout: time.Millisecond * 10,
+			timeout: rpcTimeout,
 		}))
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(serverTimeoutAddr))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err)
 	})
 
 	t.Run("client-set-timeout/server-ttheader-meta-handler/enabled", func(t *testing.T) {
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverTimeoutAddr},
+		addr := serverutils.NextListenAddr()
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr},
 			&timeoutHandler{
 				testSTReq: func(ctx context.Context, request *stability.STRequest) (*stability.STResponse, error) {
 					ddl, ok := ctx.Deadline()
 					test.Assert(t, ok)
 					test.Assert(t, ddl.After(time.Now()))
-
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(sleepTime)
 					return &stability.STResponse{Str: request.Str}, nil
 				},
 			},
 			server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 			server.WithEnableContextTimeout(true),
 		)
-		common.WaitServer(serverTimeoutAddr)
+		serverutils.Wait(addr)
 		defer svr.Stop()
 
 		cli := getKitexClient(transport.TTHeaderFramed, client.WithMetaHandler(&timeoutMetaHandler{
-			timeout: time.Millisecond * 10,
+			timeout: rpcTimeout,
 		}))
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(serverTimeoutAddr))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err) // no timeout control in both client and server
 	})
 
 	t.Run("client-not-set/server-set-timeout/enabled", func(t *testing.T) {
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverTimeoutAddr},
+		addr := serverutils.NextListenAddr()
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr},
 			&timeoutHandler{
 				testSTReq: func(ctx context.Context, request *stability.STRequest) (*stability.STResponse, error) {
 					ddl, ok := ctx.Deadline()
 					test.Assert(t, ok)
 					test.Assert(t, ddl.After(time.Now()))
-
-					time.Sleep(time.Millisecond * 50)
+					time.Sleep(sleepTime)
 					return &stability.STResponse{Str: request.Str}, nil
 				},
 			},
 			server.WithMetaHandler(&timeoutMetaHandler{
-				timeout: time.Millisecond * 10,
+				timeout: rpcTimeout,
 			}),
 			server.WithEnableContextTimeout(true),
 		)
-		common.WaitServer(serverTimeoutAddr)
+		serverutils.Wait(addr)
 		defer svr.Stop()
 
 		cli := getKitexClient(transport.TTHeaderFramed)
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(serverTimeoutAddr))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err) // no timeout control in both client and server
 	})
 }

@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/remote"
@@ -38,25 +38,31 @@ const (
 	persistentKV = "aservice_persist"
 )
 
+var testaddr1, testaddr2 string
+
 func TestMain(m *testing.M) {
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts("localhost:9002"))
+	testaddr1 = serverutils.NextListenAddr()
+	testaddr2 = serverutils.NextListenAddr()
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(testaddr2))
 	svrb := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: "localhost:9001",
+		Address: testaddr1,
 	}, &stServiceHandler{cli: cli}, server.WithMetaHandler(testMetaHandler{}))
 
 	svrc := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: "localhost:9002",
+		Address: testaddr2,
 	}, &stServiceHandler{})
-	time.Sleep(time.Second)
+
+	serverutils.Wait(testaddr1)
+	serverutils.Wait(testaddr2)
 	m.Run()
 	svrb.Stop()
 	svrc.Stop()
 }
 
 func TestTransientKV(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader, client.WithHostPorts("localhost:9001"))
+	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(testaddr1))
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx = metainfo.WithValue(ctx, transientKV, transientKV)

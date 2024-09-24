@@ -14,13 +14,9 @@
 # limitations under the License.
 
 set -e
-set -x
-
 
 # add time for each command for timing
 export PS4='[$(date "+%F %T")] '
-
-export GO111MODULE=on
 
 bits=$(getconf LONG_BIT)
 if [[ $bits != 64 ]]; then
@@ -28,70 +24,83 @@ if [[ $bits != 64 ]]; then
     exit 1
 fi
 
-# Install protoc
+set -x
 
-get_protoc() {
-    os=$1
-    arch=$2
-    out=$3
-    suffix=$(echo ${os}-${arch} | sed 's/darwin/osx/' | sed 's/amd64/x86_64/' | sed 's/arm64/aarch_64/')
-    release=protoc-${PROTOC_VERSION#v}-${suffix}.zip
-    url=https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION}/${release}
-    wget -q $url || exit 1
-    python -m zipfile -e $release $os || exit 1
-    chmod +x $os/bin/protoc
-    mv $os/bin/protoc $out/protoc-${os}-${arch} && rm -rf $os $release
-}
+PROTOC_OUT=$PWD/bin
+PROTOC_VERSION=v3.13.0 # FIXME: this version doesn't support darwin arm64
 
 install_protoc() {
-    PROTOC_VERSION=v3.13.0
-    OUT=$(pwd)/bin
-    export PATH=$OUT:$PATH
-    mkdir -p $OUT
-
-    get_protoc darwin amd64 $OUT
-    get_protoc linux amd64 $OUT
-    get_protoc linux arm64 $OUT
-    for p in $OUT/protoc-*; do
-        "$p" --version 2>/dev/null && ln -s $(basename $p) $OUT/protoc || true
-    done
+    echo "installing protoc ... "
+    os=`uname -s | sed 's/Darwin/osx/'`
+    arch=`uname -m | sed 's/amd64/x86_64/' | sed 's/arm64/aarch_64/'`
+    suffix=$(echo ${os}-${arch})
+    filename=protoc-${PROTOC_VERSION#v}-${suffix}.zip
+    url=https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION}/${filename}
+    rm -f $filename
+    wget -q $url || exit 1
+    unzip -o -q $filename -d ./tmp/
+    mkdir -p $PROTOC_OUT
+    mv ./tmp/bin/protoc $PROTOC_OUT
+    rm -rf ./tmp/
+    echo "installing protoc ... done"
 }
 
 go_install() {
+    echo "installing $@ ..."
     go install $@ || go get $@
+    echo "installing $@ ... done"
 }
 
 kitex_cmd() {
   kitex --no-dependency-check $@
 }
 
-which protoc || install_protoc
+export PATH=$PROTOC_OUT:$PATH
+
+echo -e "\ninstalling missing commands\n"
+
+# install protoc
+which protoc || install_protoc &
 
 # install protoc-gen-go and protoc-gen-go-kitexgrpc
-which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+which protoc-gen-go || go_install google.golang.org/protobuf/cmd/protoc-gen-go@latest &
+
 # install protoc-gen-go and protoc-gen-go-kitexgrpc
-which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest &
 
-# Install thriftgo
-which thriftgo || go_install github.com/cloudwego/thriftgo@latest
+# install thriftgo
+which thriftgo || go_install github.com/cloudwego/thriftgo@latest &
 
-# Install kitex and generate codes
+# install kitex
 LOCAL_REPO=$1
 
 if [[ -n $LOCAL_REPO ]]; then
     cd ${LOCAL_REPO}
-    go_install ${LOCAL_REPO}/tool/cmd/kitex
+    go_install ${LOCAL_REPO}/tool/cmd/kitex &
     cd -
 else
-    go_install github.com/cloudwego/kitex/tool/cmd/kitex@develop
+    go_install github.com/cloudwego/kitex/tool/cmd/kitex@develop &
 fi
+
+wait
+echo -e "\ninstalling missing commands ... done\n"
+
+# double check commands,
+# set -e may not working since commands run in background
+which protoc
+which protoc-gen-go
+which protoc-gen-go-grpc
+which thriftgo
+which kitex
 
 kitex -version
 
 rm -f go.mod # go mod init fails if it already exists
-
 go mod init github.com/cloudwego/kitex-tests
-test -d kitex_gen && rm -rf kitex_gen
+
+echo -e "\ngenerating code for testing ...\n"
+
+rm -rf kitex_gen
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/http.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
@@ -106,19 +115,24 @@ kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_multi_servi
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/pb_multi_service.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl/combine_service.proto
 
-test -d kitex_gen_slim && rm -rf kitex_gen_slim
+rm -rf kitex_gen_slim
 kitex_cmd -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
 
-test -d kitex_gen_noDefSerdes && rm -rf kitex_gen_noDefSerdes
+rm -rf kitex_gen_noDefSerdes
 kitex_cmd -module github.com/cloudwego/kitex-tests -thrift no_default_serdes -gen-path kitex_gen_noDefSerdes ./idl/stability.thrift
 
-# generate thrift streaming code
-LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
-test -d grpc_gen && rm -rf grpc_gen
+rm -rf grpc_gen
 mkdir grpc_gen
 protoc --go_out=grpc_gen/. ./idl/grpc_demo_2.proto
 protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
+# generate thrift streaming code
+LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
+
+echo -e "\ngenerating code for testing ... done\n"
+
+
+echo -e "\nupdating dependencies ... \n"
 
 # Init dependencies
 go get github.com/apache/thrift@v0.13.0
@@ -132,44 +146,26 @@ fi
 
 go mod tidy
 
-# static check
-go vet -stdmethods=false $(go list ./...)
-#go_install mvdan.cc/gofumpt@v0.2.0
-#test -z "$(gofumpt -l -extra .)"
+echo -e "\nupdating dependencies ... done\n"
 
 # run tests
-packages=(
-./thriftrpc/normalcall/...
-./thriftrpc/muxcall/...
-./thriftrpc/retrycall/...
-./thriftrpc/failedcall/...
-./thriftrpc/multiservicecall/...
-./thriftrpc/failedmux/...
-./thriftrpc/abctest/...
-./thriftrpc/utiltest/...
-./pbrpc/normalcall/...
-./pbrpc/muxcall/...
-./pbrpc/failedcall/...
-./pbrpc/multiservicecall/...
-./generic/http/...
-./generic/map/...
-./kitexgrpc/...
-./thrift_streaming/...
-)
+# use less cores for stability
+# coz some of them are logical cores
+nproc=$(nproc)
+export GOMAXPROCS=$(( $nproc / 2 ))
 
-for pkg in ${packages[@]}
-do
-    if [[ -n $LOCAL_REPO ]]; then
-        go test -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt.tmp -coverpkg=github.com/cloudwego/kitex/... $pkg
-        if [[ "$OSTYPE" =~ ^darwin ]];
-        then
-            sed -i '' 1d ${LOCAL_REPO}/coverage.txt.tmp
-        else
-            sed -i '1d' ${LOCAL_REPO}/coverage.txt.tmp
-        fi
-        cat ${LOCAL_REPO}/coverage.txt.tmp >> ${LOCAL_REPO}/coverage.txt
-        rm ${LOCAL_REPO}/coverage.txt.tmp
-    else
-        go test $pkg
-    fi
-done
+echo -e "\nrunning tests ... \n"
+
+if [[ -n $LOCAL_REPO ]]; then
+    go test -failfast -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt -coverpkg=github.com/cloudwego/kitex/... ./...
+   if [[ "$OSTYPE" =~ ^darwin ]]; # remove `mode: atomic` line
+   then
+       sed -i '' 1d ${LOCAL_REPO}/coverage.txt
+   else
+       sed -i '1d' ${LOCAL_REPO}/coverage.txt
+   fi
+else
+    go test -failfast ./...
+fi
+
+echo "PASSED"

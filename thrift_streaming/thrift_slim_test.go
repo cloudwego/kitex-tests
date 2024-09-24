@@ -1,6 +1,3 @@
-//go:build amd64 && !windows && go1.16 && !go1.22 && !disablefrugal
-// +build amd64,!windows,go1.16,!go1.22,!disablefrugal
-
 // Copyright 2023 CloudWeGo Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,8 +32,8 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
-	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_slim/echo/echoservice"
 )
@@ -53,7 +50,7 @@ func RunSlimThriftServer(handler echo.EchoService, addr string, opts ...server.O
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
@@ -357,7 +354,7 @@ func TestSlimKitexStreamClientMiddlewareServer(t *testing.T) {
 }
 
 func TestSlimKitexServerMiddleware(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	t.Run("pingpong", func(t *testing.T) {
 		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, addr, svrCodecOpt,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {

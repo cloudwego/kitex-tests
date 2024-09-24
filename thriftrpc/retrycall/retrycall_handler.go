@@ -17,6 +17,7 @@ package retrycall
 import (
 	"context"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -27,37 +28,90 @@ import (
 	"github.com/cloudwego/kitex/pkg/retry"
 )
 
+var (
+	defaultRPCTimeout = 40 * time.Millisecond
+	defaultSleepTime  = 60 * time.Millisecond // must > defaultRPCTimeout
+)
+
 const (
 	retryMsg            = "retry"
+	counterNamespaceKey = "counterNs"
 	sleepTimeMsKey      = "TIME_SLEEP_TIME_MS"
 	skipCounterSleepKey = "TIME_SKIP_COUNTER_SLEEP"
 	respFlagMsgKey      = "CUSTOMIZED_RESP_MSG"
 )
 
-var _ stability.STService = &STServiceHandler{}
-
 var (
-	testSTReqCount        int32
-	testObjReqCount       int32
-	testExceptionCount    int32
-	circuitBreakTestCount int32
+	testObjReqCount    int32
+	testExceptionCount int32
 )
 
 type mockType = string
 
 const (
-	mockTypeMockTimeout         mockType = "0"
-	mockTypeNonRetryReturnError mockType = "1"
-	mockTypeCustomizedResp      mockType = "2"
-	mockTypeSleepWithMetainfo   mockType = "3"
-	mockTypeBizStatus           mockType = "4"
-	mockTypeReturnTransErr      mockType = "5"
+	mockTypeMockTimeout         mockType = "mockTypeMockTimeout"
+	mockTypeNonRetryReturnError mockType = "mockTypeNonRetryReturnError"
+	mockTypeCustomizedResp      mockType = "mockTypeCustomizedResp"
+	mockTypeBizStatus           mockType = "mockTypeBizStatus"
+	mockTypeReturnTransErr      mockType = "mockTypeReturnTransErr"
+	mockType10PctSleep          mockType = "mockType10PctSleep"
 
 	retryTransErrCode = 1000
 )
 
+type reqCounters struct {
+	STReq        int32
+	CircuitBreak int32
+
+	// TODO: need to refactor the code if tests can't run with t.Parallel()
+	// ObjReq           int32
+	// Exception        int32
+}
+
 // STServiceHandler .
 type STServiceHandler struct{}
+
+var _ stability.STService = &STServiceHandler{}
+
+var counters sync.Map
+
+func resetCounters(ns string) {
+	counters.Store(ns, &reqCounters{})
+}
+
+func getCounter(ns string) *reqCounters {
+	v, ok := counters.Load(ns)
+	if !ok {
+		return nil
+	}
+	return v.(*reqCounters)
+}
+
+type testingT interface {
+	Name() string
+}
+
+func getTestCounters(t testingT) *reqCounters {
+	v, ok := counters.Load(t.Name())
+	if !ok {
+		return nil
+	}
+	return v.(*reqCounters)
+}
+
+func counterNamespace(t testingT) context.Context {
+	ns := t.Name()
+	resetCounters(ns)
+	return metainfo.WithValue(context.Background(), counterNamespaceKey, ns)
+}
+
+func getCounterNamespace(ctx context.Context) string {
+	s, _ := metainfo.GetPersistentValue(ctx, counterNamespaceKey)
+	if s == "" {
+		s, _ = metainfo.GetValue(ctx, counterNamespaceKey)
+	}
+	return s
+}
 
 // TestSTReq .
 func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
@@ -66,6 +120,7 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,
 	}
+
 	if req.FlagMsg == mockTypeCustomizedResp {
 		// should use ttheader
 
@@ -80,13 +135,6 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 				resp.FlagMsg = "success"
 			}
 		}
-		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
-			time.Sleep(sleepTime)
-		}
-	} else if req.FlagMsg == mockTypeSleepWithMetainfo {
-		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
-			time.Sleep(sleepTime)
-		}
 	} else if req.FlagMsg == mockTypeReturnTransErr {
 		// should use ttheader
 
@@ -100,13 +148,15 @@ func (h *STServiceHandler) TestSTReq(ctx context.Context, req *stability.STReque
 				err = remote.NewTransErrorWithMsg(retryTransErrCode, "mock error")
 			}
 		}
-		if sleepTime := getSleepTimeMS(ctx); sleepTime > 0 {
-			time.Sleep(sleepTime)
+	} else if req.FlagMsg == mockType10PctSleep {
+		v := getCounter(getCounterNamespace(ctx))
+		if (atomic.AddInt32(&v.STReq, 1)-1)%10 == 0 {
+			time.Sleep(defaultSleepTime)
 		}
-	} else {
-		if v := atomic.AddInt32(&testSTReqCount, 1); v%10 == 0 {
-			time.Sleep(50 * time.Millisecond)
-		}
+	}
+
+	if sleepTime := getSleepTime(ctx); sleepTime > 0 {
+		time.Sleep(sleepTime)
 	}
 	return resp, err
 }
@@ -127,7 +177,7 @@ func (h *STServiceHandler) TestObjReq(ctx context.Context, req *instparam.ObjReq
 		}
 	} else {
 		if atomic.AddInt32(&testObjReqCount, 1)%5 == 0 {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(defaultSleepTime)
 		}
 	}
 	return resp, nil
@@ -152,7 +202,7 @@ func (h *STServiceHandler) TestException(ctx context.Context, req *stability.STR
 	} else {
 		err = &stability.STException{Message: "mock exception"}
 		if atomic.AddInt32(&testExceptionCount, 1)%30 == 0 {
-			time.Sleep(50 * time.Millisecond)
+			time.Sleep(defaultSleepTime)
 		}
 	}
 	return nil, err
@@ -167,27 +217,28 @@ func (*STServiceHandler) VisitOneway(ctx context.Context, req *stability.STReque
 type CircuitBreak = string
 
 const (
-	CircuitBreak50PCT      CircuitBreak = "0"
-	CircuitBreakRetrySleep CircuitBreak = "1"
+	circuitBreak50PCT      CircuitBreak = "0"
+	circuitBreakRetrySleep CircuitBreak = "1"
 )
 
 // CircuitBreakTest .
 func (h *STServiceHandler) CircuitBreakTest(ctx context.Context, req *stability.STRequest) (r *stability.STResponse, err error) {
-	if req.FlagMsg == CircuitBreakRetrySleep {
+	if req.FlagMsg == circuitBreakRetrySleep {
 		// use ttheader
 		// first request(non retry request) will sleep to mock timeout, then retry request return directly
 		if _, exist := metainfo.GetPersistentValue(ctx, retry.TransitKey); !exist {
-			sleepTime := 200 * time.Millisecond
-			if v := getSleepTimeMS(ctx); v > 0 {
+			sleepTime := defaultSleepTime
+			if v := getSleepTime(ctx); v > 0 {
 				sleepTime = v
 			}
 			time.Sleep(sleepTime)
 		}
 
-	} else if req.FlagMsg == CircuitBreak50PCT {
-		// force 50% of the responses to cost over 200ms
-		if atomic.AddInt32(&circuitBreakTestCount, 1)%2 == 0 {
-			time.Sleep(200 * time.Millisecond)
+	} else if req.FlagMsg == circuitBreak50PCT {
+		// force 50% of the responses to cost defaultSleepTime
+		v := getCounter(getCounterNamespace(ctx))
+		if (atomic.AddInt32(&v.CircuitBreak, 1)-1)%2 == 0 {
+			time.Sleep(defaultSleepTime)
 		}
 	}
 	resp := &stability.STResponse{
@@ -202,22 +253,12 @@ func setSkipCounterSleep(ctx context.Context) context.Context {
 	return metainfo.WithPersistentValue(ctx, skipCounterSleepKey, "1")
 }
 
-func skipCounterSleep(ctx context.Context) bool {
-	if _, exist := metainfo.GetValue(ctx, skipCounterSleepKey); exist {
-		return true
-	}
-	if _, exist := metainfo.GetPersistentValue(ctx, skipCounterSleepKey); exist {
-		return true
-	}
-	return false
+func withSleepTime(ctx context.Context, d time.Duration) context.Context {
+	ms := int(d / time.Millisecond)
+	return metainfo.WithValue(ctx, sleepTimeMsKey, strconv.Itoa(ms))
 }
 
-func getSleepTimeMS(ctx context.Context) time.Duration {
-	if value, exist := metainfo.GetPersistentValue(ctx, sleepTimeMsKey); exist {
-		if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
-			return time.Duration(sleepTimeMS) * time.Millisecond
-		}
-	}
+func getSleepTime(ctx context.Context) time.Duration {
 	if value, exist := metainfo.GetValue(ctx, sleepTimeMsKey); exist {
 		if sleepTimeMS, err := strconv.Atoi(value); err == nil && sleepTimeMS > 0 {
 			return time.Duration(sleepTimeMS) * time.Millisecond

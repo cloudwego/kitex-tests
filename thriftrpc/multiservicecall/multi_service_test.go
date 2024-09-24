@@ -17,7 +17,6 @@ package multiservicecall
 import (
 	"context"
 	"fmt"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service2"
 	"net"
 	"strings"
 	"testing"
@@ -34,8 +33,10 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/serviceb"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service/servicec"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service2"
 	servicea2 "github.com/cloudwego/kitex-tests/kitex_gen/thrift/multi_service2/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 // ServiceAImpl implements the last servicea interface defined in the IDL.
@@ -67,37 +68,40 @@ func (s *ServiceCImpl) Echo1(ctx context.Context, req *multi_service.Request) (r
 
 func GetServer(hostport string, opts ...server.Option) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-	opts = append(opts, server.WithServiceAddr(addr))
-
+	opts = append(opts, server.WithServiceAddr(addr),
+		server.WithExitWaitTime(20*time.Millisecond),
+	)
 	return server.NewServer(opts...)
 }
 
 func TestRegisterService(t *testing.T) {
-	testRegisterService(t, "localhost:9900")
+	testRegisterService(t, serverutils.NextListenAddr())
 }
 
 func TestMuxRegisterService(t *testing.T) {
-	testRegisterService(t, "localhost:9901", server.WithMuxTransport())
+	testRegisterService(t, serverutils.NextListenAddr(), server.WithMuxTransport())
 }
 
 func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
-	testMultiServiceWithRefuseTrafficWithoutServiceName(t, "localhost:9902", server.WithRefuseTrafficWithoutServiceName())
+	testMultiServiceWithRefuseTrafficWithoutServiceName(t,
+		serverutils.NextListenAddr(), server.WithRefuseTrafficWithoutServiceName())
 }
 
 func TestMuxMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
-	testMultiServiceWithRefuseTrafficWithoutServiceName(t, "localhost:9903", server.WithRefuseTrafficWithoutServiceName(), server.WithMuxTransport())
+	testMultiServiceWithRefuseTrafficWithoutServiceName(t, serverutils.NextListenAddr(),
+		server.WithRefuseTrafficWithoutServiceName(), server.WithMuxTransport())
 }
 
 func TestMultiService(t *testing.T) {
-	testMultiService(t, "localhost:9904")
+	testMultiService(t, serverutils.NextListenAddr())
 }
 
 func TestMuxMultiService(t *testing.T) {
-	testMultiService(t, "localhost:9905", server.WithMuxTransport())
+	testMultiService(t, serverutils.NextListenAddr(), server.WithMuxTransport())
 }
 
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
-	ip := "localhost:9906"
+	ip := serverutils.NextListenAddr()
 	svr := GetServer(ip)
 	err := servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
@@ -119,12 +123,12 @@ func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 }
 
 func TestUnknownException(t *testing.T) {
-	ip := "localhost:9907"
+	ip := serverutils.NextListenAddr()
 	svr := GetServer(ip)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	go svr.Run()
 	defer svr.Stop()
-	time.Sleep(100 * time.Millisecond)
+	serverutils.Wait(ip)
 
 	clientB, err := serviceb.NewClient("ServiceB",
 		client.WithHostPorts(ip),
@@ -137,13 +141,13 @@ func TestUnknownException(t *testing.T) {
 }
 
 func TestUnknownExceptionWithMultiService(t *testing.T) {
-	hostport := "localhost:9908"
+	hostport := serverutils.NextListenAddr()
 	svr := GetServer(hostport)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
-	time.Sleep(100 * time.Millisecond)
+	serverutils.Wait(hostport)
 
 	// unknown service error
 	clientB, err := serviceb.NewClient("ServiceB",
@@ -219,7 +223,7 @@ func testMultiService(t *testing.T, ip string, opts ...server.Option) {
 	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
-	time.Sleep(100 * time.Millisecond)
+	serverutils.Wait(ip)
 
 	req := &multi_service.Request{Message: "multi_service req"}
 

@@ -34,10 +34,8 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-const address = "localhost:9009"
-
-func runServer() server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", address)
+func runServer(listenaddr string) server.Server {
+	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
 	svc := bizservice.NewServer(new(BizServiceImpl), server.WithServiceAddr(addr))
 	go func() {
 		if err := svc.Run(); err != nil {

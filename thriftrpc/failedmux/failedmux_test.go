@@ -18,20 +18,18 @@ import (
 	"context"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/apache/thrift/lib/go/thrift"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/remote/codec"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 )
-
-var cli stservice.Client
 
 type mockedCodec struct {
 	remote.Codec
@@ -46,15 +44,18 @@ func (mc *mockedCodec) Name() string {
 	return "mockedCodec"
 }
 
+var testaddr string
+
 func TestMain(m *testing.M) {
+	testaddr = serverutils.NextListenAddr()
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  "localhost:9002",
+		Address:  testaddr,
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil, server.WithCodec(&mockedCodec{
 		Codec: codec.NewDefaultCodec(),
 	}))
-	time.Sleep(time.Second)
+	serverutils.Wait(testaddr)
 	m.Run()
 	svr.Stop()
 }
@@ -62,7 +63,7 @@ func TestMain(m *testing.M) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{"localhost:9002"},
+		HostPorts:         []string{testaddr},
 		Protocol:          p,
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
 	})
@@ -70,7 +71,7 @@ func getKitexClient(p transport.Protocol) stservice.Client {
 
 // TestSTReq method mock STRequest param read failed in server
 func TestStTReqMux(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -81,7 +82,7 @@ func TestStTReqMux(t *testing.T) {
 
 // TestObjReq method mock ObjResp read failed in client
 func TestObjReqMux(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	objReq.FlagMsg = "ObjReq"
@@ -93,7 +94,7 @@ func TestObjReqMux(t *testing.T) {
 
 // oneway cannot read failed of server
 func TestVisitOnewayMux(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)

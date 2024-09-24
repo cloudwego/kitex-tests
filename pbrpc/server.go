@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/stability"
@@ -49,6 +50,7 @@ func RunServer(param *ServerInitParam, handler stability.STService, opts ...serv
 		panic(err)
 	}
 
+	opts = append(opts, server.WithExitWaitTime(20*time.Millisecond))
 	opts = append(opts, server.WithServiceAddr(addr))
 	opts = append(opts, server.WithLimit(&limit.Option{
 		MaxConnections: 30000, MaxQPS: 300000, UpdateControl: func(u limit.Updater) {},
@@ -56,6 +58,7 @@ func RunServer(param *ServerInitParam, handler stability.STService, opts ...serv
 	if param.ConnMode == ConnectionMultiplexed {
 		opts = append(opts, server.WithMuxTransport())
 	}
+
 	if handler == nil {
 		handler = new(STServiceHandler)
 	}

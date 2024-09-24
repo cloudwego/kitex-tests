@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/a/b/c"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
@@ -46,6 +45,7 @@ import (
 	"github.com/cloudwego/kitex/transport"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
 )
@@ -339,7 +339,7 @@ func TestKitexStreamClientMiddlewareServer(t *testing.T) {
 }
 
 func TestKitexServerMiddleware(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	t.Run("pingpong", func(t *testing.T) {
 		svr := RunThriftServer(&EchoServiceImpl{}, addr,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
@@ -610,7 +610,7 @@ func TestTimeoutRecvSend(t *testing.T) {
 	})
 
 	t.Run("client recv timeout with MetaHandler", func(t *testing.T) {
-		addr := addrAllocator()
+		addr := serverutils.NextListenAddr()
 		svr := RunThriftServer(&thriftServerTimeoutImpl{
 			Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
 				time.Sleep(time.Millisecond * 100)
@@ -635,7 +635,7 @@ func TestTimeoutRecvSend(t *testing.T) {
 	})
 
 	t.Run("server recv timeout with MetaHandler", func(t *testing.T) {
-		addr := addrAllocator()
+		addr := serverutils.NextListenAddr()
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -708,7 +708,7 @@ func TestThriftStreamingMetaData(t *testing.T) {
 			"1_x":     []string{"14"},
 		}
 
-		addr := addrAllocator()
+		addr := serverutils.NextListenAddr()
 
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
@@ -804,7 +804,7 @@ func TestThriftStreamingMetaData(t *testing.T) {
 	})
 
 	t.Run("header-failure", func(t *testing.T) {
-		addr := addrAllocator()
+		addr := serverutils.NextListenAddr()
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -838,7 +838,7 @@ func TestThriftStreamingMetaData(t *testing.T) {
 	})
 
 	t.Run("trailer-failure", func(t *testing.T) {
-		addr := addrAllocator()
+		addr := serverutils.NextListenAddr()
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -902,7 +902,7 @@ func TestThriftStreamLogID(t *testing.T) {
 		return got, got == expectedLogID
 	}
 
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunThriftServer(
 		&thriftServerTimeoutImpl{
 			Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -995,7 +995,7 @@ func RunABCServer(handler echo.ABCService, addr string, opts ...server.Option) s
 			panic(err)
 		}
 	}()
-	common.WaitServer(addr)
+	serverutils.Wait(addr)
 	return svr
 }
 
@@ -1037,7 +1037,7 @@ func (a abcServerImpl) EchoUnary(ctx context.Context, req1 *c.Request) (r *c.Res
 }
 
 func TestABCService(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunABCServer(&abcServerImpl{}, addr)
 	defer svr.Stop()
 	t.Run("echo", func(t *testing.T) {
@@ -1084,7 +1084,7 @@ func TestABCService(t *testing.T) {
 
 func TestCustomMetaHandler(t *testing.T) {
 	t.Run("OnReadStream", func(t *testing.T) {
-		addr := addrAllocator()
+		addr := serverutils.NextListenAddr()
 		var value atomic.Value
 		var expectedValue = "value"
 		svr := RunABCServer(&abcServerImpl{}, addr,

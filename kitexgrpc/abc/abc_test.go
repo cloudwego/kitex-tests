@@ -17,12 +17,12 @@ package abc
 import (
 	"testing"
 
-	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/kitexgrpc/abc/consts"
 	"github.com/cloudwego/kitex-tests/kitexgrpc/abc/servicea"
 	"github.com/cloudwego/kitex-tests/kitexgrpc/abc/serviceb"
 	"github.com/cloudwego/kitex-tests/kitexgrpc/abc/servicec"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 func TestMain(m *testing.M) {
@@ -43,8 +43,8 @@ func TestMain(m *testing.M) {
 		}
 	}()
 
-	common.WaitServer(consts.ServiceCAddr)
-	common.WaitServer(consts.ServiceBAddr)
+	serverutils.Wait(consts.ServiceCAddr)
+	serverutils.Wait(consts.ServiceBAddr)
 
 	m.Run()
 }

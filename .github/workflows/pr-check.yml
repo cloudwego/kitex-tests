@@ -3,22 +3,26 @@ name: Push Check
 on: [pull_request]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  run-tests:
+    runs-on: [ self-hosted, X64 ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: stable
+          cache: false
+      - name: Run Tests
+        run: ./run.sh
 
+  compliant-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: Check License Header
         uses: apache/skywalking-eyes/header@v0.4.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: typos-action
-        uses: crate-ci/typos@v1.2.1
-
-      - name: Run Tests
-        run: ./run.sh
+      - name: Check Spell
+        uses: crate-ci/typos@v1.13.14

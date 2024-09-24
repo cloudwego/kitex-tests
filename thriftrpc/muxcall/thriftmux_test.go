@@ -18,30 +18,32 @@ import (
 	"context"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/thriftrpc"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
+	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
-var cli stservice.Client
+var testaddr string
 
 func TestMain(m *testing.M) {
+	testaddr = serverutils.NextListenAddr()
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  "localhost:9002",
+		Address:  testaddr,
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil)
-	time.Sleep(time.Second)
+	serverutils.Wait(testaddr)
 	m.Run()
 	svr.Stop()
 }
@@ -49,13 +51,13 @@ func TestMain(m *testing.M) {
 func getKitexMuxClient(opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{"localhost:9002"},
+		HostPorts:         []string{testaddr},
 		ConnMode:          thriftrpc.ConnectionMultiplexed,
 	}, opts...)
 }
 
 func TestStTReq(t *testing.T) {
-	cli = getKitexMuxClient()
+	cli := getKitexMuxClient()
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -64,7 +66,7 @@ func TestStTReq(t *testing.T) {
 }
 
 func TestObjReq(t *testing.T) {
-	cli = getKitexMuxClient()
+	cli := getKitexMuxClient()
 
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	objReq.FlagMsg = "ObjReq"
@@ -74,7 +76,7 @@ func TestObjReq(t *testing.T) {
 }
 
 func TestException(t *testing.T) {
-	cli = getKitexMuxClient()
+	cli := getKitexMuxClient()
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	_, err := cli.TestException(ctx, stReq)
@@ -86,7 +88,7 @@ func TestException(t *testing.T) {
 }
 
 func TestVisitOneway(t *testing.T) {
-	cli = getKitexMuxClient()
+	cli := getKitexMuxClient()
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
@@ -96,10 +98,11 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	backupState := rpcinfo.PoolEnabled()
 	defer rpcinfo.EnablePool(backupState)
 
+	addr := serverutils.NextListenAddr()
 	var ri rpcinfo.RPCInfo
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network:  "tcp",
-		Address:  "localhost:9003",
+		Address:  addr,
 		ConnMode: thriftrpc.ConnectionMultiplexed,
 	}, nil, server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, req, resp interface{}) error {
@@ -107,28 +110,28 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 			return next(ctx, req, resp)
 		}
 	}))
-	time.Sleep(time.Second)
 	defer svr.Stop()
+	serverutils.Wait(addr)
 
-	cli = getKitexMuxClient(client.WithTransportProtocol(transport.TTHeaderFramed))
+	cli := getKitexMuxClient(client.WithTransportProtocol(transport.TTHeaderFramed))
 	ctx, stReq := thriftrpc.CreateSTRequest(metainfo.WithBackwardValues(context.Background()))
 
 	t.Run("reuse", func(t *testing.T) {
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort("localhost:9003"))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err)
 		test.Assert(t, ri.Invocation().MethodName() == "", ri.Invocation().MethodName()) // zeroed
 	})
 
 	t.Run("disable reuse", func(t *testing.T) {
 		rpcinfo.EnablePool(false)
-		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort("localhost:9003"))
+		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err)
 		test.Assert(t, ri.Invocation().MethodName() != "", ri.Invocation().MethodName())
 	})
 }
 
 func BenchmarkMuxCall(b *testing.B) {
-	cli = getKitexMuxClient()
+	cli := getKitexMuxClient()
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
@@ -149,7 +152,7 @@ func BenchmarkMuxCall(b *testing.B) {
 }
 
 func BenchmarkMuxCallParallel(b *testing.B) {
-	cli = getKitexMuxClient()
+	cli := getKitexMuxClient()
 	b.ReportAllocs()
 	b.ResetTimer()
 

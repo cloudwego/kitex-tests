@@ -30,6 +30,7 @@ import (
 	"github.com/cloudwego/kitex/server"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/grpc_pb"
 	grpcpbservice "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/grpc_pb/pbservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/kitex_pb"
@@ -233,7 +234,7 @@ func TestGRPCPBStreamClient(t *testing.T) {
 }
 
 func TestGRPCPBServerMiddleware(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunGRPCPBServer(&GRPCPBServiceImpl{}, addr,
 		server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
@@ -350,7 +351,7 @@ func TestGRPCPBServerMiddleware(t *testing.T) {
 }
 
 func TestGRPCPBServiceWithCompatibleMiddleware(t *testing.T) {
-	addr := addrAllocator()
+	addr := serverutils.NextListenAddr()
 	svr := RunGRPCPBServer(
 		&GRPCPBServiceImpl{},
 		addr,

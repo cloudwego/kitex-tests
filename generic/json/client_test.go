@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
@@ -30,10 +31,18 @@ import (
 	"github.com/cloudwego/kitex/transport"
 )
 
+var (
+	testaddr    string
+	genericAddr string
+)
+
 func TestMain(m *testing.M) {
-	svc := runServer()
-	gsvc := runGenericServer()
-	time.Sleep(100 * time.Millisecond)
+	testaddr = serverutils.NextListenAddr()
+	genericAddr = serverutils.NextListenAddr()
+	svc := runServer(testaddr)
+	gsvc := runGenericServer(genericAddr)
+	serverutils.Wait(testaddr)
+	serverutils.Wait(genericAddr)
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()
@@ -45,7 +54,7 @@ func TestClient(t *testing.T) {
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(address))
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{
@@ -78,7 +87,7 @@ func TestGeneric(t *testing.T) {
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(address))
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{
@@ -117,7 +126,10 @@ func TestBizErr(t *testing.T) {
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(genericAddress), client.WithMetaHandler(transmeta.ClientTTHeaderHandler), client.WithTransportProtocol(transport.TTHeader))
+	cli, err := genericclient.NewClient("a.b.c", g,
+		client.WithHostPorts(genericAddr),
+		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+		client.WithTransportProtocol(transport.TTHeader))
 	test.Assert(t, err == nil)
 	_, err = cli.GenericCall(context.Background(), "Echo", nil)
 	bizerr, ok := kerrors.FromBizStatusError(err)

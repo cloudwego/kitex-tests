@@ -30,7 +30,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler/servicea"
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/unknown_handler/serviceb"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/clientutils"
 )
 
 type ServiceAImpl struct{}
@@ -69,7 +69,7 @@ func TestUnknownServiceError(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	client, err := servicea.NewClient("grpcService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(client)
+	defer clientutils.CallClose(client)
 
 	req := &unknown_handler.Request{Name: "kitex"}
 	_, err = client.Echo(context.Background(), req)
@@ -87,7 +87,7 @@ func TestUnknownServiceHandler(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	client, err := servicea.NewClient("grpcService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
 	test.Assert(t, err == nil, err)
-	defer utils.CallClose(client)
+	defer clientutils.CallClose(client)
 
 	req := &unknown_handler.Request{Name: "kitex"}
 	resp, err := client.Echo(context.Background(), req)

@@ -18,20 +18,23 @@ import (
 	"context"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pbrpc"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/transport"
 )
 
+var testaddr string
+
 func TestMain(m *testing.M) {
+	testaddr = serverutils.NextListenAddr()
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
 		Network: "tcp",
-		Address: "localhost:8002",
+		Address: testaddr,
 	}, nil)
-	time.Sleep(time.Second)
+	serverutils.Wait(testaddr)
 	m.Run()
 	svr.Stop()
 }
@@ -39,7 +42,7 @@ func TestMain(m *testing.M) {
 func getKitexClient(p transport.Protocol) stservice.Client {
 	return pbrpc.CreateKitexClient(&pbrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{"localhost:8002"},
+		HostPorts:         []string{testaddr},
 		Protocol:          p,
 		ConnMode:          pbrpc.ConnectionMultiplexed,
 	})

@@ -30,6 +30,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
@@ -42,7 +43,6 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
-	"github.com/cloudwego/kitex-tests/common"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
@@ -51,67 +51,24 @@ import (
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
-var (
-	cli            stservice.Client
-	cliSlim        stservice_slim.Client
-	cliNoDefSerdes stservice_noDefSerdes.Client
-
-	addr                     = "127.0.0.1:9001"
-	disablePoolAddr          = "127.0.0.1:9002"
-	muxAdr                   = "127.0.0.1:9003" // used in `muxcall`
-	slimFrugalAddr           = "127.0.0.1:9004"
-	slimAddr                 = "127.0.0.1:9005"
-	serverTimeoutAddr        = "127.0.0.1:9006"
-	noDefSerdesFrugalAddr    = "127.0.0.1:9007"
-	noDefSerdesFastCodecAddr = "127.0.0.1:9008"
-	serverWithCRCAddr        = "127.0.0.1:9009"
-)
+var testaddr string
 
 func TestMain(m *testing.M) {
+	testaddr = serverutils.NextListenAddr()
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
-		Address: addr,
+		Address: testaddr,
 	}, nil)
-
-	slimSvr := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: slimAddr,
-	}, nil)
-
-	slimSvrWithFrugalConfigured := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: slimFrugalAddr,
-	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
-
-	noDefSerdesSvrWithFrugalConfigured := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: noDefSerdesFrugalAddr,
-	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead|thrift.EnableSkipDecoder)))
-
-	noDefSerdesSvcWithFastCodecConfigured := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: noDefSerdesFastCodecAddr,
-	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite|thrift.FastRead|thrift.EnableSkipDecoder)))
-
-	common.WaitServer(addr)
-	common.WaitServer(slimAddr)
-	common.WaitServer(slimFrugalAddr)
-	common.WaitServer(noDefSerdesFrugalAddr)
-	common.WaitServer(noDefSerdesFastCodecAddr)
+	serverutils.Wait(testaddr)
 
 	m.Run()
-
 	svr.Stop()
-	slimSvr.Stop()
-	slimSvrWithFrugalConfigured.Stop()
-	noDefSerdesSvrWithFrugalConfigured.Stop()
-	noDefSerdesSvcWithFastCodecConfigured.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
 	return thriftrpc.CreateKitexClient(&thriftrpc.ClientInitParam{
 		TargetServiceName: "cloudwego.kitex.testa",
-		HostPorts:         []string{":9001"},
+		HostPorts:         []string{testaddr},
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
 	}, opts...)
@@ -152,7 +109,7 @@ func testObjArgs(t *testing.T, req *instparam.ObjReq, resp *instparam.ObjResp) {
 }
 
 func TestStTReq(t *testing.T) {
-	cli = getKitexClient(transport.PurePayload)
+	cli := getKitexClient(transport.PurePayload)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -169,7 +126,7 @@ func TestStTReq(t *testing.T) {
 }
 
 func TestStTReqWithTTHeader(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -178,7 +135,7 @@ func TestStTReqWithTTHeader(t *testing.T) {
 }
 
 func TestStTReqWithFramed(t *testing.T) {
-	cli = getKitexClient(transport.Framed)
+	cli := getKitexClient(transport.Framed)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -187,7 +144,7 @@ func TestStTReqWithFramed(t *testing.T) {
 }
 
 func TestStTReqWithTTHeaderFramed(t *testing.T) {
-	cli = getKitexClient(transport.TTHeaderFramed)
+	cli := getKitexClient(transport.TTHeaderFramed)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -196,7 +153,7 @@ func TestStTReqWithTTHeaderFramed(t *testing.T) {
 }
 
 func TestObjReq(t *testing.T) {
-	cli = getKitexClient(transport.PurePayload)
+	cli := getKitexClient(transport.PurePayload)
 
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	objReq.FlagMsg = "ObjReq"
@@ -206,7 +163,7 @@ func TestObjReq(t *testing.T) {
 }
 
 func TestException(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	_, err := cli.TestException(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -218,7 +175,7 @@ func TestException(t *testing.T) {
 }
 
 func TestVisitOneway(t *testing.T) {
-	cli = getKitexClient(transport.TTHeaderFramed)
+	cli := getKitexClient(transport.TTHeaderFramed)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	err := cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
@@ -231,12 +188,12 @@ func TestVisitOneway(t *testing.T) {
 	err = cli.VisitOneway(ctx, stReq)
 	test.Assert(t, err == nil, err)
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 	test.Assert(t, atomic.LoadInt32(&thriftrpc.CheckNum) == int32(3))
 }
 
 func TestRPCTimeoutPriority(t *testing.T) {
-	cli = getKitexClient(transport.TTHeaderFramed, client.WithRPCTimeout(500*time.Millisecond))
+	cli := getKitexClient(transport.TTHeaderFramed, client.WithRPCTimeout(500*time.Millisecond))
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	durationStr := "300ms"
 	stReq.MockCost = &durationStr
@@ -254,7 +211,7 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 	t.Run("client", func(t *testing.T) {
 		var ri rpcinfo.RPCInfo
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
-		cli = getKitexClient(transport.TTHeaderFramed, client.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
+		cli := getKitexClient(transport.TTHeaderFramed, client.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				ri = rpcinfo.GetRPCInfo(ctx)
 				return nil // no need to send the real request
@@ -275,6 +232,7 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 	})
 
 	t.Run("server", func(t *testing.T) {
+		disablePoolAddr := serverutils.NextListenAddr()
 		var ri1, ri2 rpcinfo.RPCInfo
 		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: disablePoolAddr}, nil,
 			server.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
@@ -289,10 +247,10 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 					return err
 				}
 			}))
-		common.WaitServer(addr)
 		defer svr.Stop()
+		serverutils.Wait(disablePoolAddr)
 
-		cli = getKitexClient(transport.TTHeaderFramed)
+		cli := getKitexClient(transport.TTHeaderFramed)
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 
 		t.Run("enable", func(t *testing.T) {
@@ -328,6 +286,22 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 
 // When using slim template and users do not
 func TestFrugalFallback(t *testing.T) {
+	slimAddr := serverutils.NextListenAddr()
+	s0 := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: slimAddr,
+	}, nil)
+	defer s0.Stop()
+	serverutils.Wait(slimAddr)
+
+	slimFrugalAddr := serverutils.NextListenAddr()
+	s1 := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: slimFrugalAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
+	serverutils.Wait(slimFrugalAddr)
+	defer s1.Stop()
+
 	testCases := []struct {
 		desc      string
 		hostPorts []string
@@ -364,10 +338,10 @@ func TestFrugalFallback(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cliSlim = getSlimKitexClient(transport.TTHeader, tc.hostPorts, tc.opts...)
+			cli := getSlimKitexClient(transport.TTHeader, tc.hostPorts, tc.opts...)
 			ctx, stReq := thriftrpc.CreateSlimSTRequest(context.Background())
 			for i := 0; i < 3; i++ {
-				stResp, err := cliSlim.TestSTReq(ctx, stReq)
+				stResp, err := cli.TestSTReq(ctx, stReq)
 				if tc.expectErr {
 					test.Assert(t, err != nil, err)
 					continue
@@ -380,7 +354,7 @@ func TestFrugalFallback(t *testing.T) {
 }
 
 func TestCircuitBreakerCustomErrorTypeFunc(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader,
+	cli := getKitexClient(transport.TTHeader,
 		client.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				return nil
@@ -409,7 +383,7 @@ func TestCircuitBreakerCustomErrorTypeFunc(t *testing.T) {
 }
 
 func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
-	cli = getKitexClient(transport.TTHeader,
+	cli := getKitexClient(transport.TTHeader,
 		client.WithInstanceMW(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				return nil
@@ -438,6 +412,23 @@ func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
 }
 
 func TestNoDefaultSerdes(t *testing.T) {
+	frugalOnlyAddr := serverutils.NextListenAddr()
+	fastcodecOnlyAddr := serverutils.NextListenAddr()
+	s0 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: frugalOnlyAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead|thrift.EnableSkipDecoder)))
+	defer s0.Stop()
+
+	s1 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Network: "tcp",
+		Address: fastcodecOnlyAddr,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite|thrift.FastRead|thrift.EnableSkipDecoder)))
+	defer s1.Stop()
+
+	serverutils.Wait(frugalOnlyAddr)
+	serverutils.Wait(fastcodecOnlyAddr)
+
 	testCases := []struct {
 		desc      string
 		hostPorts []string
@@ -446,35 +437,35 @@ func TestNoDefaultSerdes(t *testing.T) {
 	}{
 		{
 			desc:      "use FastCodec and SkipDecoder, connect to Frugal and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFrugalAddr},
+			hostPorts: []string{frugalOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead | thrift.EnableSkipDecoder)),
 			},
 		},
 		{
 			desc:      "use Frugal and SkipDecoder, connect to Frugal and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFrugalAddr},
+			hostPorts: []string{frugalOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead | thrift.EnableSkipDecoder)),
 			},
 		},
 		{
 			desc:      "use FastCodec and SkipDecoder, connect to FastCodec and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFastCodecAddr},
+			hostPorts: []string{fastcodecOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead | thrift.EnableSkipDecoder)),
 			},
 		},
 		{
 			desc:      "use Frugal and SkipDecoder, connect to FastCodec and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFastCodecAddr},
+			hostPorts: []string{fastcodecOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead | thrift.EnableSkipDecoder)),
 			},
 		},
 		{
 			desc:      "use FastCodec, connect to Frugal and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFrugalAddr},
+			hostPorts: []string{frugalOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
 			},
@@ -482,7 +473,7 @@ func TestNoDefaultSerdes(t *testing.T) {
 		},
 		{
 			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFrugalAddr},
+			hostPorts: []string{frugalOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
 			},
@@ -490,7 +481,7 @@ func TestNoDefaultSerdes(t *testing.T) {
 		},
 		{
 			desc:      "use FastCodec, connect to FastCodec and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFastCodecAddr},
+			hostPorts: []string{fastcodecOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
 			},
@@ -498,7 +489,7 @@ func TestNoDefaultSerdes(t *testing.T) {
 		},
 		{
 			desc:      "use Frugal, connect to FastCodec and SkipDecoder enabled server",
-			hostPorts: []string{noDefSerdesFastCodecAddr},
+			hostPorts: []string{fastcodecOnlyAddr},
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
 			},
@@ -507,10 +498,10 @@ func TestNoDefaultSerdes(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cliNoDefSerdes = getNoDefSerdesKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
+			cli := getNoDefSerdesKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
 			ctx, stReq := thriftrpc.CreateNoDefSerdesSTRequest(context.Background())
 			for i := 0; i < 3; i++ {
-				stResp, err := cliNoDefSerdes.TestSTReq(ctx, stReq)
+				stResp, err := cli.TestSTReq(ctx, stReq)
 				if !tc.expectErr {
 					test.Assert(t, err == nil, err)
 					test.Assert(t, stReq.Str == stResp.Str)
@@ -530,28 +521,29 @@ func TestCRC32PayloadValidator(t *testing.T) {
 		// request server without crc32 check config
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 		for i := 0; i < 10; i++ {
-			_, err := crcClient.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
+			_, err := crcClient.TestSTReq(ctx, stReq, callopt.WithHostPort(testaddr))
 			test.Assert(t, err == nil, err)
 		}
 	})
 
 	t.Run("serverWithCRC", func(t *testing.T) {
 		// request server with crc config
+		addr := serverutils.NextListenAddr()
 		svrCodecOpt := server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true}))
-		svrWithCRC := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: serverWithCRCAddr}, nil, svrCodecOpt)
-		common.WaitServer(serverWithCRCAddr)
+		svrWithCRC := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr}, nil, svrCodecOpt)
 		defer svrWithCRC.Stop()
+		serverutils.Wait(addr)
 
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 		for i := 0; i < 10; i++ {
-			_, err := crcClient.TestSTReq(ctx, stReq, callopt.WithHostPort(serverWithCRCAddr))
+			_, err := crcClient.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 			test.Assert(t, err == nil, err)
 		}
 	})
 }
 
 func BenchmarkThriftCall(b *testing.B) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	ctx, objReq := thriftrpc.CreateObjReq(context.Background())
 	b.ReportAllocs()
@@ -571,7 +563,7 @@ func BenchmarkThriftCall(b *testing.B) {
 }
 
 func BenchmarkThriftCallParallel(b *testing.B) {
-	cli = getKitexClient(transport.PurePayload)
+	cli := getKitexClient(transport.PurePayload)
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -592,7 +584,7 @@ func BenchmarkThriftCallParallel(b *testing.B) {
 }
 
 func BenchmarkTTHeaderParallel(b *testing.B) {
-	cli = getKitexClient(transport.TTHeader)
+	cli := getKitexClient(transport.TTHeader)
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -616,7 +608,7 @@ func BenchmarkTTHeaderParallel(b *testing.B) {
 }
 
 func BenchmarkThriftWithComplexData(b *testing.B) {
-	cli = getKitexClient(transport.Framed)
+	cli := getKitexClient(transport.Framed)
 	ctx, objReq := createComplexObjReq(context.Background())
 
 	b.ReportAllocs()
