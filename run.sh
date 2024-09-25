@@ -26,8 +26,17 @@ fi
 
 set -x
 
-PROTOC_OUT=$PWD/bin
-PROTOC_VERSION=v3.13.0 # FIXME: this version doesn't support darwin arm64
+PATH_BIN=$PWD/bin
+mkdir -p $PATH_BIN
+
+export PATH=$PATH_BIN:$PATH
+
+# GOBIN need to be changed here as kitex-tests will install different version bin when testing,
+# GOPATH remains the same as default,
+# coz other runners in the same host may share path like GOMODCACHE, GOCACHE
+export GOBIN=$PATH_BIN
+
+PROTOC_VERSION=v3.20.2
 
 install_protoc() {
     echo "installing protoc ... "
@@ -39,8 +48,7 @@ install_protoc() {
     rm -f $filename
     wget -q $url || exit 1
     unzip -o -q $filename -d ./tmp/
-    mkdir -p $PROTOC_OUT
-    mv ./tmp/bin/protoc $PROTOC_OUT
+    mv ./tmp/bin/protoc $PATH_BIN
     rm -rf ./tmp/
     echo "installing protoc ... done"
 }
@@ -54,8 +62,6 @@ go_install() {
 kitex_cmd() {
   kitex --no-dependency-check $@
 }
-
-export PATH=$PROTOC_OUT:$PATH
 
 echo -e "\ninstalling missing commands\n"
 
@@ -87,12 +93,10 @@ echo -e "\ninstalling missing commands ... done\n"
 
 # double check commands,
 # set -e may not working since commands run in background
-which protoc
-which protoc-gen-go
-which protoc-gen-go-grpc
-which thriftgo
-which kitex
-
+protoc --version
+protoc-gen-go --version
+protoc-gen-go-grpc --version
+thriftgo --version
 kitex -version
 
 rm -f go.mod # go mod init fails if it already exists
