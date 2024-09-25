@@ -47,13 +47,14 @@ go.work
 go.work.sum
 
 # Files produced by run.sh
+*.bak
+*.zip
 kitex_gen/
 kitex_gen_slim/
 kitex_gen_noDefSerdes/
 grpc_gen/
 go.mod
 go.sum
-*.bak
 bin
 thrift_streaming/binaries
 thrift_streaming/kitex_gen/
