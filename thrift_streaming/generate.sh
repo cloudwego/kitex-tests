@@ -149,5 +149,6 @@ fi
 
 cd exitserver
 echo -e "\nbuilding exitserver @ $PWD\nPlease run ./update_go_mod.sh if any Go compatibility issue\n"
+go version
 go build
 mv exitserver $ROOT/binaries
