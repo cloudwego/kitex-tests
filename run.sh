@@ -148,6 +148,8 @@ if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
 fi
 
+GOPROXY=direct go mod edit -replace github.com/cloudwego/kitex=github.com/Marina-Sakai/kitex@fix/combine_services_parse_mode
+
 go mod tidy
 
 echo -e "\nupdating dependencies ... done\n"
