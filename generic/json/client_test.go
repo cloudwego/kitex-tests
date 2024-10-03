@@ -17,6 +17,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"github.com/cloudwego/kitex/pkg/generic/thrift"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -34,6 +35,26 @@ import (
 var (
 	testaddr    string
 	genericAddr string
+	req         = map[string]interface{}{
+		"Msg": "hello",
+		"I8":  int8(1),
+		"I16": int16(1),
+		"I32": int32(1),
+		"I64": int64(1),
+		"Map": map[string]interface{}{
+			"hello": "world",
+		},
+		"Set":       []interface{}{"hello", "world"},
+		"List":      []interface{}{"hello", "world"},
+		"ErrorCode": int32(1),
+		"Info": map[string]interface{}{
+			"Map": map[string]interface{}{
+				"hello": "world",
+			},
+			"ID": int64(232324),
+		},
+	}
+	reqStr, _ = json.Marshal(req)
 )
 
 func TestMain(m *testing.M) {
@@ -57,26 +78,6 @@ func TestClient(t *testing.T) {
 	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
-	req := map[string]interface{}{
-		"Msg": "hello",
-		"I8":  int8(1),
-		"I16": int16(1),
-		"I32": int32(1),
-		"I64": int64(1),
-		"Map": map[string]interface{}{
-			"hello": "world",
-		},
-		"Set":       []interface{}{"hello", "world"},
-		"List":      []interface{}{"hello", "world"},
-		"ErrorCode": int32(1),
-		"Info": map[string]interface{}{
-			"Map": map[string]interface{}{
-				"hello": "world",
-			},
-			"ID": int64(232324),
-		},
-	}
-	reqStr, _ := json.Marshal(req)
 	_, err = cli.GenericCall(context.Background(), "Echo", string(reqStr))
 	test.Assert(t, err == nil)
 }
@@ -136,4 +137,17 @@ func TestBizErr(t *testing.T) {
 	test.Assert(t, ok)
 	test.Assert(t, bizerr.BizStatusCode() == 404)
 	test.Assert(t, bizerr.BizMessage() == "not found")
+}
+
+func TestCombinedServicesParseMode(t *testing.T) {
+	p, err := generic.NewThriftFileProviderWithOption("../../idl/tenant.thrift", []generic.ThriftIDLProviderOption{generic.WithParseMode(thrift.CombineServices)})
+	test.Assert(t, err == nil)
+	g, err := generic.JSONThriftGeneric(p)
+	test.Assert(t, err == nil)
+
+	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
+	test.Assert(t, err == nil)
+
+	_, err = cli.GenericCall(context.Background(), "Echo", string(reqStr))
+	test.Assert(t, err == nil)
 }

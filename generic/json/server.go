@@ -19,11 +19,14 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/server/genericserver"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
+	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
 func assert(expected, actual interface{}) error {
@@ -36,13 +39,21 @@ func assert(expected, actual interface{}) error {
 
 func runServer(listenaddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithServiceAddr(addr))
+	svr := server.NewServer(server.WithServiceAddr(addr))
+	err := echoservice.RegisterService(svr, new(EchoServiceImpl))
+	if err != nil {
+		panic(err)
+	}
+	err = stservice.RegisterService(svr, new(thriftrpc.STServiceHandler))
+	if err != nil {
+		panic(err)
+	}
 	go func() {
-		if err := svc.Run(); err != nil {
+		if err := svr.Run(); err != nil {
 			panic(err)
 		}
 	}()
-	return svc
+	return svr
 }
 
 func runGenericServer(listenaddr string) server.Server {
