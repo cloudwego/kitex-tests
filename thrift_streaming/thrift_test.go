@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2"
 	"io"
 	"reflect"
 	"strconv"
@@ -552,6 +553,59 @@ func TestKitexServerMiddleware(t *testing.T) {
 		resp, err := stream.CloseAndRecv()
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.Message == "2_send_middleware", resp.Message)
+	})
+
+	t.Run("gRPC GetServerConn", func(t *testing.T) {
+		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+			server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+				return func(ctx context.Context, args, result interface{}) (err error) {
+					streamArg, ok := args.(*streaming.Args)
+					test.Assert(t, ok)
+					_, err = nphttp2.GetServerConn(streamArg.Stream)
+					test.Assert(t, err == nil, err)
+					return next(ctx, args, result)
+				}
+			}),
+		)
+		defer svr.Stop()
+
+		cli := echoservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		ctx := metainfo.WithValue(context.Background(), KeyGetServerConn, "true")
+		stream, err := cli.EchoClient(ctx)
+		test.Assert(t, err == nil, err)
+
+		err = stream.Send(&echo.EchoRequest{Message: "GetServerConn"})
+		test.Assert(t, err == nil, err)
+
+		resp, err := stream.CloseAndRecv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.Message == "GetServerConn Succeeded")
+	})
+
+	t.Run("process ctx in middleware and reflect to Stream.Context()", func(t *testing.T) {
+		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+			server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+				return func(ctx context.Context, args, result interface{}) (err error) {
+					_, ok := args.(*streaming.Args)
+					test.Assert(t, ok)
+					ctx = context.WithValue(ctx, "key", "val")
+					return next(ctx, args, result)
+				}
+			}),
+		)
+		defer svr.Stop()
+
+		cli := echoservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
+		ctx := metainfo.WithValue(context.Background(), KeyInspectMWCtx, "true")
+		stream, err := cli.EchoClient(ctx)
+		test.Assert(t, err == nil, err)
+
+		err = stream.Send(&echo.EchoRequest{Message: "InspectMWCtx"})
+		test.Assert(t, err == nil, err)
+
+		resp, err := stream.CloseAndRecv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.Message == "InspectMWCtx Succeeded")
 	})
 }
 
