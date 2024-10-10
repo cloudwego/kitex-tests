@@ -149,6 +149,7 @@ if [[ -n $LOCAL_REPO ]]; then
 fi
 
 GOPROXY=direct go mod edit -replace github.com/cloudwego/kitex=github.com/Marina-Sakai/kitex@v0.9.0-rc7.0.20241010014959-202c253df736
+go get github.com/cloudwego/dynamicgo@main
 
 go mod tidy
 
