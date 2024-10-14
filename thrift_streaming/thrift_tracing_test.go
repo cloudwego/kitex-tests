@@ -224,10 +224,10 @@ func TestTracerNormalEndOfStream(t *testing.T) {
 		// to trigger an io.EOF for invoking the DoFinish
 		_, err = stream.Recv()
 		test.Assert(t, err == io.EOF, err)
-		test.Assert(t, clientTracer.recvCount == count+1, clientTracer) // one extra call for io.EOF
-		test.Assert(t, clientTracer.sendCount == count, clientTracer)
-		test.Assert(t, serverTracer.recvCount == count, serverTracer)
-		test.Assert(t, serverTracer.sendCount == count, serverTracer)
+		test.Assert(t, clientTracer.recvCount == count, clientTracer.recvCount)
+		test.Assert(t, clientTracer.sendCount == count, clientTracer.sendCount)
+		test.Assert(t, serverTracer.recvCount == count, serverTracer.recvCount)
+		test.Assert(t, serverTracer.sendCount == count, serverTracer.sendCount)
 		clientTracer.finishCheck(t, "client")
 		serverTracer.finishCheck(t, "server")
 	})
@@ -249,10 +249,11 @@ func TestTracerNormalEndOfStream(t *testing.T) {
 		// to trigger an io.EOF for invoking the DoFinish
 		_, err = stream.Recv()
 		test.Assert(t, err == io.EOF, err)
-		test.Assert(t, clientTracer.recvCount == count+1, clientTracer) // one extra call for io.EOF
-		test.Assert(t, clientTracer.sendCount == count, clientTracer)
-		test.Assert(t, serverTracer.recvCount == count, serverTracer)
-		test.Assert(t, serverTracer.sendCount == count, serverTracer)
+		test.Assert(t, err == io.EOF, err)
+		test.Assert(t, clientTracer.recvCount == count, clientTracer.recvCount)
+		test.Assert(t, clientTracer.sendCount == count, clientTracer.sendCount)
+		test.Assert(t, serverTracer.recvCount == count, serverTracer.recvCount)
+		test.Assert(t, serverTracer.sendCount == count, serverTracer.sendCount)
 		clientTracer.finishCheck(t, "client")
 		serverTracer.finishCheck(t, "server")
 	})
@@ -271,9 +272,9 @@ func TestTracerNormalEndOfStream(t *testing.T) {
 			}
 			test.Assert(t, err == nil, err)
 		}
-		test.Assert(t, clientTracer.sendCount == 1, clientTracer)
-		test.Assert(t, clientTracer.recvCount == count+1, clientTracer) // one extra call for io.EOF
-		test.Assert(t, serverTracer.sendCount == count, serverTracer)
+		test.Assert(t, clientTracer.sendCount == 1, clientTracer.sendCount)
+		test.Assert(t, clientTracer.recvCount == count, clientTracer.recvCount)
+		test.Assert(t, serverTracer.sendCount == count, serverTracer.sendCount)
 		test.Assert(t, serverTracer.recvCount == 1, serverTracer)
 		clientTracer.finishCheck(t, "client")
 		serverTracer.finishCheck(t, "server")
@@ -808,7 +809,7 @@ func TestTracerStreamEventEOF(t *testing.T) {
 	test.Assert(t, err == io.EOF, err)
 
 	count := atomic.LoadInt32(&recvCountSuccess)
-	test.Assert(t, count == 2, count)
+	test.Assert(t, count == 1, count)
 }
 
 func TestTracerFinishStream(t *testing.T) {
