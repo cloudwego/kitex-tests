@@ -146,6 +146,7 @@ go get github.com/cloudwego/kitex@develop
 
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
+    go mod edit -replace github.com/cloudwego/kitex/pkg/protocol/bthrift=${LOCAL_REPO}/pkg/protocol/bthrift
 fi
 
 go mod tidy

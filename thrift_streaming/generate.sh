@@ -136,6 +136,7 @@ function generate_new_thriftgo_old_kitex() {
 go get github.com/cloudwego/kitex@develop
 if [ -d "$LOCAL_REPO" ]; then
     go mod edit -replace github.com/cloudwego/kitex=$LOCAL_REPO
+    go mod edit -replace github.com/cloudwego/kitex/pkg/protocol/bthrift=${LOCAL_REPO}/pkg/protocol/bthrift
 fi
 
 generate_new
