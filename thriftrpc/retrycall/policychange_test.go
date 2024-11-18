@@ -65,7 +65,7 @@ func TestBugfix4InvalidRetry(t *testing.T) {
 	})
 
 	// expect
-	// <v0.11.0: NotifyPolicyChange failed, type not match
+	// <v0.11.0: NotifyPolicyChange failed, panic
 	// >v0.11.0: NotifyPolicyChange failed, type not match
 	t.Run("type=3, unknown retry with unknown policy", func(t *testing.T) {
 		jsonRet := `{"enable":true,"type":3,
