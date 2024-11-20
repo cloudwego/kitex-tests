@@ -25,6 +25,8 @@ import (
 	"github.com/cloudwego/kitex-tests/pkg/test"
 )
 
+var sonicAPI = sonic.Config{UseNumber: true}.Froze()
+
 func notifyPolicyChange(t *testing.T, jsonStr string, method string) *retry.Container {
 	var p retry.Policy
 	err := sonic.UnmarshalString(jsonStr, &p)
@@ -67,6 +69,24 @@ func TestBugfix4InvalidRetry(t *testing.T) {
 		jsonRet := `{"enable":true,"type":2,
 "mixed_policy":{"retry_delay_ms":10,"stop_policy":{"max_retry_times":2,"max_duration_ms":0,"disable_chain_stop":false,"ddl_stop":false,"cb_policy":{"error_rate":0.1,"min_sample":200}},"backoff_policy":{"backoff_type":"none"},"retry_same_node":false,"extra":"{\"not_retry_for_timeout\":false,\"rpc_retry_code\":{\"all_error_code\":false,\"error_codes\":[103,1204]},\"biz_retry_code\":{\"all_error_code\":false,\"error_codes\":[]}}","extra_struct":{"not_retry_for_timeout":false,"rpc_retry_code":{"all_error_code":false,"error_codes":[103,1204]},"biz_retry_code":{"all_error_code":false,"error_codes":[]}}},
 "failure_policy": {}
+}`
+		rc := notifyPolicyChange(t, jsonRet, mockMethod)
+
+		dmap := rc.Dump().(map[string]interface{})
+		test.Assert(t, strings.Contains(dmap["msg"].(string), "new retryer[mockMethod-Mixed]"), dmap["msg"])
+		mP, ok := dmap[mockMethod].(map[string]interface{})
+		test.Assert(t, ok)
+		test.Assert(t, mP["enable"] == true, mP)
+		test.Assert(t, mP["mixed_retry"] != nil, mP["mixed_retry"])
+	})
+
+	// expect
+	// <v0.11.0: NotifyPolicyChange failed, type not match
+	// >v0.11.0: NotifyPolicyChange successful, mixed retry
+	t.Run("type=2, mixed retry, but policy has empty failure_policy", func(t *testing.T) {
+		jsonRet := `{"enable":true,"type":2,
+"mixed_policy":{"retry_delay_ms":10,"stop_policy":{"max_retry_times":2,"max_duration_ms":0,"disable_chain_stop":false,"ddl_stop":false,"cb_policy":{"error_rate":0.1,"min_sample":200}},"backoff_policy":{"backoff_type":"none"},"retry_same_node":false,"extra":"{\"not_retry_for_timeout\":false,\"rpc_retry_code\":{\"all_error_code\":false,\"error_codes\":[103,1204]},\"biz_retry_code\":{\"all_error_code\":false,\"error_codes\":[]}}","extra_struct":{"not_retry_for_timeout":false,"rpc_retry_code":{"all_error_code":false,"error_codes":[103,1204]},"biz_retry_code":{"all_error_code":false,"error_codes":[]}}},
+"failure_policy": {"stop_policy":{"max_retry_times":0,"max_duration_ms":0,"disable_chain_stop": false, "ddl_stop": false,"cb_policy": {"error_rate":0,"min_sample": 0}},"retry_same_node": false}
 }`
 		rc := notifyPolicyChange(t, jsonRet, mockMethod)
 
