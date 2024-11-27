@@ -17,10 +17,13 @@ package thrift_streaming
 import (
 	"log"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/cloudwego/kitex"
+	"github.com/cloudwego/kitex/server"
+
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
 	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
@@ -31,7 +34,6 @@ import (
 	kitexpbservice "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/kitex_pb/pbservice"
 	cross_echo "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_cross/echo"
 	cross_echoservice "github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen_cross/echo/echoservice"
-	"github.com/cloudwego/kitex/server"
 )
 
 func WithServerAddr(hostPort string) server.Option {
@@ -117,6 +119,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	var wg sync.WaitGroup
+	wg.Add(6)
 	thriftAddr = serverutils.NextListenAddr()
 	crossAddr = serverutils.NextListenAddr()
 	slimAddr = serverutils.NextListenAddr()
@@ -124,12 +128,32 @@ func TestMain(m *testing.M) {
 	pbAddr = serverutils.NextListenAddr()
 	combineAddr = serverutils.NextListenAddr()
 	var thriftSvr, thriftCrossSvr, slimServer, grpcServer, pbServer, combineServer server.Server
-	go func() { thriftSvr = RunThriftServer(&EchoServiceImpl{}, thriftAddr) }()
-	go func() { thriftCrossSvr = RunThriftCrossServer(&CrossEchoServiceImpl{}, crossAddr) }()
-	go func() { grpcServer = RunGRPCPBServer(&GRPCPBServiceImpl{}, grpcAddr) }()
-	go func() { pbServer = RunKitexPBServer(&KitexPBServiceImpl{}, pbAddr) }()
-	go func() { slimServer = RunSlimThriftServer(&SlimEchoServiceImpl{}, slimAddr) }()
-	go func() { combineServer = RunCombineThriftServer(&CombineServiceImpl{}, combineAddr) }()
+	go func() {
+		thriftSvr = RunThriftServer(&EchoServiceImpl{}, thriftAddr)
+		wg.Done()
+	}()
+	go func() {
+		thriftCrossSvr = RunThriftCrossServer(&CrossEchoServiceImpl{}, crossAddr)
+		wg.Done()
+	}()
+	go func() {
+		grpcServer = RunGRPCPBServer(&GRPCPBServiceImpl{}, grpcAddr)
+		wg.Done()
+	}()
+	go func() {
+		pbServer = RunKitexPBServer(&KitexPBServiceImpl{}, pbAddr)
+		wg.Done()
+	}()
+	go func() {
+		slimServer = RunSlimThriftServer(&SlimEchoServiceImpl{}, slimAddr)
+		wg.Done()
+	}()
+	go func() {
+		combineServer = RunCombineThriftServer(&CombineServiceImpl{}, combineAddr)
+		wg.Done()
+	}()
+	// wait for all servers to start
+	wg.Wait()
 	defer func() {
 		if thriftSvr != nil {
 			thriftSvr.Stop()
