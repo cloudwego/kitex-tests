@@ -28,10 +28,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/a/b/c"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/abcservice"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/streamclient"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -43,6 +39,11 @@ import (
 	"github.com/cloudwego/kitex/pkg/utils/contextmap"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/a/b/c"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/combine/combineservice"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/abcservice"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
@@ -791,6 +792,12 @@ func TestThriftStreamingMetaData(t *testing.T) {
 			got := headerReceived[k]
 			test.Assertf(t, reflect.DeepEqual(got, expected), "key = %v, got = %v, expected = %v", k, got, expected)
 		}
+		resp, err := stream.Recv()
+		test.Assert(t, err == nil, err)
+		test.Assert(t, resp.Message == "ok", resp.Message)
+		// expect to receive io.EOF, which means the client has received the trailers
+		_, err = stream.Recv()
+		test.Assert(t, err == io.EOF, err)
 
 		trailerReceived := stream.Trailer()
 		klog.Infof("trailerReceived: %v", trailerReceived)
