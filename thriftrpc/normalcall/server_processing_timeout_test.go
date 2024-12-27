@@ -79,6 +79,14 @@ func (t *timeoutMetaHandler) ReadMeta(ctx context.Context, msg remote.Message) (
 	return ctx, nil
 }
 
+func (t *timeoutMetaHandler) OnConnectStream(ctx context.Context) (context.Context, error) {
+	return ctx, nil
+}
+
+func (t *timeoutMetaHandler) OnReadStream(ctx context.Context) (context.Context, error) {
+	return ctx, nil
+}
+
 func TestServerProcessingTimeout(t *testing.T) {
 	t.Run("both-ttheader-meta-handler/not-enabled", func(t *testing.T) {
 		addr := serverutils.NextListenAddr()

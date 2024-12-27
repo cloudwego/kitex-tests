@@ -161,8 +161,7 @@ func (h *stServiceHandler) CircuitBreakTest(ctx context.Context, req *stability.
 	return resp, nil
 }
 
-type testMetaHandler struct {
-}
+type testMetaHandler struct{}
 
 func (t testMetaHandler) WriteMeta(ctx context.Context, msg remote.Message) (context.Context, error) {
 	return ctx, nil
@@ -172,5 +171,13 @@ func (t testMetaHandler) ReadMeta(ctx context.Context, msg remote.Message) (cont
 	tk1, tv1 := "tk1", "tv1"
 	// to check if kitex filter the transient key
 	ctx = metainfo.SetMetaInfoFromMap(ctx, map[string]string{metainfo.PrefixTransient + tk1: tv1})
+	return ctx, nil
+}
+
+func (t testMetaHandler) OnConnectStream(ctx context.Context) (context.Context, error) {
+	return ctx, nil
+}
+
+func (t testMetaHandler) OnReadStream(ctx context.Context) (context.Context, error) {
 	return ctx, nil
 }
