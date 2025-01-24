@@ -95,6 +95,27 @@ func RunNoDefSerdesServer(param *ServerInitParam, handler stability_noDefSerdes.
 	return svr
 }
 
+// RunEmptyServer .
+func RunEmptyServer(param *ServerInitParam, handler stability.STService, opts ...server.Option) server.Server {
+	opts = generateServerOptionsFromParam(param, opts...)
+	if handler == nil {
+		handler = new(STServiceHandler)
+	}
+	svr := server.NewServer(opts...)
+	svcInfo := stservice.NewServiceInfo()
+	delete(svcInfo.Methods, "testSTReq")
+	if err := svr.RegisterService(svcInfo, handler); err != nil {
+		panic(err)
+	}
+
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	return svr
+}
+
 // generateServerOptionsFromParam process ServerInitParam and add server.Option
 func generateServerOptionsFromParam(param *ServerInitParam, opts ...server.Option) []server.Option {
 	var addr net.Addr
