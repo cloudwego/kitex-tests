@@ -15,26 +15,26 @@
  */
 syntax = "proto3";
 
-option go_package = "protobuf/grpc_demo";
+option go_package = "echopb";
 
-package grpc_demo;
+package echopb;
 
-service ServiceA {
-  rpc CallUnary (Request) returns (Reply) {}
-  rpc CallClientStream (stream Request) returns (Reply){}
-  rpc CallServerStream (Request) returns (stream Reply){}
-  rpc CallBidiStream (stream Request) returns (stream Reply){}
+service TestService {
+  rpc Unary (EchoClientRequest) returns (EchoClientResponse) {}
+  rpc EchoBidi (stream EchoClientRequest) returns (stream EchoClientResponse){}
+  rpc EchoClient (stream EchoClientRequest) returns (EchoClientResponse){}
+  rpc EchoServer (EchoClientRequest) returns (stream EchoClientResponse){}
 }
 
-service ServiceB {
+service EmptyService {
 
 }
 
-message Request {
-  string name = 1;
+message EchoClientRequest {
+  string message = 1;
 }
 
-message Reply {
+message EchoClientResponse {
   string message = 1;
 }
 
