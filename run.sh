@@ -132,6 +132,8 @@ protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 # generate thrift streaming code
 LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
+# generate thrift streaming code with streamx mode
+cd ./streamx && kitex_cmd -streamx -I idl ./idl/echo.thrift && kitex_cmd -streamx -I idl ./idl/echo.proto && cd -
 
 echo -e "\ngenerating code for testing ... done\n"
 
