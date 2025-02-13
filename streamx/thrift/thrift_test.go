@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cloudwego/kitex-tests/streamx"
+
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -144,6 +146,12 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 				if d != maxReceiveTimes {
 					return errors.New("send middleware builder call times is not maxReceiveTimes")
 				}
+				if *ri.Invocation().Extra("test_stream_send_event").(*int) != maxReceiveTimes {
+					return errors.New("send event call times is not maxReceiveTimes")
+				}
+				if *ri.Invocation().Extra("test_stream_recv_event").(*int) != maxReceiveTimes {
+					return errors.New("recv event call times is not maxReceiveTimes")
+				}
 				return nil
 			}
 			return err
@@ -200,9 +208,11 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 				if a != maxReceiveTimes+1 {
 					return errors.New("recv middleware call times is not maxReceiveTimes")
 				}
-
 				if c != maxReceiveTimes+1 {
 					return errors.New("recv middleware builder call times is not maxReceiveTimes")
+				}
+				if *ri.Invocation().Extra("test_stream_recv_event").(*int) != maxReceiveTimes {
+					return errors.New("recv event call times is not maxReceiveTimes")
 				}
 				err = stream.SendAndClose(ctx, &echo.EchoClientResponse{
 					Message: "pong",
@@ -215,6 +225,9 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 				}
 				if d != 1 {
 					return errors.New("send middleware builder call times is not 1")
+				}
+				if *ri.Invocation().Extra("test_stream_send_event").(*int) != 1 {
+					return errors.New("send event call times is not 1")
 				}
 			}
 			return err
@@ -275,12 +288,18 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 	if d != maxReceiveTimes {
 		return errors.New("send middleware builder call times is not maxReceiveTimes")
 	}
+	if *ri.Invocation().Extra("test_stream_recv_event").(*int) != 1 {
+		return errors.New("recv event call times is not 1")
+	}
+	if *ri.Invocation().Extra("test_stream_send_event").(*int) != maxReceiveTimes {
+		return errors.New("send event call times is not maxReceiveTimes")
+	}
 	return nil
 }
 
 func runServer(listenaddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svr := testservice.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second),
+	svr := testservice.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second), server.WithTracer(streamx.NewTracer()),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler), server.WithMetaHandler(transmeta.ServerHTTP2Handler),
 		server.WithUnaryOptions(server.WithUnaryMiddleware(func(next endpoint.UnaryEndpoint) endpoint.UnaryEndpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
@@ -376,7 +395,7 @@ func runClient(t *testing.T, isTTHeaderStreaming bool) {
 		// ttheader streaming has higher priority than grpc streaming
 		prot |= transport.TTHeaderStreaming
 	}
-	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr),
+	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr), client.WithTracer(streamx.NewTracer()),
 		client.WithTransportProtocol(prot),
 		client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
 		client.WithUnaryOptions(client.WithUnaryRPCTimeout(200*time.Millisecond),
