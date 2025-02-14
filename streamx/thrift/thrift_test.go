@@ -22,13 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/streamx"
-
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/endpoint"
-	cep "github.com/cloudwego/kitex/pkg/endpoint/client"
-	sep "github.com/cloudwego/kitex/pkg/endpoint/server"
+	"github.com/cloudwego/kitex/pkg/endpoint/cep"
+	"github.com/cloudwego/kitex/pkg/endpoint/sep"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/metadata"
@@ -41,6 +39,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
+	"github.com/cloudwego/kitex-tests/streamx"
 	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
 )
