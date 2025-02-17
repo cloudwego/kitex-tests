@@ -380,20 +380,19 @@ func TestMain(m *testing.M) {
 	svc.Stop()
 }
 
+func TestGRPCStreamingThrift(t *testing.T) {
+	runClient(t, transport.TTHeader)
+}
+
 func TestGRPCThrift(t *testing.T) {
-	runClient(t, false)
+	runClient(t, transport.GRPC)
 }
 
 func TestTTHeaderStreaming(t *testing.T) {
-	runClient(t, true)
+	runClient(t, transport.TTHeader|transport.TTHeaderStreaming)
 }
 
-func runClient(t *testing.T, isTTHeaderStreaming bool) {
-	prot := transport.TTHeader
-	if isTTHeaderStreaming {
-		// ttheader streaming has higher priority than grpc streaming
-		prot |= transport.TTHeaderStreaming
-	}
+func runClient(t *testing.T, prot transport.Protocol) {
 	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr), client.WithTracer(streamx.NewTracer()),
 		client.WithTransportProtocol(prot),
 		client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
