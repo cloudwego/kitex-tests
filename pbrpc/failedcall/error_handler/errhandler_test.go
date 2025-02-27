@@ -33,6 +33,7 @@ import (
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
+	"google.golang.org/protobuf/proto"
 )
 
 var testaddr string
@@ -184,8 +185,11 @@ func TestHandlerReturnBizError(t *testing.T) {
 	test.Assert(t, bizerror.BizStatusCode() == 404)
 	test.Assert(t, bizerror.BizMessage() == "not found")
 	test.Assert(t, reflect.DeepEqual(bizerror.BizExtra(), map[string]string{"version": "v1.0.0"}))
-	str := bizerror.(status.Iface).GRPCStatus().Details()[0].(*stability.STRequest).Str
-	test.Assert(t, reflect.DeepEqual(str, "hello world"))
+	// only works for proto.Message
+	if _, ok := any((*stability.STRequest)(nil)).(proto.Message); ok {
+		str := bizerror.(status.Iface).GRPCStatus().Details()[0].(*stability.STRequest).Str
+		test.Assert(t, reflect.DeepEqual(str, "hello world"))
+	}
 }
 
 func TestHandlerPanic(t *testing.T) {
