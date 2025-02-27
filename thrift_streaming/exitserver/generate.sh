@@ -21,4 +21,4 @@ set -x
 module='github.com/cloudwego/kitex-tests/thrift_streaming/exitserver'
 
 # no need to regenerate if there's no update to api.thrift
-kitex-v0.9.0-rc4 -module $module api.thrift
+kitex  -module $module -thrift no_default_serdes api.thrift

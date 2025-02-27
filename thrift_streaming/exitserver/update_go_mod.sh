@@ -21,15 +21,4 @@
 rm -f go.mod
 rm -f go.sum
 go mod init github.com/cloudwego/kitex-tests/thrift_streaming/exitserver
-
-# using legacy kitex version on purpose
-go get github.com/cloudwego/kitex@v0.9.0-rc4
-go get github.com/apache/thrift@v0.13.0
-go get golang.org/x/net@v0.23.0 # fix security issues
-go mod edit -replace github.com/apache/thrift=github.com/apache/thrift@v0.13.0
-
-# updating tricky packages to make sure it works ...
-go get github.com/bytedance/sonic@latest
-go get github.com/choleraehyq/pid@latest
-
 go mod tidy
