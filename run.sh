@@ -53,6 +53,18 @@ install_protoc() {
     echo "installing protoc ... done"
 }
 
+# use abs path, the env will be passed to and used by other scripts in sub dirs
+if [[ -n $1 ]]; then
+    LOCAL_REPO=`realpath $1`
+fi
+
+# export and reuse the latest version,
+# then no need to query the remote develop branch multiple times for it.
+export KITEX_LATEST_VERSION=develop # default value if not set
+if [[ -z $LOCAL_REPO ]]; then
+    export KITEX_LATEST_VERSION=`go list -m github.com/cloudwego/kitex@develop | cut -d" " -f2`
+fi
+
 go_install() {
     echo "installing $@ ..."
     go install $@ || go get $@
@@ -78,14 +90,13 @@ which protoc-gen-go-grpc || go_install google.golang.org/grpc/cmd/protoc-gen-go-
 which thriftgo || go_install github.com/cloudwego/thriftgo@latest &
 
 # install kitex
-LOCAL_REPO=$1
 
 if [[ -n $LOCAL_REPO ]]; then
     cd ${LOCAL_REPO}
-    go_install ${LOCAL_REPO}/tool/cmd/kitex &
+    go_install ${LOCAL_REPO}/tool/cmd/kitex
     cd -
 else
-    go_install github.com/cloudwego/kitex/tool/cmd/kitex@develop &
+    go_install github.com/cloudwego/kitex/tool/cmd/kitex@$KITEX_LATEST_VERSION
 fi
 
 wait
@@ -98,9 +109,6 @@ protoc-gen-go --version
 protoc-gen-go-grpc --version
 thriftgo --version
 kitex -version
-
-rm -f go.mod # go mod init fails if it already exists
-go mod init github.com/cloudwego/kitex-tests
 
 echo -e "\ngenerating code for testing ...\n"
 
@@ -139,15 +147,30 @@ echo -e "\ngenerating code for testing ... done\n"
 echo -e "\nupdating dependencies ... \n"
 
 # Init dependencies
-go get github.com/apache/thrift@v0.13.0
-go get google.golang.org/grpc@latest
-go get google.golang.org/genproto@latest
-go get github.com/cloudwego/kitex@develop
+rm -f go.mod
+go mod init github.com/cloudwego/kitex-tests
 
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
     go mod edit -replace github.com/cloudwego/kitex/pkg/protocol/bthrift=${LOCAL_REPO}/pkg/protocol/bthrift
+else
+    go get github.com/cloudwego/kitex@$KITEX_LATEST_VERSION
 fi
+
+fixed_version() {
+    go mod edit -replace $1=$1@$2
+}
+
+# ...
+fixed_version github.com/apache/thrift v0.13.0
+
+# https://github.com/googleapis/go-genproto/issues/1015
+fixed_version google.golang.org/genproto v0.0.0-20250227231956-55c901821b1e
+fixed_version google.golang.org/genproto/googleapis/rpc v0.0.0-20250227231956-55c901821b1e
+
+# used by this repo, and it takes seconds for `go mod tidy`
+# can we get rid of it one day? used in kitexgrpc/normalcall/normalcall_test.go
+fixed_version github.com/shirou/gopsutil/v3 v3.24.5
 
 go mod tidy
 
@@ -157,12 +180,18 @@ echo -e "\nupdating dependencies ... done\n"
 # use less cores for stability
 # coz some of them are logical cores
 nproc=$(nproc)
-export GOMAXPROCS=$(( $nproc / 2 ))
+export GOMAXPROCS=$(( 3 * $nproc / 4 ))
 
 echo -e "\nrunning tests ... \n"
 
-if [[ -n $LOCAL_REPO ]]; then
-    go test -failfast -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt -coverpkg=github.com/cloudwego/kitex/... ./...
+# skip kitex_gen dirs which have no tests
+test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/`
+
+if [[ -n $LOCAL_REPO && -n $CI ]]; then
+    # only generate coverage file in ci env
+    # CI=true will be set by Github runner or you can set by yourself
+    # It will be slower if generate code coverage
+    go test -failfast -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt -coverpkg=github.com/cloudwego/kitex/... $test_modules
    if [[ "$OSTYPE" =~ ^darwin ]]; # remove `mode: atomic` line
    then
        sed -i '' 1d ${LOCAL_REPO}/coverage.txt
@@ -170,7 +199,7 @@ if [[ -n $LOCAL_REPO ]]; then
        sed -i '1d' ${LOCAL_REPO}/coverage.txt
    fi
 else
-    go test -failfast ./...
+    go test -failfast $test_modules
 fi
 
 echo "PASSED"
