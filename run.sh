@@ -132,6 +132,8 @@ protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 # generate thrift streaming code
 LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
+# generate thrift streaming code with streamx mode
+cd ./streamx && rm -rf ./kitex_gen && kitex_cmd -streamx -I idl ./idl/echo.thrift && kitex_cmd -streamx -I idl ./idl/echo.proto && cd -
 
 echo -e "\ngenerating code for testing ... done\n"
 
@@ -162,13 +164,15 @@ export GOMAXPROCS=$(( $nproc / 2 ))
 echo -e "\nrunning tests ... \n"
 
 if [[ -n $LOCAL_REPO ]]; then
-    go test -failfast -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt -coverpkg=github.com/cloudwego/kitex/... ./...
+   go test -failfast -covermode=atomic -coverprofile=${LOCAL_REPO}/coverage.txt.tmp -coverpkg=github.com/cloudwego/kitex/... ./...
    if [[ "$OSTYPE" =~ ^darwin ]]; # remove `mode: atomic` line
    then
-       sed -i '' 1d ${LOCAL_REPO}/coverage.txt
+       sed -i '' 1d ${LOCAL_REPO}/coverage.txt.tmp
    else
-       sed -i '1d' ${LOCAL_REPO}/coverage.txt
+       sed -i '1d' ${LOCAL_REPO}/coverage.txt.tmp
    fi
+   cat ${LOCAL_REPO}/coverage.txt.tmp >> ${LOCAL_REPO}/coverage.txt
+   rm ${LOCAL_REPO}/coverage.txt.tmp
 else
     go test -failfast ./...
 fi
