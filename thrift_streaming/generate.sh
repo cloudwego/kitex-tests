@@ -43,6 +43,11 @@ kitex_cmd() {
   kitex --no-dependency-check $@
 }
 
+# the env should be set in the main run.sh
+if [ -z "$KITEX_LATEST_VERSION" ]; then
+  export KITEX_LATEST_VERSION=`go list -m github.com/cloudwego/kitex@develop | cut -d" " -f2`
+fi
+
 # generate with old kitex and thriftgo WITHOUT thrift streaming support
 function generate_old() {
     echo -e "\ngenerate_old\n"
@@ -79,7 +84,7 @@ function generate_new() {
         cd $LOCAL_REPO/tool/cmd/kitex && go build && cp kitex $dir
         cd $SAVE_DIR
     else
-        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@develop
+        GOBIN=$dir go install github.com/cloudwego/kitex/tool/cmd/kitex@$KITEX_LATEST_VERSION
     fi
     if [ ! -f "$dir/thriftgo" ]; then
         GOBIN=$dir go install github.com/cloudwego/thriftgo@latest
@@ -133,10 +138,11 @@ function generate_new_thriftgo_old_kitex() {
     kitex -gen-path kitex_gen_cross $module $idl
 }
 
-go get github.com/cloudwego/kitex@develop
 if [ -d "$LOCAL_REPO" ]; then
     go mod edit -replace github.com/cloudwego/kitex=$LOCAL_REPO
     go mod edit -replace github.com/cloudwego/kitex/pkg/protocol/bthrift=${LOCAL_REPO}/pkg/protocol/bthrift
+else
+    go get github.com/cloudwego/kitex@$KITEX_LATEST_VERSION
 fi
 
 generate_new
