@@ -23,6 +23,7 @@ import (
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/remote"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -54,8 +55,12 @@ func (*STServiceHandler) TestSTReq(ctx context.Context, req *stability.STRequest
 	case "bizErrWithDetail":
 		bizStatusErr := kerrors.NewGRPCBizStatusErrorWithExtra(404, "not found", map[string]string{"version": "v1.0.0"})
 		if sterr, ok := bizStatusErr.(kerrors.GRPCStatusIface); ok {
-			st, _ := sterr.GRPCStatus().WithDetails(&stability.STRequest{Str: "hello world"})
-			sterr.SetGRPCStatus(st)
+			details := &stability.STRequest{Str: "hello world"} // WithDetails only works with proto.Message
+			v := any(details)
+			if m, ok := v.(proto.Message); ok {
+				st, _ := sterr.GRPCStatus().WithDetails(m)
+				sterr.SetGRPCStatus(st)
+			}
 		}
 		return nil, bizStatusErr
 	case panicStr:
