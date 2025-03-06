@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"sync"
 	"testing"
@@ -40,8 +41,8 @@ import (
 
 var svrCodecOpt = server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalReadWrite))
 
-func RunSlimThriftServer(handler echo.EchoService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunSlimThriftServer(handler echo.EchoService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	opts = append(opts, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalReadWrite)))
 	svr := echoservice.NewServer(handler, opts...)
@@ -50,7 +51,6 @@ func RunSlimThriftServer(handler echo.EchoService, addr string, opts ...server.O
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
@@ -354,9 +354,10 @@ func TestSlimKitexStreamClientMiddlewareServer(t *testing.T) {
 }
 
 func TestSlimKitexServerMiddleware(t *testing.T) {
-	addr := serverutils.NextListenAddr()
 	t.Run("pingpong", func(t *testing.T) {
-		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, addr, svrCodecOpt,
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
+		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, ln, svrCodecOpt,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					realArgs := args.(*echo.EchoServiceEchoPingPongArgs)
@@ -385,7 +386,9 @@ func TestSlimKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("unary", func(t *testing.T) {
-		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, addr, svrCodecOpt,
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
+		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, ln, svrCodecOpt,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					realArgs, ok := args.(*echo.EchoServiceEchoUnaryArgs)
@@ -433,7 +436,9 @@ func TestSlimKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("bidirectional streaming", func(t *testing.T) {
-		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, addr, svrCodecOpt,
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
+		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, ln, svrCodecOpt,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					_, ok := args.(*streaming.Args)
@@ -479,8 +484,10 @@ func TestSlimKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("server streaming", func(t *testing.T) {
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		count := 0
-		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, addr, svrCodecOpt,
+		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, ln, svrCodecOpt,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					_, ok := args.(*streaming.Args)
@@ -527,8 +534,10 @@ func TestSlimKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("client streaming", func(t *testing.T) {
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		count := 0
-		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, addr, svrCodecOpt,
+		svr := RunSlimThriftServer(&SlimEchoServiceImpl{}, ln, svrCodecOpt,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					_, ok := args.(*streaming.Args)

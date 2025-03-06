@@ -54,12 +54,11 @@ import (
 var testaddr string
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	testaddr = ln.Addr().String()
 	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: testaddr,
+		Listener: ln,
 	}, nil)
-	serverutils.Wait(testaddr)
 
 	m.Run()
 	svr.Stop()
@@ -232,9 +231,10 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 	})
 
 	t.Run("server", func(t *testing.T) {
-		disablePoolAddr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		disablePoolAddr := ln.Addr().String()
 		var ri1, ri2 rpcinfo.RPCInfo
-		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: disablePoolAddr}, nil,
+		svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Listener: ln}, nil,
 			server.WithMiddleware(func(endpoint endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, req, resp interface{}) (err error) {
 					err = endpoint(ctx, req, resp)
@@ -248,7 +248,6 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 				}
 			}))
 		defer svr.Stop()
-		serverutils.Wait(disablePoolAddr)
 
 		cli := getKitexClient(transport.TTHeaderFramed)
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
@@ -285,21 +284,21 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 }
 
 func TestSlimTemplate(t *testing.T) {
-	slimAddr := serverutils.NextListenAddr()
+	ln0 := serverutils.Listen()
+	slimAddr := ln0.Addr().String()
 	s0 := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: slimAddr,
+		Listener: ln0,
 	}, nil)
 	defer s0.Stop()
-	serverutils.Wait(slimAddr)
 
-	slimFrugalAddr := serverutils.NextListenAddr()
+	ln1 := serverutils.Listen()
+	slimFrugalAddr := ln1.Addr().String()
 	s1 := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: slimFrugalAddr,
+		Listener: ln1,
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead)))
-	serverutils.Wait(slimFrugalAddr)
 	defer s1.Stop()
+
+	_ = slimFrugalAddr // not in use, can be removed in the future
 
 	testCases := []struct {
 		desc      string
@@ -389,22 +388,19 @@ func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
 }
 
 func TestNoDefaultSerdes(t *testing.T) {
-	frugalOnlyAddr := serverutils.NextListenAddr()
-	fastcodecOnlyAddr := serverutils.NextListenAddr()
+	ln0 := serverutils.Listen()
+	frugalOnlyAddr := ln0.Addr().String()
+	ln1 := serverutils.Listen()
+	fastcodecOnlyAddr := ln1.Addr().String()
 	s0 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: frugalOnlyAddr,
+		Listener: ln0,
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead|thrift.EnableSkipDecoder)))
 	defer s0.Stop()
 
 	s1 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: fastcodecOnlyAddr,
+		Listener: ln1,
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite|thrift.FastRead|thrift.EnableSkipDecoder)))
 	defer s1.Stop()
-
-	serverutils.Wait(frugalOnlyAddr)
-	serverutils.Wait(fastcodecOnlyAddr)
 
 	testCases := []struct {
 		desc      string
@@ -473,11 +469,11 @@ func TestCRC32PayloadValidator(t *testing.T) {
 
 	t.Run("serverWithCRC", func(t *testing.T) {
 		// request server with crc config
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		svrCodecOpt := server.WithCodec(codec.NewDefaultCodecWithConfig(codec.CodecConfig{CRC32Check: true}))
-		svrWithCRC := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Network: "tcp", Address: addr}, nil, svrCodecOpt)
+		svrWithCRC := thriftrpc.RunServer(&thriftrpc.ServerInitParam{Listener: ln}, nil, svrCodecOpt)
 		defer svrWithCRC.Stop()
-		serverutils.Wait(addr)
 
 		ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 		for i := 0; i < 10; i++ {

@@ -173,12 +173,13 @@ func (w *wrapStreamWithDoFinish) DoFinish(err error) {
 }
 
 func TestTracerNormalEndOfStream(t *testing.T) {
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 
 	serverTracer := &testTracer{}
 	svr := RunThriftServer(
 		&EchoServiceImpl{},
-		addr,
+		ln,
 		server.WithExitWaitTime(time.Millisecond*10),
 		server.WithTracer(serverTracer),
 	)
@@ -428,7 +429,8 @@ func TestTracingSendError(t *testing.T) {
 
 func TestTracingServerReturnError(t *testing.T) {
 	mockError := fmt.Errorf("mock error")
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	serverTracer := &testTracer{}
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoUnary: func(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
@@ -443,7 +445,7 @@ func TestTracingServerReturnError(t *testing.T) {
 		echoBidirectional: func(bidirectionalServer echo.EchoService_EchoBidirectionalServer) error {
 			return mockError
 		},
-	}, addr, server.WithExitWaitTime(time.Millisecond*10), server.WithTracer(serverTracer))
+	}, ln, server.WithExitWaitTime(time.Millisecond*10), server.WithTracer(serverTracer))
 	defer svr.Stop()
 
 	clientTracer := &testTracer{}
@@ -513,7 +515,8 @@ func TestTracingServerReturnError(t *testing.T) {
 
 func TestTracingServerReturnBizError(t *testing.T) {
 	mockError := kerrors.NewGRPCBizStatusError(100, "biz error")
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	serverTracer := &testTracer{}
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoUnary: func(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
@@ -528,7 +531,7 @@ func TestTracingServerReturnBizError(t *testing.T) {
 		echoBidirectional: func(bidirectionalServer echo.EchoService_EchoBidirectionalServer) error {
 			return mockError
 		},
-	}, addr, server.WithExitWaitTime(time.Millisecond*10), server.WithTracer(serverTracer))
+	}, ln, server.WithExitWaitTime(time.Millisecond*10), server.WithTracer(serverTracer))
 	defer svr.Stop()
 
 	clientTracer := &testTracer{}
@@ -601,7 +604,8 @@ func TestTracingServerReturnBizError(t *testing.T) {
 }
 
 func TestTracingClientTimeout(t *testing.T) {
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoUnary: func(ctx context.Context, request *echo.EchoRequest) (*echo.EchoResponse, error) {
 			time.Sleep(time.Millisecond * 100)
@@ -619,7 +623,7 @@ func TestTracingClientTimeout(t *testing.T) {
 			time.Sleep(time.Millisecond * 100)
 			return nil
 		},
-	}, addr, server.WithExitWaitTime(time.Millisecond*10))
+	}, ln, server.WithExitWaitTime(time.Millisecond*10))
 	defer svr.Stop()
 
 	clientTracer := &testTracer{}
@@ -779,13 +783,14 @@ func (c *customTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo
 }
 
 func TestTracerStreamEventEOF(t *testing.T) {
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoServer: func(request *echo.EchoRequest, st echo.EchoService_EchoServerServer) error {
 			_ = st.Send(&echo.EchoResponse{Message: request.Message})
 			return nil
 		},
-	}, addr, server.WithExitWaitTime(time.Millisecond*10))
+	}, ln, server.WithExitWaitTime(time.Millisecond*10))
 	defer svr.Stop()
 
 	recvCountSuccess := int32(0)
@@ -813,13 +818,14 @@ func TestTracerStreamEventEOF(t *testing.T) {
 }
 
 func TestTracerFinishStream(t *testing.T) {
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	svr := RunThriftServer(&thriftTraceHandler{
 		echoServer: func(request *echo.EchoRequest, st echo.EchoService_EchoServerServer) error {
 			_ = st.Send(&echo.EchoResponse{Message: request.Message})
 			return nil
 		},
-	}, addr, server.WithExitWaitTime(time.Millisecond*10))
+	}, ln, server.WithExitWaitTime(time.Millisecond*10))
 	defer svr.Stop()
 
 	finishCalled := int32(0)

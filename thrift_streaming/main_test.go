@@ -44,8 +44,8 @@ func WithServerAddr(hostPort string) server.Option {
 	return server.WithServiceAddr(addr)
 }
 
-func RunThriftServer(handler echo.EchoService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunThriftServer(handler echo.EchoService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := echoservice.NewServer(handler, opts...)
 	go func() {
@@ -53,12 +53,11 @@ func RunThriftServer(handler echo.EchoService, addr string, opts ...server.Optio
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
-func RunCombineThriftServer(handler combineservice.CombineService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunCombineThriftServer(handler combineservice.CombineService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := combineservice.NewServer(handler, opts...)
 	go func() {
@@ -66,12 +65,11 @@ func RunCombineThriftServer(handler combineservice.CombineService, addr string, 
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
-func RunThriftCrossServer(handler cross_echo.EchoService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunThriftCrossServer(handler cross_echo.EchoService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := cross_echoservice.NewServer(handler, opts...)
 	go func() {
@@ -79,12 +77,11 @@ func RunThriftCrossServer(handler cross_echo.EchoService, addr string, opts ...s
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
-func RunGRPCPBServer(handler grpc_pb.PBService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunGRPCPBServer(handler grpc_pb.PBService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := grpcpbservice.NewServer(handler, opts...)
 	go func() {
@@ -92,12 +89,11 @@ func RunGRPCPBServer(handler grpc_pb.PBService, addr string, opts ...server.Opti
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
-func RunKitexPBServer(handler kitex_pb.PBService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunKitexPBServer(handler kitex_pb.PBService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := kitexpbservice.NewServer(handler, opts...)
 	go func() {
@@ -105,7 +101,6 @@ func RunKitexPBServer(handler kitex_pb.PBService, addr string, opts ...server.Op
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
@@ -121,35 +116,41 @@ var (
 func TestMain(m *testing.M) {
 	var wg sync.WaitGroup
 	wg.Add(6)
-	thriftAddr = serverutils.NextListenAddr()
-	crossAddr = serverutils.NextListenAddr()
-	slimAddr = serverutils.NextListenAddr()
-	grpcAddr = serverutils.NextListenAddr()
-	pbAddr = serverutils.NextListenAddr()
-	combineAddr = serverutils.NextListenAddr()
 	var thriftSvr, thriftCrossSvr, slimServer, grpcServer, pbServer, combineServer server.Server
 	go func() {
-		thriftSvr = RunThriftServer(&EchoServiceImpl{}, thriftAddr)
+		ln := serverutils.Listen()
+		thriftAddr = ln.Addr().String()
+		thriftSvr = RunThriftServer(&EchoServiceImpl{}, ln)
 		wg.Done()
 	}()
 	go func() {
-		thriftCrossSvr = RunThriftCrossServer(&CrossEchoServiceImpl{}, crossAddr)
+		ln := serverutils.Listen()
+		crossAddr = ln.Addr().String()
+		thriftCrossSvr = RunThriftCrossServer(&CrossEchoServiceImpl{}, ln)
 		wg.Done()
 	}()
 	go func() {
-		grpcServer = RunGRPCPBServer(&GRPCPBServiceImpl{}, grpcAddr)
+		ln := serverutils.Listen()
+		grpcAddr = ln.Addr().String()
+		grpcServer = RunGRPCPBServer(&GRPCPBServiceImpl{}, ln)
 		wg.Done()
 	}()
 	go func() {
-		pbServer = RunKitexPBServer(&KitexPBServiceImpl{}, pbAddr)
+		ln := serverutils.Listen()
+		pbAddr = ln.Addr().String()
+		pbServer = RunKitexPBServer(&KitexPBServiceImpl{}, ln)
 		wg.Done()
 	}()
 	go func() {
-		slimServer = RunSlimThriftServer(&SlimEchoServiceImpl{}, slimAddr)
+		ln := serverutils.Listen()
+		slimAddr = ln.Addr().String()
+		slimServer = RunSlimThriftServer(&SlimEchoServiceImpl{}, ln)
 		wg.Done()
 	}()
 	go func() {
-		combineServer = RunCombineThriftServer(&CombineServiceImpl{}, combineAddr)
+		ln := serverutils.Listen()
+		combineAddr = ln.Addr().String()
+		combineServer = RunCombineThriftServer(&CombineServiceImpl{}, ln)
 		wg.Done()
 	}()
 	// wait for all servers to start

@@ -37,9 +37,8 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-func runServer(listenaddr string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svr := server.NewServer(server.WithServiceAddr(addr))
+func runServer(ln net.Listener) server.Server {
+	svr := server.NewServer(server.WithListener(ln))
 	err := echoservice.RegisterService(svr, new(EchoServiceImpl))
 	if err != nil {
 		panic(err)
@@ -56,8 +55,7 @@ func runServer(listenaddr string) server.Server {
 	return svr
 }
 
-func runGenericServer(listenaddr string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
+func runGenericServer(ln net.Listener) server.Server {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	if err != nil {
 		panic(err)
@@ -66,7 +64,7 @@ func runGenericServer(listenaddr string) server.Server {
 	if err != nil {
 		panic(err)
 	}
-	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithServiceAddr(addr), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
+	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)

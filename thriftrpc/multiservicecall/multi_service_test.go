@@ -66,43 +66,43 @@ func (s *ServiceCImpl) Echo1(ctx context.Context, req *multi_service.Request) (r
 	return &multi_service.Response{Message: "servicec Echo1"}, nil
 }
 
-func GetServer(hostport string, opts ...server.Option) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-	opts = append(opts, server.WithServiceAddr(addr),
+func GetServer(ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln),
 		server.WithExitWaitTime(20*time.Millisecond),
 	)
 	return server.NewServer(opts...)
 }
 
 func TestRegisterService(t *testing.T) {
-	testRegisterService(t, serverutils.NextListenAddr())
+	testRegisterService(t, serverutils.Listen())
 }
 
 func TestMuxRegisterService(t *testing.T) {
-	testRegisterService(t, serverutils.NextListenAddr(), server.WithMuxTransport())
+	testRegisterService(t, serverutils.Listen(), server.WithMuxTransport())
 }
 
 func TestMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
 	testMultiServiceWithRefuseTrafficWithoutServiceName(t,
-		serverutils.NextListenAddr(), server.WithRefuseTrafficWithoutServiceName())
+		serverutils.Listen(), server.WithRefuseTrafficWithoutServiceName())
 }
 
 func TestMuxMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T) {
-	testMultiServiceWithRefuseTrafficWithoutServiceName(t, serverutils.NextListenAddr(),
+	testMultiServiceWithRefuseTrafficWithoutServiceName(t, serverutils.Listen(),
 		server.WithRefuseTrafficWithoutServiceName(), server.WithMuxTransport())
 }
 
 func TestMultiService(t *testing.T) {
-	testMultiService(t, serverutils.NextListenAddr())
+	testMultiService(t, serverutils.Listen())
 }
 
 func TestMuxMultiService(t *testing.T) {
-	testMultiService(t, serverutils.NextListenAddr(), server.WithMuxTransport())
+	testMultiService(t, serverutils.Listen(), server.WithMuxTransport())
 }
 
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
-	ip := serverutils.NextListenAddr()
-	svr := GetServer(ip)
+	ln := serverutils.Listen()
+	ip := ln.Addr().String()
+	svr := GetServer(ln)
 	err := servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBImpl))
@@ -123,12 +123,12 @@ func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 }
 
 func TestUnknownException(t *testing.T) {
-	ip := serverutils.NextListenAddr()
-	svr := GetServer(ip)
+	ln := serverutils.Listen()
+	ip := ln.Addr().String()
+	svr := GetServer(ln)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	go svr.Run()
 	defer svr.Stop()
-	serverutils.Wait(ip)
 
 	clientB, err := serviceb.NewClient("ServiceB",
 		client.WithHostPorts(ip),
@@ -141,13 +141,13 @@ func TestUnknownException(t *testing.T) {
 }
 
 func TestUnknownExceptionWithMultiService(t *testing.T) {
-	hostport := serverutils.NextListenAddr()
-	svr := GetServer(hostport)
+	ln := serverutils.Listen()
+	hostport := ln.Addr().String()
+	svr := GetServer(ln)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
-	serverutils.Wait(hostport)
 
 	// unknown service error
 	clientB, err := serviceb.NewClient("ServiceB",
@@ -171,8 +171,8 @@ func TestUnknownExceptionWithMultiService(t *testing.T) {
 	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown method EchoA (service ServiceA)")
 }
 
-func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
-	svr := GetServer(ip, opts...)
+func testRegisterService(t *testing.T, ln net.Listener, opts ...server.Option) {
+	svr := GetServer(ln, opts...)
 	err := servicea.RegisterService(svr, new(ServiceAImpl), server.WithFallbackService())
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBImpl))
@@ -180,7 +180,7 @@ func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
 	test.Assert(t, err == nil)
 
-	svr = GetServer(ip, opts...)
+	svr = GetServer(ln, opts...)
 	test.PanicAt(t, func() {
 		_ = servicea.RegisterService(svr, new(ServiceAImpl), server.WithFallbackService())
 		_ = serviceb.RegisterService(svr, new(ServiceBImpl), server.WithFallbackService())
@@ -191,7 +191,7 @@ func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
 		return true
 	})
 
-	svr = GetServer(ip, opts...)
+	svr = GetServer(ln, opts...)
 	err = servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
@@ -201,8 +201,8 @@ func testRegisterService(t *testing.T, ip string, opts ...server.Option) {
 	test.Assert(t, err.Error() == "method name [Echo1] is conflicted between services but no fallback service is specified")
 }
 
-func testMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T, ip string, opts ...server.Option) {
-	svr := GetServer(ip, opts...)
+func testMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T, ln net.Listener, opts ...server.Option) {
+	svr := GetServer(ln, opts...)
 	err := servicea.RegisterService(svr, new(ServiceAImpl))
 	test.Assert(t, err == nil)
 	err = servicec.RegisterService(svr, new(ServiceCImpl))
@@ -210,20 +210,20 @@ func testMultiServiceWithRefuseTrafficWithoutServiceName(t *testing.T, ip string
 	go svr.Run()
 	defer svr.Stop()
 
-	clientA, err := servicea.NewClient("ServiceA", client.WithHostPorts(ip))
+	clientA, err := servicea.NewClient("ServiceA", client.WithHostPorts(ln.Addr().String()))
 	test.Assert(t, err == nil, err)
 	_, err = clientA.Echo1(context.Background(), &multi_service.Request{Message: "multi_service req"})
 	test.Assert(t, err != nil)
 }
 
-func testMultiService(t *testing.T, ip string, opts ...server.Option) {
-	svr := GetServer(ip, opts...)
+func testMultiService(t *testing.T, ln net.Listener, opts ...server.Option) {
+	ip := ln.Addr().String()
+	svr := GetServer(ln, opts...)
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	serviceb.RegisterService(svr, new(ServiceBImpl))
 	servicec.RegisterService(svr, new(ServiceCImpl), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
-	serverutils.Wait(ip)
 
 	req := &multi_service.Request{Message: "multi_service req"}
 

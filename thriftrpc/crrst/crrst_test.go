@@ -38,13 +38,12 @@ type stServiceHandler struct {
 }
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	testaddr = ln.Addr().String()
 	svr := thriftrpc.RunEmptyServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: testaddr,
+		Listener: ln,
 	}, &stServiceHandler{}, server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 
-	serverutils.Wait(testaddr)
 	m.Run()
 	svr.Stop()
 }

@@ -234,8 +234,9 @@ func TestGRPCPBStreamClient(t *testing.T) {
 }
 
 func TestGRPCPBServerMiddleware(t *testing.T) {
-	addr := serverutils.NextListenAddr()
-	svr := RunGRPCPBServer(&GRPCPBServiceImpl{}, addr,
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
+	svr := RunGRPCPBServer(&GRPCPBServiceImpl{}, ln,
 		server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				method, _ := kitexutil.GetMethod(ctx)
@@ -351,10 +352,11 @@ func TestGRPCPBServerMiddleware(t *testing.T) {
 }
 
 func TestGRPCPBServiceWithCompatibleMiddleware(t *testing.T) {
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	svr := RunGRPCPBServer(
 		&GRPCPBServiceImpl{},
-		addr,
+		ln,
 		server.WithCompatibleMiddlewareForUnary(),
 		server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {

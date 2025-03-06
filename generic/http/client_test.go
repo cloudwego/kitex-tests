@@ -32,10 +32,10 @@ import (
 var testaddr string
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	testaddr = ln.Addr().String()
 	klog.SetLevel(klog.LevelFatal)
-	svc := runServer(testaddr)
-	serverutils.Wait(testaddr)
+	svc := runServer(ln)
 	m.Run()
 	svc.Stop()
 }

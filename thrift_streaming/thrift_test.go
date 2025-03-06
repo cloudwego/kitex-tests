@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -340,9 +341,10 @@ func TestKitexStreamClientMiddlewareServer(t *testing.T) {
 }
 
 func TestKitexServerMiddleware(t *testing.T) {
-	addr := serverutils.NextListenAddr()
 	t.Run("pingpong", func(t *testing.T) {
-		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
+		svr := RunThriftServer(&EchoServiceImpl{}, ln,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					realArgs := args.(*echo.EchoServiceEchoPingPongArgs)
@@ -370,7 +372,9 @@ func TestKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("unary", func(t *testing.T) {
-		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
+		svr := RunThriftServer(&EchoServiceImpl{}, ln,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					realArgs, ok := args.(*echo.EchoServiceEchoUnaryArgs)
@@ -416,7 +420,9 @@ func TestKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("bidirectional streaming", func(t *testing.T) {
-		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
+		svr := RunThriftServer(&EchoServiceImpl{}, ln,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					_, ok := args.(*streaming.Args)
@@ -462,8 +468,10 @@ func TestKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("server streaming", func(t *testing.T) {
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		count := 0
-		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+		svr := RunThriftServer(&EchoServiceImpl{}, ln,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					_, ok := args.(*streaming.Args)
@@ -508,8 +516,10 @@ func TestKitexServerMiddleware(t *testing.T) {
 	})
 
 	t.Run("client streaming", func(t *testing.T) {
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		count := 0
-		svr := RunThriftServer(&EchoServiceImpl{}, addr,
+		svr := RunThriftServer(&EchoServiceImpl{}, ln,
 			server.WithMiddleware(func(e endpoint.Endpoint) endpoint.Endpoint {
 				return func(ctx context.Context, args, result interface{}) (err error) {
 					_, ok := args.(*streaming.Args)
@@ -611,13 +621,14 @@ func TestTimeoutRecvSend(t *testing.T) {
 	})
 
 	t.Run("client recv timeout with MetaHandler", func(t *testing.T) {
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		svr := RunThriftServer(&thriftServerTimeoutImpl{
 			Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
 				time.Sleep(time.Millisecond * 100)
 				return nil
 			},
-		}, addr)
+		}, ln)
 		defer svr.Stop()
 
 		cli := echoservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr),
@@ -636,7 +647,8 @@ func TestTimeoutRecvSend(t *testing.T) {
 	})
 
 	t.Run("server recv timeout with MetaHandler", func(t *testing.T) {
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -650,7 +662,7 @@ func TestTimeoutRecvSend(t *testing.T) {
 					return err
 				},
 			},
-			addr,
+			ln,
 			WithServerContextCancel(),
 		)
 		defer svr.Stop()
@@ -709,7 +721,8 @@ func TestThriftStreamingMetaData(t *testing.T) {
 			"1_x":     []string{"14"},
 		}
 
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
@@ -763,7 +776,7 @@ func TestThriftStreamingMetaData(t *testing.T) {
 					return nil
 				},
 			},
-			addr,
+			ln,
 		)
 		defer svr.Stop()
 		cli := echoservice.MustNewStreamClient("service", streamclient.WithHostPorts(addr))
@@ -811,7 +824,8 @@ func TestThriftStreamingMetaData(t *testing.T) {
 	})
 
 	t.Run("header-failure", func(t *testing.T) {
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -826,7 +840,7 @@ func TestThriftStreamingMetaData(t *testing.T) {
 					return stream.Send(&echo.EchoResponse{Message: "ok"})
 				},
 			},
-			addr,
+			ln,
 		)
 		defer svr.Stop()
 
@@ -845,7 +859,8 @@ func TestThriftStreamingMetaData(t *testing.T) {
 	})
 
 	t.Run("trailer-failure", func(t *testing.T) {
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		svr := RunThriftServer(
 			&thriftServerTimeoutImpl{
 				Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -861,7 +876,7 @@ func TestThriftStreamingMetaData(t *testing.T) {
 					return nil
 				},
 			},
-			addr,
+			ln,
 		)
 		defer svr.Stop()
 
@@ -909,7 +924,8 @@ func TestThriftStreamLogID(t *testing.T) {
 		return got, got == expectedLogID
 	}
 
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 	svr := RunThriftServer(
 		&thriftServerTimeoutImpl{
 			Handler: func(stream echo.EchoService_EchoBidirectionalServer) (err error) {
@@ -922,7 +938,7 @@ func TestThriftStreamLogID(t *testing.T) {
 				return stream.Send(&echo.EchoResponse{Message: "ok"})
 			},
 		},
-		addr,
+		ln,
 		server.WithExitWaitTime(time.Millisecond*10),
 		server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
@@ -993,8 +1009,8 @@ func TestThriftStreamLogID(t *testing.T) {
 	}
 }
 
-func RunABCServer(handler echo.ABCService, addr string, opts ...server.Option) server.Server {
-	opts = append(opts, WithServerAddr(addr))
+func RunABCServer(handler echo.ABCService, ln net.Listener, opts ...server.Option) server.Server {
+	opts = append(opts, server.WithListener(ln))
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
 	svr := abcservice.NewServer(handler, opts...)
 	go func() {
@@ -1002,7 +1018,6 @@ func RunABCServer(handler echo.ABCService, addr string, opts ...server.Option) s
 			panic(err)
 		}
 	}()
-	serverutils.Wait(addr)
 	return svr
 }
 
@@ -1044,8 +1059,9 @@ func (a abcServerImpl) EchoUnary(ctx context.Context, req1 *c.Request) (r *c.Res
 }
 
 func TestABCService(t *testing.T) {
-	addr := serverutils.NextListenAddr()
-	svr := RunABCServer(&abcServerImpl{}, addr)
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
+	svr := RunABCServer(&abcServerImpl{}, ln)
 	defer svr.Stop()
 	t.Run("echo", func(t *testing.T) {
 		cli := abcservice.MustNewClient("service", client.WithHostPorts(addr))
@@ -1091,10 +1107,11 @@ func TestABCService(t *testing.T) {
 
 func TestCustomMetaHandler(t *testing.T) {
 	t.Run("OnReadStream", func(t *testing.T) {
-		addr := serverutils.NextListenAddr()
+		ln := serverutils.Listen()
+		addr := ln.Addr().String()
 		var value atomic.Value
 		var expectedValue = "value"
-		svr := RunABCServer(&abcServerImpl{}, addr,
+		svr := RunABCServer(&abcServerImpl{}, ln,
 			server.WithMetaHandler(remote.NewCustomMetaHandler(remote.WithOnReadStream(
 				func(ctx context.Context) (context.Context, error) {
 					return contextmap.WithContextMap(ctx), nil

@@ -16,7 +16,6 @@ package thriftrpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"sync/atomic"
 	"time"
@@ -42,8 +41,7 @@ var (
 
 // ServerInitParam .
 type ServerInitParam struct {
-	Network  string
-	Address  string
+	Listener net.Listener
 	ConnMode ConnectionMode
 }
 
@@ -118,22 +116,8 @@ func RunEmptyServer(param *ServerInitParam, handler stability.STService, opts ..
 
 // generateServerOptionsFromParam process ServerInitParam and add server.Option
 func generateServerOptionsFromParam(param *ServerInitParam, opts ...server.Option) []server.Option {
-	var addr net.Addr
-	var err error
-	switch v := param.Network; v {
-	case "unix":
-		addr, err = net.ResolveUnixAddr(v, param.Address)
-	case "tcp":
-		addr, err = net.ResolveTCPAddr(v, param.Address)
-	default:
-		panic(fmt.Errorf("unsupported network: %s", v))
-	}
-	if err != nil {
-		panic(err)
-	}
-
 	opts = append(opts, server.WithExitWaitTime(time.Millisecond*10))
-	opts = append(opts, server.WithServiceAddr(addr))
+	opts = append(opts, server.WithListener(param.Listener))
 	opts = append(opts, server.WithLimit(&limit.Option{
 		MaxConnections: 30000, MaxQPS: 300000, UpdateControl: func(u limit.Updater) {},
 	}))
