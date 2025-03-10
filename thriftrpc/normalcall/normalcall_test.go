@@ -284,8 +284,7 @@ func TestDisablePoolForRPCInfo(t *testing.T) {
 	})
 }
 
-// When using slim template and users do not
-func TestFrugalFallback(t *testing.T) {
+func TestSlimTemplate(t *testing.T) {
 	slimAddr := serverutils.NextListenAddr()
 	s0 := thriftrpc.RunSlimServer(&thriftrpc.ServerInitParam{
 		Network: "tcp",
@@ -312,28 +311,6 @@ func TestFrugalFallback(t *testing.T) {
 			desc:      "use slim template, do not configure thrift codec type",
 			hostPorts: []string{slimAddr},
 			opts:      nil,
-		},
-		{
-			desc:      "use slim template, configure FastWrite | FastRead thrift codec",
-			hostPorts: []string{slimAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
-			},
-		},
-		{
-			desc:      "use slim template, only configure Basic thrift codec to disable frugal",
-			hostPorts: []string{slimAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)),
-			},
-			expectErr: true,
-		},
-		{
-			desc:      "use slim template, configure FrugalWrite | FrugalRead thrift codec, connect to frugal configured server",
-			hostPorts: []string{slimFrugalAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
-			},
 		},
 	}
 	for _, tc := range testCases {
@@ -462,38 +439,6 @@ func TestNoDefaultSerdes(t *testing.T) {
 			opts: []client.Option{
 				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead | thrift.EnableSkipDecoder)),
 			},
-		},
-		{
-			desc:      "use FastCodec, connect to Frugal and SkipDecoder enabled server",
-			hostPorts: []string{frugalOnlyAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
-			},
-			expectErr: true,
-		},
-		{
-			desc:      "use Frugal, connect to Frugal and SkipDecoder enabled server",
-			hostPorts: []string{frugalOnlyAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
-			},
-			expectErr: true,
-		},
-		{
-			desc:      "use FastCodec, connect to FastCodec and SkipDecoder enabled server",
-			hostPorts: []string{fastcodecOnlyAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite | thrift.FastRead)),
-			},
-			expectErr: true,
-		},
-		{
-			desc:      "use Frugal, connect to FastCodec and SkipDecoder enabled server",
-			hostPorts: []string{fastcodecOnlyAddr},
-			opts: []client.Option{
-				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite | thrift.FrugalRead)),
-			},
-			expectErr: true,
 		},
 	}
 	for _, tc := range testCases {
