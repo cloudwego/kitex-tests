@@ -62,7 +62,8 @@ fi
 # then no need to query the remote develop branch multiple times for it.
 export KITEX_LATEST_VERSION=develop # default value if not set
 if [[ -z $LOCAL_REPO ]]; then
-    export KITEX_LATEST_VERSION=`go list -m github.com/cloudwego/kitex@develop | cut -d" " -f2`
+  # use GOPROXY=direct to fix proxy cache issues
+  export KITEX_LATEST_VERSION=`GOPROXY=direct go list -m github.com/cloudwego/kitex@develop | cut -d" " -f2`
 fi
 
 go_install() {
