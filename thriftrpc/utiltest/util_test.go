@@ -18,10 +18,11 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/cloudwego/kitex/pkg/utils"
+
 	"github.com/cloudwego/gopkg/protocol/thrift"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex/pkg/utils"
 )
 
 func TestRPCCodec(t *testing.T) {
@@ -80,8 +81,6 @@ func TestRPCCodec(t *testing.T) {
 }
 
 func TestSerializer(t *testing.T) {
-	rc := utils.NewThriftMessageCodec()
-
 	req := stability.NewSTRequest()
 	req.Name = "Hello Kitex"
 	strMap := make(map[string]string)
@@ -92,11 +91,10 @@ func TestSerializer(t *testing.T) {
 	args := stability.NewSTServiceTestSTReqArgs()
 	args.Req = req
 
-	b, err := rc.Serialize(args)
-	test.Assert(t, err == nil, err)
+	b := thrift.FastMarshal(args)
 
 	var args2 stability.STServiceTestSTReqArgs
-	err = rc.Deserialize(&args2, b)
+	err := thrift.FastUnmarshal(b, &args2)
 	test.Assert(t, err == nil, err)
 
 	test.Assert(t, args2.Req.Name == req.Name)
