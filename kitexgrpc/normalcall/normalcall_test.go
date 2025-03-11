@@ -74,12 +74,13 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	backupState := rpcinfo.PoolEnabled()
 	defer rpcinfo.EnablePool(backupState)
 
-	addr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	addr := ln.Addr().String()
 
 	var ri rpcinfo.RPCInfo
 	svr := servicea.NewServer(
 		&ServerAHandler{},
-		server.WithServiceAddr(serverAddr(addr)),
+		server.WithListener(ln),
 		server.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
 			return func(ctx context.Context, req, resp interface{}) error {
 				ri = rpcinfo.GetRPCInfo(ctx)
@@ -92,7 +93,6 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 			panic(err)
 		}
 	}()
-	time.Sleep(50 * time.Millisecond)
 	defer svr.Stop()
 
 	cli := servicea.MustNewClient("servicea", client.WithHostPorts(addr))
@@ -115,17 +115,17 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 }
 
 func TestShortConnection(t *testing.T) {
-	svrAddrStr := serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	svrAddrStr := ln.Addr().String()
 	svr := servicea.NewServer(
 		&ServerAHandler{},
-		server.WithServiceAddr(serverAddr(svrAddrStr)),
+		server.WithListener(ln),
 	)
 	go func() {
 		if err := svr.Run(); err != nil {
 			panic(err)
 		}
 	}()
-	serverutils.Wait(svrAddrStr)
 	defer svr.Stop()
 
 	cli, err := servicea.NewClient("servicea",

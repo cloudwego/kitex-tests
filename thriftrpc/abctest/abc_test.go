@@ -41,21 +41,19 @@ const (
 var testaddr1, testaddr2 string
 
 func TestMain(m *testing.M) {
-	testaddr1 = serverutils.NextListenAddr()
-	testaddr2 = serverutils.NextListenAddr()
+	ln1 := serverutils.Listen()
+	testaddr1 = ln1.Addr().String()
+	ln2 := serverutils.Listen()
+	testaddr2 = ln2.Addr().String()
 	cli := getKitexClient(transport.TTHeader, client.WithHostPorts(testaddr2))
 	svrb := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: testaddr1,
+		Listener: ln1,
 	}, &stServiceHandler{cli: cli}, server.WithMetaHandler(testMetaHandler{}))
 
 	svrc := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: testaddr2,
+		Listener: ln2,
 	}, &stServiceHandler{})
 
-	serverutils.Wait(testaddr1)
-	serverutils.Wait(testaddr2)
 	m.Run()
 	svrb.Stop()
 	svrc.Stop()

@@ -33,10 +33,10 @@ import (
 var testaddr string
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
-	svc := runServer(testaddr)
+	ln := serverutils.Listen()
+	testaddr = ln.Addr().String()
+	svc := runServer(ln)
 	gsvc := runGenericServer()
-	serverutils.Wait(testaddr)
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()

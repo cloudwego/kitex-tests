@@ -56,41 +56,42 @@ func (*ServiceCHandler) Chat1(ctx context.Context, req *pb_multi_service.Request
 	return &pb_multi_service.Reply{Message: "servicec Chat1"}, nil
 }
 
-func GetServer(hostport string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-	return server.NewServer(server.WithServiceAddr(addr),
+func GetServer(ln net.Listener) server.Server {
+	return server.NewServer(server.WithListener(ln),
 		server.WithExitWaitTime(20*time.Millisecond),
 	)
 }
 
-func GetMuxServer(hostport string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-	return server.NewServer(server.WithServiceAddr(addr),
+func GetMuxServer(ln net.Listener) server.Server {
+	return server.NewServer(server.WithListener(ln),
 		server.WithExitWaitTime(20*time.Millisecond),
 		server.WithMuxTransport())
 }
 
 func TestRegisterService(t *testing.T) {
-	testRegisterService(t, GetServer, serverutils.NextListenAddr())
+	testRegisterService(t, GetServer, serverutils.Listen())
 }
 
 func TestMuxRegisterService(t *testing.T) {
-	testRegisterService(t, GetMuxServer, serverutils.NextListenAddr())
+	testRegisterService(t, GetMuxServer, serverutils.Listen())
 }
 
 func TestMultiService(t *testing.T) {
-	ip := serverutils.NextListenAddr()
-	testMultiService(t, GetServer(ip), ip)
+	ln := serverutils.Listen()
+	ip := ln.Addr().String()
+	testMultiService(t, GetServer(ln), ip)
 }
 
 func TestMuxMultiService(t *testing.T) {
-	ip := serverutils.NextListenAddr()
-	testMultiService(t, GetMuxServer(ip), ip)
+	ln := serverutils.Listen()
+	ip := ln.Addr().String()
+	testMultiService(t, GetMuxServer(ln), ip)
 }
 
 func TestMultiServiceWithCombineServiceClient(t *testing.T) {
-	ip := serverutils.NextListenAddr()
-	svr := GetServer(ip)
+	ln := serverutils.Listen()
+	ip := ln.Addr().String()
+	svr := GetServer(ln)
 	err := servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBHandler))
@@ -111,8 +112,8 @@ func TestMultiServiceWithCombineServiceClient(t *testing.T) {
 	test.Assert(t, resp.Message == "servicea Chat1")
 }
 
-func testRegisterService(t *testing.T, getServer func(ip string) server.Server, ip string) {
-	svr := getServer(ip)
+func testRegisterService(t *testing.T, getServer func(net.Listener) server.Server, ln net.Listener) {
+	svr := getServer(ln)
 	err := servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
 	test.Assert(t, err == nil)
 	err = serviceb.RegisterService(svr, new(ServiceBHandler))
@@ -120,7 +121,7 @@ func testRegisterService(t *testing.T, getServer func(ip string) server.Server, 
 	err = servicec.RegisterService(svr, new(ServiceCHandler))
 	test.Assert(t, err == nil)
 
-	svr = getServer(ip)
+	svr = getServer(ln)
 	test.PanicAt(t, func() {
 		_ = servicea.RegisterService(svr, new(ServiceAHandler), server.WithFallbackService())
 		_ = serviceb.RegisterService(svr, new(ServiceBHandler), server.WithFallbackService())
@@ -131,7 +132,7 @@ func testRegisterService(t *testing.T, getServer func(ip string) server.Server, 
 		return true
 	})
 
-	svr = getServer(ip)
+	svr = getServer(ln)
 	err = servicea.RegisterService(svr, new(ServiceAHandler))
 	test.Assert(t, err == nil)
 	err = servicec.RegisterService(svr, new(ServiceCHandler))
@@ -147,7 +148,6 @@ func testMultiService(t *testing.T, svr server.Server, ip string) {
 	servicec.RegisterService(svr, new(ServiceCHandler), server.WithFallbackService())
 	go svr.Run()
 	defer svr.Stop()
-	serverutils.Wait(ip)
 
 	req := &pb_multi_service.Request{Name: "pb multi_service req"}
 

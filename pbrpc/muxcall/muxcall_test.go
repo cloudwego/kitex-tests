@@ -29,12 +29,11 @@ import (
 var testaddr string
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
+	ln := serverutils.Listen()
+	testaddr = ln.Addr().String()
 	svr := pbrpc.RunServer(&pbrpc.ServerInitParam{
-		Network: "tcp",
-		Address: testaddr,
+		Listener: ln,
 	}, nil)
-	serverutils.Wait(testaddr)
 	m.Run()
 	svr.Stop()
 }

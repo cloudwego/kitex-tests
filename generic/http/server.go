@@ -34,9 +34,8 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-func runServer(listenaddr string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svc := bizservice.NewServer(new(BizServiceImpl), server.WithServiceAddr(addr))
+func runServer(ln net.Listener) server.Server {
+	svc := bizservice.NewServer(new(BizServiceImpl), server.WithListener(ln))
 	go func() {
 		if err := svc.Run(); err != nil {
 			println(err)

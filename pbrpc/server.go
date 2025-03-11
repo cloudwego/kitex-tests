@@ -16,7 +16,6 @@ package pbrpc
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"time"
 
@@ -29,29 +28,14 @@ import (
 
 // ServerInitParam .
 type ServerInitParam struct {
-	Network  string
-	Address  string
+	Listener net.Listener
 	ConnMode ConnectionMode
 }
 
 // RunServer .
 func RunServer(param *ServerInitParam, handler stability.STService, opts ...server.Option) server.Server {
-	var addr net.Addr
-	var err error
-	switch v := param.Network; v {
-	case "unix":
-		addr, err = net.ResolveUnixAddr(v, param.Address)
-	case "tcp":
-		addr, err = net.ResolveTCPAddr(v, param.Address)
-	default:
-		panic(fmt.Errorf("unsupported network: %s", v))
-	}
-	if err != nil {
-		panic(err)
-	}
-
 	opts = append(opts, server.WithExitWaitTime(20*time.Millisecond))
-	opts = append(opts, server.WithServiceAddr(addr))
+	opts = append(opts, server.WithListener(param.Listener))
 	opts = append(opts, server.WithLimit(&limit.Option{
 		MaxConnections: 30000, MaxQPS: 300000, UpdateControl: func(u limit.Updater) {},
 	}))
@@ -65,7 +49,7 @@ func RunServer(param *ServerInitParam, handler stability.STService, opts ...serv
 	svr := stservice.NewServer(handler, opts...)
 
 	go func() {
-		if err = svr.Run(); err != nil {
+		if err := svr.Run(); err != nil {
 			panic(err)
 		}
 	}()

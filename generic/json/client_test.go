@@ -59,12 +59,12 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
-	genericAddr = serverutils.NextListenAddr()
-	svc := runServer(testaddr)
-	gsvc := runGenericServer(genericAddr)
-	serverutils.Wait(testaddr)
-	serverutils.Wait(genericAddr)
+	ln1 := serverutils.Listen()
+	testaddr = ln1.Addr().String()
+	ln2 := serverutils.Listen()
+	genericAddr = ln2.Addr().String()
+	svc := runServer(ln1)
+	gsvc := runGenericServer(ln2)
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()

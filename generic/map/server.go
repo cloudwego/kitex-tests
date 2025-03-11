@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
@@ -34,9 +35,8 @@ func assert(expected, actual interface{}) error {
 	return nil
 }
 
-func runServer(listenaddr string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithServiceAddr(addr))
+func runServer(ln net.Listener) server.Server {
+	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithListener(ln))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)
@@ -45,10 +45,9 @@ func runServer(listenaddr string) server.Server {
 	return svc
 }
 
-const genericAddress = "localhost:9010"
+var genericAddress string
 
 func runGenericServer() server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", genericAddress)
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	if err != nil {
 		panic(err)
@@ -57,7 +56,9 @@ func runGenericServer() server.Server {
 	if err != nil {
 		panic(err)
 	}
-	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithServiceAddr(addr), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
+	ln := serverutils.Listen()
+	genericAddress = ln.Addr().String()
+	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)

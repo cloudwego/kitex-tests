@@ -33,6 +33,9 @@ func init() {
 }
 
 // NextListenAddr returns a local addr that can be used to call net.Listen
+//
+// You should consider using Listen() if you're going to create a new serverm,
+// Coz NextListenAddr() doesn't guarantee the addr returned is system-wide uniq.
 func NextListenAddr() string {
 	for i := 0; i < 100; i++ {
 		n := atomic.AddInt32(&listenStartPort, 1)
@@ -61,4 +64,13 @@ func Wait(addr string) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	panic("server " + addr + " not ready")
+}
+
+// Listen returns a net.Listen listening on random addr
+func Listen() net.Listener {
+	ln, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+	return ln
 }

@@ -46,14 +46,13 @@ var retryChainStopStr = "chain stop retry"
 var testaddr string
 
 func TestMain(m *testing.M) {
-	testaddr = serverutils.NextListenAddr()
-	svr1 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
-		Network: "tcp",
-		Address: testaddr,
+	ln := serverutils.Listen()
+	testaddr = ln.Addr().String()
+	svr := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Listener: ln,
 	}, new(STServiceHandler))
-	serverutils.Wait(testaddr)
 	m.Run()
-	svr1.Stop()
+	svr.Stop()
 }
 
 func getKitexClient(p transport.Protocol, opts ...client.Option) stservice.Client {
