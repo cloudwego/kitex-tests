@@ -24,7 +24,6 @@ import (
 	stability_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability"
 	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
 
-	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/bytedance/gopkg/cloud/metainfo"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
@@ -116,7 +115,7 @@ func generateClientOptionsFromParam(param *ClientInitParam, opts ...client.Optio
 func CreateSTRequest(ctx context.Context) (context.Context, *stability.STRequest) {
 	req := stability.NewSTRequest()
 	req.Name = "byted"
-	req.On = thrift.BoolPtr(true)
+	req.On = utils.BoolPtr(true)
 	req.B = 10
 	req.Int16 = 10
 	req.Int32 = math.MaxInt32
@@ -148,7 +147,7 @@ func CreateSTRequest(ctx context.Context) (context.Context, *stability.STRequest
 func CreateSlimSTRequest(ctx context.Context) (context.Context, *stability_slim.STRequest) {
 	req := stability_slim.NewSTRequest()
 	req.Name = "byted"
-	req.On = thrift.BoolPtr(true)
+	req.On = utils.BoolPtr(true)
 	req.B = 10
 	req.Int16 = 10
 	req.Int32 = math.MaxInt32
@@ -180,7 +179,7 @@ func CreateSlimSTRequest(ctx context.Context) (context.Context, *stability_slim.
 func CreateNoDefSerdesSTRequest(ctx context.Context) (context.Context, *stability_noDefSerdes.STRequest) {
 	req := stability_noDefSerdes.NewSTRequest()
 	req.Name = "byted"
-	req.On = thrift.BoolPtr(true)
+	req.On = utils.BoolPtr(true)
 	req.B = 10
 	req.Int16 = 10
 	req.Int32 = math.MaxInt32
@@ -210,18 +209,18 @@ func CreateNoDefSerdesSTRequest(ctx context.Context) (context.Context, *stabilit
 
 // CreateObjReq .
 func CreateObjReq(ctx context.Context) (context.Context, *instparam.ObjReq) {
-	id := thrift.Int64Ptr(int64(rand.Intn(100)))
+	id := utils.Int64Ptr(int64(rand.Intn(100)))
 	subMsg1 := instparam.NewSubMessage()
 	subMsg1.Id = id
-	subMsg1.Value = thrift.StringPtr(utils.RandomString(100))
+	subMsg1.Value = utils.StringPtr(utils.RandomString(100))
 	subMsg2 := instparam.NewSubMessage()
-	subMsg2.Id = thrift.Int64Ptr(math.MaxInt64)
-	subMsg2.Value = thrift.StringPtr(utils.RandomString(100))
+	subMsg2.Id = utils.Int64Ptr(math.MaxInt64)
+	subMsg2.Value = utils.StringPtr(utils.RandomString(100))
 	subMsgList := []*instparam.SubMessage{subMsg1, subMsg2}
 
 	msg := instparam.NewMessage()
 	msg.Id = id
-	msg.Value = thrift.StringPtr(utils.RandomString(100))
+	msg.Value = utils.StringPtr(utils.RandomString(100))
 	msg.SubMessages = subMsgList
 
 	req := instparam.NewObjReq()

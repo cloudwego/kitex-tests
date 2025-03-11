@@ -18,15 +18,13 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/cloudwego/gopkg/protocol/thrift"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	athrift "github.com/cloudwego/kitex/pkg/protocol/bthrift/apache"
 	"github.com/cloudwego/kitex/pkg/utils"
 )
 
 func TestRPCCodec(t *testing.T) {
-	rc := utils.NewThriftMessageCodec()
-
 	req1 := stability.NewSTRequest()
 	req1.Name = "Hello Kitex"
 	strMap := make(map[string]string)
@@ -38,12 +36,12 @@ func TestRPCCodec(t *testing.T) {
 	args1.Req = req1
 
 	// encode
-	buf, err := rc.Encode("mockMethod", athrift.CALL, 100, args1)
+	buf, err := thrift.MarshalFastMsg("mockMethod", thrift.CALL, 100, args1)
 	test.Assert(t, err == nil, err)
 
 	var argsDecode1 stability.STServiceTestSTReqArgs
 	// decode
-	method, seqID, err := rc.Decode(buf, &argsDecode1)
+	method, seqID, err := thrift.UnmarshalFastMsg(buf, &argsDecode1)
 
 	test.Assert(t, err == nil, err)
 	test.Assert(t, method == "mockMethod")
@@ -64,12 +62,12 @@ func TestRPCCodec(t *testing.T) {
 	args2 := stability.NewSTServiceTestSTReqArgs()
 	args2.Req = req2
 	// encode
-	buf, err = rc.Encode("mockMethod1", athrift.CALL, 101, args2)
+	buf, err = thrift.MarshalFastMsg("mockMethod1", thrift.CALL, 101, args2)
 	test.Assert(t, err == nil, err)
 
 	// decode
 	var argsDecode2 stability.STServiceTestSTReqArgs
-	method, seqID, err = rc.Decode(buf, &argsDecode2)
+	method, seqID, err = thrift.UnmarshalFastMsg(buf, &argsDecode2)
 
 	test.Assert(t, err == nil, err)
 	test.Assert(t, method == "mockMethod1")

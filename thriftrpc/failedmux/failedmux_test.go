@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/cloudwego/gopkg/protocol/thrift"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
@@ -37,7 +37,7 @@ type mockedCodec struct {
 
 func (mc *mockedCodec) Decode(ctx context.Context, msg remote.Message, in remote.ByteBuffer) error {
 	mc.Codec.Decode(ctx, msg, in)
-	return remote.NewTransError(remote.ProtocolError, thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, "mocked error"))
+	return remote.NewTransError(remote.ProtocolError, thrift.NewApplicationException(thrift.PROTOCOL_ERROR, "mocked error"))
 }
 
 func (mc *mockedCodec) Name() string {
