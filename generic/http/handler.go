@@ -17,7 +17,8 @@ package http
 import (
 	"context"
 
-	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/cloudwego/kitex-tests/pkg/utils"
+
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/http"
 )
 
@@ -25,21 +26,21 @@ import (
 type BizServiceImpl struct{}
 
 var resp = &http.BizResponse{
-	T: thrift.StringPtr("1"),
+	T: utils.StringPtr("1"),
 	RspItems: map[int64]*http.RspItem{
 		1: {
-			ItemId: thrift.Int64Ptr(1),
-			Text:   thrift.StringPtr("1"),
+			ItemId: utils.Int64Ptr(1),
+			Text:   utils.StringPtr("1"),
 		},
 	},
-	VEnum: thrift.Int32Ptr(1),
+	VEnum: utils.Int32Ptr(1),
 	RspItemList: []*http.RspItem{
 		{
-			ItemId: thrift.Int64Ptr(1),
-			Text:   thrift.StringPtr("1"),
+			ItemId: utils.Int64Ptr(1),
+			Text:   utils.StringPtr("1"),
 		},
 	},
-	HttpCode:  thrift.Int32Ptr(1),
+	HttpCode:  utils.Int32Ptr(1),
 	ItemCount: []int64{1, 2, 3},
 }
 
@@ -55,14 +56,14 @@ func (s *BizServiceImpl) BizMethod1(ctx context.Context, req *http.BizRequest) (
 		return nil, err
 	}
 	if err := assert(req.GetReqItemsMap(), map[int64]*http.ReqItem{1: {
-		Id:   thrift.Int64Ptr(1),
-		Text: thrift.StringPtr("text"),
+		Id:   utils.Int64Ptr(1),
+		Text: utils.StringPtr("text"),
 	}}); err != nil {
 		return nil, err
 	}
 	if err := assert(req.GetSome(), &http.ReqItem{
-		Id:   thrift.Int64Ptr(1),
-		Text: thrift.StringPtr("text"),
+		Id:   utils.Int64Ptr(1),
+		Text: utils.StringPtr("text"),
 	}); err != nil {
 		return nil, err
 	}
