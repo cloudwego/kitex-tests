@@ -131,7 +131,7 @@ kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl
 rm -rf kitex_gen_slim
 kitex_cmd -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
 
-# generate kitex_gen with apache codec to test kitex apache codec code path.
+# we need to generate kitex_gen with apache codec independently to test codec logic in kitex bthrift.
 rm -rf kitex_gen_apache_codec
 kitex_cmd -module github.com/cloudwego/kitex-tests -thrift no_default_serdes=false -gen-path kitex_gen_apache_codec ./idl/stability.thrift
 

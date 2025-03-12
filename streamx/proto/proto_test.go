@@ -356,7 +356,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGRPCProtobuf(t *testing.T) {
-	runClient(t, false)
+	runClient(t, true)
 }
 
 // TODO: support protobuf payload in ttheader streaming
@@ -364,11 +364,11 @@ func TestGRPCProtobuf(t *testing.T) {
 //	runClient(t, true)
 //}
 
-func runClient(t *testing.T, isTTHeaderStreaming bool) {
+func runClient(t *testing.T, isGRPCStreaming bool) {
 	prot := transport.TTHeader
-	if isTTHeaderStreaming {
-		// ttheader streaming has higher priority than grpc streaming
-		prot |= transport.TTHeaderStreaming
+	if isGRPCStreaming {
+		// grpc streaming has higher priority than ttheader streaming
+		prot |= transport.GRPCStreaming
 	}
 	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr),
 		client.WithTransportProtocol(prot),
@@ -464,7 +464,7 @@ func runClient(t *testing.T, isTTHeaderStreaming bool) {
 	test.Assert(t, res.Message == "pong")
 	test.Assert(t, a == 1)
 	test.Assert(t, b == 1)
-	if !isTTHeaderStreaming {
+	if isGRPCStreaming {
 		test.Assert(t, header["unaryheaderkey"][0] == "unaryheadervalue")
 		// test.Assert(t, trailer["unarytrailerkey"][0] == "unarytrailervalue") // fix a bug, could be removed if decode grpc receive buffer twice is done.
 	}
