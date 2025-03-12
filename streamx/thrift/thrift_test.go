@@ -381,7 +381,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGRPCStreamingThrift(t *testing.T) {
-	runClient(t, transport.TTHeader)
+	runClient(t, transport.TTHeader|transport.GRPCStreaming)
 }
 
 func TestGRPCThrift(t *testing.T) {
@@ -389,7 +389,7 @@ func TestGRPCThrift(t *testing.T) {
 }
 
 func TestTTHeaderStreaming(t *testing.T) {
-	runClient(t, transport.TTHeader|transport.TTHeaderStreaming)
+	runClient(t, transport.TTHeader)
 }
 
 func runClient(t *testing.T, prot transport.Protocol) {
