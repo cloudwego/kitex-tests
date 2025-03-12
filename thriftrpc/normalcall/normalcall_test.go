@@ -45,7 +45,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
+	stservice_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability/stservice"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	tutils "github.com/cloudwego/kitex-tests/pkg/utils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
@@ -82,9 +82,9 @@ func getSlimKitexClient(p transport.Protocol, hostPorts []string, opts ...client
 	}, opts...)
 }
 
-func getNoDefSerdesKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_noDefSerdes.Client {
-	return thriftrpc.CreateNoDefSerdesKitexClient(&thriftrpc.ClientInitParam{
-		TargetServiceName: "cloudwego.kitex.testa.noDefSerdes",
+func getApacheCodecKitexClient(p transport.Protocol, hostPorts []string, opts ...client.Option) stservice_apache_codec.Client {
+	return thriftrpc.CreateApacheCodecKitexClient(&thriftrpc.ClientInitParam{
+		TargetServiceName: "cloudwego.kitex.testa.apache_codec",
 		HostPorts:         hostPorts,
 		Protocol:          p,
 		ConnMode:          thriftrpc.LongConnection,
@@ -387,7 +387,7 @@ func TestCircuitBreakerCustomInstanceErrorTypeFunc(t *testing.T) {
 	test.Assert(t, fuseCount >= 100, fuseCount)
 }
 
-func TestNoDefaultSerdes(t *testing.T) {
+func TestApacheCodec(t *testing.T) {
 	ln0 := serverutils.Listen()
 	frugalOnlyAddr := ln0.Addr().String()
 	ln1 := serverutils.Listen()
@@ -439,8 +439,8 @@ func TestNoDefaultSerdes(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			cli := getNoDefSerdesKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
-			ctx, stReq := thriftrpc.CreateNoDefSerdesSTRequest(context.Background())
+			cli := getApacheCodecKitexClient(transport.PurePayload, tc.hostPorts, tc.opts...)
+			ctx, stReq := thriftrpc.CreateApacheCodecSTRequest(context.Background())
 			for i := 0; i < 3; i++ {
 				stResp, err := cli.TestSTReq(ctx, stReq)
 				if !tc.expectErr {

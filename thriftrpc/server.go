@@ -26,9 +26,9 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
-	instparam_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/instparam"
-	stability_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability"
-	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
+	instparam_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/instparam"
+	stability_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability"
+	stservice_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability/stservice"
 	instparam_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/instparam"
 	stability_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
@@ -77,13 +77,13 @@ func RunSlimServer(param *ServerInitParam, handler stability_slim.STService, opt
 	return svr
 }
 
-// RunNoDefSerdesServer .
-func RunNoDefSerdesServer(param *ServerInitParam, handler stability_noDefSerdes.STService, opts ...server.Option) server.Server {
+// RunApacheCodecServer .
+func RunApacheCodecServer(param *ServerInitParam, handler stability_apache_codec.STService, opts ...server.Option) server.Server {
 	opts = generateServerOptionsFromParam(param, opts...)
 	if handler == nil {
-		handler = new(STServiceNoDefSerdesHandler)
+		handler = new(STServiceApacheCodecHandler)
 	}
-	svr := stservice_noDefSerdes.NewServer(handler, opts...)
+	svr := stservice_apache_codec.NewServer(handler, opts...)
 
 	go func() {
 		if err := svr.Run(); err != nil {
@@ -253,15 +253,15 @@ func (S *STServiceSlimHandler) CircuitBreakTest(ctx context.Context, req *stabil
 	return resp, nil
 }
 
-type STServiceNoDefSerdesHandler struct{}
+type STServiceApacheCodecHandler struct{}
 
-func (S *STServiceNoDefSerdesHandler) VisitOneway(ctx context.Context, req *stability_noDefSerdes.STRequest) (err error) {
+func (S *STServiceApacheCodecHandler) VisitOneway(ctx context.Context, req *stability_apache_codec.STRequest) (err error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (S *STServiceNoDefSerdesHandler) TestSTReq(ctx context.Context, req *stability_noDefSerdes.STRequest) (r *stability_noDefSerdes.STResponse, err error) {
-	resp := &stability_noDefSerdes.STResponse{
+func (S *STServiceApacheCodecHandler) TestSTReq(ctx context.Context, req *stability_apache_codec.STRequest) (r *stability_apache_codec.STResponse, err error) {
+	resp := &stability_apache_codec.STResponse{
 		Str:     req.Str,
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,
@@ -276,8 +276,8 @@ func (S *STServiceNoDefSerdesHandler) TestSTReq(ctx context.Context, req *stabil
 	return resp, nil
 }
 
-func (S *STServiceNoDefSerdesHandler) TestObjReq(ctx context.Context, req *instparam_noDefSerdes.ObjReq) (r *instparam_noDefSerdes.ObjResp, err error) {
-	resp := &instparam_noDefSerdes.ObjResp{
+func (S *STServiceApacheCodecHandler) TestObjReq(ctx context.Context, req *instparam_apache_codec.ObjReq) (r *instparam_apache_codec.ObjResp, err error) {
+	resp := &instparam_apache_codec.ObjResp{
 		Msg:     req.Msg,
 		MsgSet:  req.MsgSet,
 		MsgMap:  req.MsgMap,
@@ -293,17 +293,17 @@ func (S *STServiceNoDefSerdesHandler) TestObjReq(ctx context.Context, req *instp
 	return resp, nil
 }
 
-func (S *STServiceNoDefSerdesHandler) TestException(ctx context.Context, req *stability_noDefSerdes.STRequest) (r *stability_noDefSerdes.STResponse, err error) {
-	err = &stability_noDefSerdes.STException{Message: "mock exception"}
+func (S *STServiceApacheCodecHandler) TestException(ctx context.Context, req *stability_apache_codec.STRequest) (r *stability_apache_codec.STResponse, err error) {
+	err = &stability_apache_codec.STException{Message: "mock exception"}
 	return nil, err
 }
 
-func (S *STServiceNoDefSerdesHandler) CircuitBreakTest(ctx context.Context, req *stability_noDefSerdes.STRequest) (r *stability_noDefSerdes.STResponse, err error) {
+func (S *STServiceApacheCodecHandler) CircuitBreakTest(ctx context.Context, req *stability_apache_codec.STRequest) (r *stability_apache_codec.STResponse, err error) {
 	// force 50% of the responses to cost over 200ms
 	if atomic.AddInt32(&countFlag, 1)%2 == 0 {
 		time.Sleep(200 * time.Millisecond)
 	}
-	resp := &stability_noDefSerdes.STResponse{
+	resp := &stability_apache_codec.STResponse{
 		Str:     req.Str,
 		Mp:      req.StringMap,
 		FlagMsg: req.FlagMsg,

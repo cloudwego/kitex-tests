@@ -51,7 +51,7 @@ go.work.sum
 *.zip
 kitex_gen/
 kitex_gen_slim/
-kitex_gen_noDefSerdes/
+kitex_gen_apache_codec/
 grpc_gen/
 go.mod
 go.sum
