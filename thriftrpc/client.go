@@ -21,8 +21,8 @@ import (
 	"runtime"
 	"time"
 
-	stability_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability"
-	stservice_noDefSerdes "github.com/cloudwego/kitex-tests/kitex_gen_noDefSerdes/thrift/stability/stservice"
+	stability_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability"
+	stservice_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability/stservice"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
 
@@ -76,11 +76,11 @@ func CreateSlimKitexClient(param *ClientInitParam, opts ...client.Option) stserv
 	return stservice_slim.MustNewClient(param.TargetServiceName, opts...)
 }
 
-// CreateNoDefSerdesKitexClient .
-func CreateNoDefSerdesKitexClient(param *ClientInitParam, opts ...client.Option) stservice_noDefSerdes.Client {
+// CreateApacheCodecKitexClient .
+func CreateApacheCodecKitexClient(param *ClientInitParam, opts ...client.Option) stservice_apache_codec.Client {
 	opts = generateClientOptionsFromParam(param, opts...)
 
-	return stservice_noDefSerdes.MustNewClient(param.TargetServiceName, opts...)
+	return stservice_apache_codec.MustNewClient(param.TargetServiceName, opts...)
 }
 
 // generateClientOptionsFromParam process ClientInitParam and add client.Option
@@ -175,9 +175,9 @@ func CreateSlimSTRequest(ctx context.Context) (context.Context, *stability_slim.
 	return ctx, req
 }
 
-// CreateNoDefSerdesSTRequest .
-func CreateNoDefSerdesSTRequest(ctx context.Context) (context.Context, *stability_noDefSerdes.STRequest) {
-	req := stability_noDefSerdes.NewSTRequest()
+// CreateApacheCodecSTRequest .
+func CreateApacheCodecSTRequest(ctx context.Context) (context.Context, *stability_apache_codec.STRequest) {
+	req := stability_apache_codec.NewSTRequest()
 	req.Name = "byted"
 	req.On = utils.BoolPtr(true)
 	req.B = 10
@@ -200,7 +200,7 @@ func CreateNoDefSerdesSTRequest(ctx context.Context) (context.Context, *stabilit
 		utils.RandomString(10),
 		utils.RandomString(100),
 	}
-	req.E = stability_noDefSerdes.TestEnum_FIRST
+	req.E = stability_apache_codec.TestEnum_FIRST
 
 	ctx = metainfo.WithValue(ctx, "TK", "TV")
 	ctx = metainfo.WithPersistentValue(ctx, "PK", "PV")
