@@ -392,6 +392,8 @@ func TestApacheCodec(t *testing.T) {
 	frugalOnlyAddr := ln0.Addr().String()
 	ln1 := serverutils.Listen()
 	fastcodecOnlyAddr := ln1.Addr().String()
+	ln2 := serverutils.Listen()
+	apacheCodecOnlyAddr := ln2.Addr().String()
 	s0 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
 		Listener: ln0,
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FrugalWrite|thrift.FrugalRead|thrift.EnableSkipDecoder)))
@@ -402,12 +404,24 @@ func TestApacheCodec(t *testing.T) {
 	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.FastWrite|thrift.FastRead|thrift.EnableSkipDecoder)))
 	defer s1.Stop()
 
+	s2 := thriftrpc.RunServer(&thriftrpc.ServerInitParam{
+		Listener: ln2,
+	}, nil, server.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)))
+	defer s2.Stop()
+
 	testCases := []struct {
 		desc      string
 		hostPorts []string
 		opts      []client.Option
 		expectErr bool
 	}{
+		{
+			desc:      "do not use FastCodec or SkipDecoder, just use the original apache codec at the client side",
+			hostPorts: []string{apacheCodecOnlyAddr},
+			opts: []client.Option{
+				client.WithPayloadCodec(thrift.NewThriftCodecWithConfig(thrift.Basic)),
+			},
+		},
 		{
 			desc:      "use FastCodec and SkipDecoder, connect to Frugal and SkipDecoder enabled server",
 			hostPorts: []string{frugalOnlyAddr},
