@@ -155,6 +155,9 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 			}
 			return err
 		}
+		if req.Message == "biz_error" {
+			return kerrors.NewBizStatusError(404, "not found")
+		}
 		receivedTimes++
 		if req.Message != "ping" {
 			return errors.New("invalid message")
@@ -567,4 +570,14 @@ func runClient(t *testing.T, prot transport.Protocol) {
 	td, err = serverStream.Trailer()
 	test.Assert(t, err == nil)
 	test.Assert(t, td["trailerkey"] == "trailervalue")
+
+	// test biz error
+	bidiStream, err = cli.EchoBidi(ctx)
+	test.Assert(t, err == nil)
+	err = bidiStream.Send(bidiStream.Context(), &echo.EchoClientRequest{Message: "biz_error"})
+	test.Assert(t, err == nil)
+	_, err = bidiStream.Recv(bidiStream.Context())
+	bizErr, _ := kerrors.FromBizStatusError(err)
+	test.Assert(t, bizErr.BizStatusCode() == 404)
+	test.Assert(t, bizErr.BizMessage() == "not found")
 }
