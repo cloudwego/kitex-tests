@@ -127,6 +127,7 @@ kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_multi_service_2.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/pb_multi_service.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl/combine_service.proto
+kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/pbapi.proto
 
 rm -rf kitex_gen_slim
 kitex_cmd -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
