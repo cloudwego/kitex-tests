@@ -49,15 +49,4 @@ go.work.sum
 # Files produced by run.sh
 *.bak
 *.zip
-kitex_gen/
-kitex_gen_slim/
-kitex_gen_apache_codec/
-grpc_gen/
-go.mod
-go.sum
 bin
-thrift_streaming/binaries
-thrift_streaming/kitex_gen/
-thrift_streaming/kitex_gen_cross/
-thrift_streaming/kitex_gen_slim/
-thrift_streaming/exitserver/exitserver
