@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package streamx_thrift_test
+package streamx_thrift
 
 import (
 	"context"
 	"errors"
 	"io"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/metadata"
+	"github.com/cloudwego/kitex/pkg/remote/trans/ttstream"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/serviceinfo"
 	"github.com/cloudwego/kitex/pkg/streaming"
@@ -363,7 +365,8 @@ func runServer(listenaddr string) server.Server {
 					return next(ctx, stream, req)
 				}
 			}
-		})))
+		})), server.WithTTHeaderStreamingOptions(server.WithTTHeaderStreamingTransportOptions(
+			ttstream.WithServerMetaFrameHandler(ttmh), ttstream.WithServerHeaderFrameHandler(tthh))))
 	go func() {
 		if err := svr.Run(); err != nil {
 			println(err)
@@ -393,6 +396,8 @@ func TestGRPCThrift(t *testing.T) {
 
 func TestTTHeaderStreaming(t *testing.T) {
 	runClient(t, transport.TTHeader)
+	// test.Assert(t, atomic.LoadUint32(&ttmh.executed) == 1)
+	test.Assert(t, atomic.LoadUint32(&tthh.executed) == 1)
 }
 
 func runClient(t *testing.T, prot transport.Protocol) {
