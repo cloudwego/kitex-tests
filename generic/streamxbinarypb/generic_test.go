@@ -39,7 +39,7 @@ func TestClientStreaming(t *testing.T) {
 	svr := initMockTestServer(new(StreamingTestImpl), ln)
 	defer svr.Stop()
 
-	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock")
+	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock", "pbapi")
 	streamCli, err := cli.ClientStreaming(ctx, "ClientStreamingTest")
 	test.Assert(t, err == nil, err)
 	for i := 0; i < 3; i++ {
@@ -67,7 +67,7 @@ func TestServerStreaming(t *testing.T) {
 	svr := initMockTestServer(new(StreamingTestImpl), ln)
 	defer svr.Stop()
 
-	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock")
+	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock", "pbapi")
 	req := &pbapi.MockReq{Message: "Hello from Client"}
 	buf := make([]byte, 0)
 	buf, _ = req.Marshal(buf)
@@ -98,7 +98,7 @@ func TestBidirectionalStreaming(t *testing.T) {
 	svr := initMockTestServer(new(StreamingTestImpl), ln)
 	defer svr.Stop()
 
-	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock")
+	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock", "pbapi")
 	streamCli, err := cli.BidirectionalStreaming(ctx, "BidirectionalStreamingTest")
 	test.Assert(t, err == nil)
 
@@ -147,7 +147,7 @@ func TestUnary(t *testing.T) {
 	svr := initMockTestServer(new(StreamingTestImpl), ln)
 	defer svr.Stop()
 
-	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock")
+	cli := initStreamingClient(t, ctx, ln.Addr().String(), "", "Mock", "pbapi")
 	req := &pbapi.MockReq{Message: "Hello from Client"}
 	buf := make([]byte, 0)
 	buf, _ = req.Marshal(buf)
@@ -162,8 +162,8 @@ func TestUnary(t *testing.T) {
 	test.Assert(t, resp.Message == "hello Hello from Client")
 }
 
-func initStreamingClient(t *testing.T, ctx context.Context, addr, idl, serviceName string, cliOpts ...client.Option) genericclient.StreamXClient {
-	g := generic.BinaryPbGeneric(serviceName)
+func initStreamingClient(t *testing.T, ctx context.Context, addr, idl, serviceName, packageName string, cliOpts ...client.Option) genericclient.Client {
+	g := generic.BinaryPbGeneric(serviceName, packageName)
 	return newGenericClient(g, addr, cliOpts...)
 }
 
