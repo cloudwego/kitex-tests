@@ -16,6 +16,7 @@ package thrift_streaming
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -65,6 +66,7 @@ type testTracer struct {
 	finishRecvSize uint64
 	finishCalled   bool
 	wg             sync.WaitGroup
+	finish         func(ctx context.Context)
 }
 
 func (t *testTracer) Reset() {
@@ -110,6 +112,9 @@ func (t *testTracer) Finish(ctx context.Context) {
 	t.finishRecvSize = ri.Stats().RecvSize()
 	t.finishCalled = true
 	t.wg.Done()
+	if t.finish != nil {
+		t.finish(ctx)
+	}
 	return
 }
 
@@ -846,4 +851,26 @@ func TestTracerFinishStream(t *testing.T) {
 
 	streaming.FinishStream(st, nil)
 	test.Assert(t, atomic.LoadInt32(&finishCalled) == 1)
+}
+
+func TestStream_DoFinishOnError(t *testing.T) {
+	finishCalled := false
+	tracer := &testTracer{
+		finish: func(ctx context.Context) { finishCalled = true },
+	}
+
+	cli := echoservice.MustNewStreamClient(
+		"service",
+		streamclient.WithHostPorts(thriftAddr),
+		streamclient.WithTracer(tracer),
+		streamclient.WithMiddleware(func(next endpoint.Endpoint) endpoint.Endpoint {
+			return func(ctx context.Context, req, resp interface{}) (err error) {
+				return errors.New("injected error")
+			}
+		}),
+	)
+
+	_, err := cli.EchoBidirectional(context.Background())
+	test.Assert(t, err != nil, "should return error")
+	test.Assert(t, finishCalled, "DoFinish should be called")
 }
