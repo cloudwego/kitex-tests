@@ -42,9 +42,9 @@ func init() {
 	})
 }
 
-func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.Option) genericclient.StreamXClient {
+func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.Option) genericclient.Client {
 	cliOpts = append(cliOpts, client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(targetIPPort))
-	cli, err := genericclient.NewStreamXClient("destService", g, cliOpts...)
+	cli, err := genericclient.NewClient("destService", g, cliOpts...)
 	if err != nil {
 		panic(err)
 	}
