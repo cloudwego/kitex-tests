@@ -26,7 +26,7 @@ type metaFrameHandler struct {
 	executed uint32
 }
 
-func (m *metaFrameHandler) OnMetaFrame(smeta ttstream.StreamMeta, intHeader ttstream.IntHeader, header streaming.Header, payload []byte) error {
+func (m *metaFrameHandler) OnMetaFrame(ctx context.Context, intHeader ttstream.IntHeader, header streaming.Header, payload []byte) error {
 	atomic.StoreUint32(&m.executed, 1)
 	return nil
 }
