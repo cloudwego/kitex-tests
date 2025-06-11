@@ -1,6 +1,6 @@
 module github.com/cloudwego/kitex-tests/thrift_streaming/exitserver
 
-go 1.21.13
+go 1.18
 
 require (
 	github.com/cloudwego/gopkg v0.1.4
