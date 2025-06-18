@@ -38,10 +38,9 @@ export GOBIN=$PATH_BIN
 
 # Fix some dependency versions to ensure compatibility when testing with Go 1.18
 # TODO: Remove this if Go 1.18 is no longer supported
+IS_GO_118=false
 if [[ `go version` == *"go1.18"* ]]; then
   IS_GO_118=true
-else
-  IS_GO_118=false
 fi
 
 PROTOC_VERSION=v3.20.2
