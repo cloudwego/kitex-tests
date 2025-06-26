@@ -366,7 +366,7 @@ func runServer(listenaddr string) server.Server {
 				}
 			}
 		})), server.WithTTHeaderStreamingOptions(server.WithTTHeaderStreamingTransportOptions(
-			ttstream.WithServerMetaFrameHandler(ttmh), ttstream.WithServerHeaderFrameHandler(tthh))))
+			ttstream.WithServerHeaderFrameHandler(tthh))))
 	go func() {
 		if err := svr.Run(); err != nil {
 			println(err)
