@@ -24,12 +24,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/server"
+
+	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
+	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
 )
 
 var startChan chan struct{}
@@ -68,7 +69,7 @@ type serviceImpl struct {
 }
 
 func (s *serviceImpl) PingPong(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
-	return nil, nil
+	return &echo.EchoClientResponse{}, nil
 }
 
 func (s *serviceImpl) Unary(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
