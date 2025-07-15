@@ -50,9 +50,10 @@ func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.
 	return cli
 }
 
-func newGenericServer(handler generic.ServiceV2, ln net.Listener, opts ...server.Option) server.Server {
+func newGenericServer(pingPongHandler genericserver.PingPongUnknownHandler,
+	streamingHandler genericserver.StreamingUnknownHandler, ln net.Listener, opts ...server.Option) server.Server {
 	opts = append(opts, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
-	svr := genericserver.NewUnknownServiceOrMethodServer(handler, opts...)
+	svr := genericserver.NewUnknownServiceOrMethodServer(pingPongHandler, streamingHandler, opts...)
 	go func() {
 		err := svr.Run()
 		if err != nil {
@@ -64,11 +65,7 @@ func newGenericServer(handler generic.ServiceV2, ln net.Listener, opts ...server
 	return svr
 }
 
-type genericServiceImpl struct {
-	generic.ServiceV2
-}
-
-func (s *genericServiceImpl) GenericCall(ctx context.Context, service, method string, request interface{}) (response interface{}, err error) {
+func pingPongUnknownHandler(ctx context.Context, service, method string, request interface{}) (response interface{}, err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if service != "TestService" && ri.Config().TransportProtocol() != transport.Framed {
 		return nil, fmt.Errorf("service not match")
@@ -91,7 +88,7 @@ func (s *genericServiceImpl) GenericCall(ctx context.Context, service, method st
 	return buf, nil
 }
 
-func (s *genericServiceImpl) BidiStreaming(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
+func streamingUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
 	if service != "TestService" {
 		return fmt.Errorf("service not match")
 	}

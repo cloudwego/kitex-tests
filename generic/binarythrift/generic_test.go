@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 	genericAddr = genericLn.Addr()
 
 	newMockTestServer(&serviceImpl{}, genCodeLn)
-	newGenericServer(&genericServiceImpl{}, genericLn)
+	newGenericServer(pingPongUnknownHandler, streamingUnknownHandler, genericLn)
 
 	m.Run()
 }
