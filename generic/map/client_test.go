@@ -16,6 +16,7 @@ package tests
 
 import (
 	"context"
+	"io"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -205,6 +206,9 @@ func TestGenericServiceImplV2_ServerStreaming(t *testing.T) {
 			resp, err := stream.Recv(stream.Context())
 			test.Assert(t, err == nil)
 			test.Assert(t, resp.(map[string]interface{})["Msg"] == "world")
+
+			_, err = stream.Recv(stream.Context())
+			test.Assert(t, err == io.EOF)
 		})
 	}
 }
@@ -229,9 +233,15 @@ func TestGenericServiceImplV2_BidiStreaming(t *testing.T) {
 			})
 			test.Assert(t, err == nil)
 
+			err = stream.CloseSend(stream.Context())
+			test.Assert(t, err == nil)
+
 			resp, err := stream.Recv(stream.Context())
 			test.Assert(t, err == nil)
 			test.Assert(t, resp.(map[string]interface{})["Msg"] == "world")
+
+			_, err = stream.Recv(stream.Context())
+			test.Assert(t, err == io.EOF)
 		})
 	}
 }

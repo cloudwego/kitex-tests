@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"time"
 
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/transmeta"
@@ -38,7 +39,9 @@ func assert(expected, actual interface{}) error {
 }
 
 func runServer(ln net.Listener) server.Server {
-	svr := server.NewServer(server.WithListener(ln))
+	svr := server.NewServer(server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	err := echoservice.RegisterService(svr, new(EchoServiceImpl))
 	if err != nil {
 		panic(err)
@@ -52,6 +55,7 @@ func runServer(ln net.Listener) server.Server {
 			panic(err)
 		}
 	}()
+	time.Sleep(100 * time.Millisecond)
 	return svr
 }
 
@@ -64,11 +68,36 @@ func runGenericServer(ln net.Listener) server.Server {
 	if err != nil {
 		panic(err)
 	}
-	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
+	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)
 		}
 	}()
+	time.Sleep(100 * time.Millisecond)
+	return svc
+}
+
+func runGenericServerV2(ln net.Listener) server.Server {
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	if err != nil {
+		panic(err)
+	}
+	g, err := generic.JSONThriftGeneric(p)
+	if err != nil {
+		panic(err)
+	}
+	svc := genericserver.NewServerV2(generic.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
+		server.WithExitWaitTime(500*time.Millisecond))
+	go func() {
+		if err := svc.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	time.Sleep(100 * time.Millisecond)
 	return svc
 }

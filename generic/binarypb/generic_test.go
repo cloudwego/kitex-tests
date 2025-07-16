@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"io"
 	"net"
 	"strconv"
 	"testing"
@@ -106,6 +107,9 @@ func TestServerStreaming(t *testing.T) {
 				err = resp.Unmarshal(res.([]byte))
 				test.Assert(t, err == nil)
 				test.Assert(t, resp.Message == "hello world")
+
+				_, err = stream.Recv(stream.Context())
+				test.Assert(t, err == io.EOF)
 			})
 		}
 	}
@@ -126,6 +130,9 @@ func TestBidiStreaming(t *testing.T) {
 				err = stream.Send(stream.Context(), buf)
 				test.Assert(t, err == nil)
 
+				err = stream.CloseSend(stream.Context())
+				test.Assert(t, err == nil)
+
 				res, err := stream.Recv(stream.Context())
 				test.Assert(t, err == nil)
 
@@ -133,6 +140,9 @@ func TestBidiStreaming(t *testing.T) {
 				err = resp.Unmarshal(res.([]byte))
 				test.Assert(t, err == nil)
 				test.Assert(t, resp.Message == "hello world")
+
+				_, err = stream.Recv(stream.Context())
+				test.Assert(t, err == io.EOF)
 			})
 		}
 	}
