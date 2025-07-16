@@ -20,14 +20,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/kerrors"
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 var testaddr string
@@ -42,13 +43,19 @@ func TestMain(m *testing.M) {
 	gsvc.Stop()
 }
 
-func TestClient(t *testing.T) {
+func newGenericClient(destService string, g generic.Generic, opts ...client.Option) (genericclient.Client, error) {
+	opts = append(opts, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+	opts = append(opts, client.WithMetaHandler(transmeta.ClientHTTP2Handler))
+	return genericclient.NewClient(destService, g, opts...)
+}
+
+func TestPingPong(t *testing.T) {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	test.Assert(t, err == nil)
 	g, err := generic.MapThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{
@@ -93,13 +100,13 @@ func TestClient(t *testing.T) {
 	}, respM["Info"])
 }
 
-func TestGeneric(t *testing.T) {
+func TestOneway(t *testing.T) {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	test.Assert(t, err == nil)
 	g, err := generic.MapThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{
@@ -138,7 +145,7 @@ func TestBizErr(t *testing.T) {
 	g, err := generic.MapThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(genericAddress), client.WithMetaHandler(transmeta.ClientTTHeaderHandler), client.WithTransportProtocol(transport.TTHeader))
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericAddress), client.WithTransportProtocol(transport.TTHeader))
 	test.Assert(t, err == nil)
 	_, err = cli.GenericCall(context.Background(), "Echo", nil)
 	bizerr, ok := kerrors.FromBizStatusError(err)

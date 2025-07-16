@@ -52,7 +52,9 @@ func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.
 
 func newGenericServer(pingPongHandler genericserver.PingPongUnknownHandler,
 	streamingHandler genericserver.StreamingUnknownHandler, ln net.Listener, opts ...server.Option) server.Server {
-	opts = append(opts, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
+	opts = append(opts, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	svr := genericserver.NewUnknownServiceOrMethodServer(pingPongHandler, streamingHandler, opts...)
 	go func() {
 		err := svr.Run()
@@ -147,7 +149,9 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 }
 
 func newMockTestServer(handler echo.TestService, ln net.Listener, opts ...server.Option) server.Server {
-	opts = append(opts, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
+	opts = append(opts, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	svr := testservice.NewServer(handler, opts...)
 	go func() {
 		err := svr.Run()
