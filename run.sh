@@ -131,7 +131,7 @@ echo -e "\ngenerating code for testing ...\n"
 rm -rf kitex_gen
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/http.thrift
-kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
+kitex_cmd -streamx -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests -combine-service ./idl/combine_service.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service_2.thrift

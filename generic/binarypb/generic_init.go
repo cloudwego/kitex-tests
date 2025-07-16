@@ -57,7 +57,10 @@ func newGenericServer(pingPongHandler genericserver.PingPongUnknownHandler,
 	opts = append(opts, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
-	svr := genericserver.NewUnknownServiceOrMethodServer(pingPongHandler, streamingHandler, opts...)
+	svr := genericserver.NewUnknownServiceOrMethodServer(&genericserver.UnknownServiceOrMethodHandler{
+		PingPongHandler:      pingPongHandler,
+		BidiStreamingHandler: streamingHandler,
+	}, opts...)
 	go func() {
 		err := svr.Run()
 		if err != nil {

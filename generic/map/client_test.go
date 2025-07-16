@@ -38,9 +38,11 @@ func TestMain(m *testing.M) {
 	testaddr = ln.Addr().String()
 	svc := runServer(ln)
 	gsvc := runGenericServer()
+	g2Svr := runGenericServerV2()
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()
+	g2Svr.Stop()
 }
 
 func newGenericClient(destService string, g generic.Generic, opts ...client.Option) (genericclient.Client, error) {
@@ -147,9 +149,89 @@ func TestBizErr(t *testing.T) {
 
 	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericAddress), client.WithTransportProtocol(transport.TTHeader))
 	test.Assert(t, err == nil)
-	_, err = cli.GenericCall(context.Background(), "Echo", nil)
+	_, err = cli.GenericCall(context.Background(), "Echo", map[string]interface{}{
+		"Msg": "biz_error",
+	})
 	bizerr, ok := kerrors.FromBizStatusError(err)
 	test.Assert(t, ok)
 	test.Assert(t, bizerr.BizStatusCode() == 404)
 	test.Assert(t, bizerr.BizMessage() == "not found")
+}
+
+func TestGenericServiceImplV2_ClientStreaming(t *testing.T) {
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+			test.Assert(t, err == nil)
+			g, err := generic.MapThriftGeneric(p)
+			test.Assert(t, err == nil)
+
+			cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericV2Address), client.WithTransportProtocol(protocol))
+			test.Assert(t, err == nil)
+
+			stream, err := cli.ClientStreaming(context.Background(), "EchoClient")
+			test.Assert(t, err == nil)
+
+			err = stream.Send(stream.Context(), map[string]interface{}{
+				"Msg": "hello world",
+			})
+			test.Assert(t, err == nil)
+
+			resp, err := stream.CloseAndRecv(stream.Context())
+			test.Assert(t, err == nil)
+			test.Assert(t, resp.(map[string]interface{})["Msg"] == "world")
+		})
+	}
+}
+
+func TestGenericServiceImplV2_ServerStreaming(t *testing.T) {
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+			test.Assert(t, err == nil)
+			g, err := generic.MapThriftGeneric(p)
+			test.Assert(t, err == nil)
+
+			cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericV2Address), client.WithTransportProtocol(protocol))
+			test.Assert(t, err == nil)
+
+			stream, err := cli.ServerStreaming(context.Background(), "EchoServer", map[string]interface{}{
+				"Msg": "hello world",
+			})
+			test.Assert(t, err == nil)
+
+			resp, err := stream.Recv(stream.Context())
+			test.Assert(t, err == nil)
+			test.Assert(t, resp.(map[string]interface{})["Msg"] == "world")
+		})
+	}
+}
+
+func TestGenericServiceImplV2_BidiStreaming(t *testing.T) {
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+			test.Assert(t, err == nil)
+			g, err := generic.MapThriftGeneric(p)
+			test.Assert(t, err == nil)
+
+			cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericV2Address), client.WithTransportProtocol(protocol))
+			test.Assert(t, err == nil)
+
+			stream, err := cli.BidirectionalStreaming(context.Background(), "EchoBidi")
+			test.Assert(t, err == nil)
+
+			err = stream.Send(stream.Context(), map[string]interface{}{
+				"Msg": "hello world",
+			})
+			test.Assert(t, err == nil)
+
+			resp, err := stream.Recv(stream.Context())
+			test.Assert(t, err == nil)
+			test.Assert(t, resp.(map[string]interface{})["Msg"] == "world")
+		})
+	}
 }

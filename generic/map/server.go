@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"time"
 
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/transmeta"
@@ -45,6 +46,7 @@ func runServer(ln net.Listener) server.Server {
 			panic(err)
 		}
 	}()
+	time.Sleep(100 * time.Millisecond)
 	return svc
 }
 
@@ -69,5 +71,33 @@ func runGenericServer() server.Server {
 			panic(err)
 		}
 	}()
+	time.Sleep(100 * time.Millisecond)
+	return svc
+}
+
+var genericV2Address string
+
+func runGenericServerV2() server.Server {
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	if err != nil {
+		panic(err)
+	}
+	g, err := generic.MapThriftGeneric(p)
+	if err != nil {
+		panic(err)
+	}
+	ln := serverutils.Listen()
+	genericV2Address = ln.Addr().String()
+	svc := genericserver.NewServerV2(&GenericServiceImplV2{}, g, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
+		server.WithExitWaitTime(500*time.Millisecond),
+	)
+	go func() {
+		if err := svc.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	time.Sleep(100 * time.Millisecond)
 	return svc
 }

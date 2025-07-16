@@ -18,12 +18,15 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
 )
 
 // EchoServiceImpl implements the last service interface defined in the IDL.
-type EchoServiceImpl struct{}
+type EchoServiceImpl struct {
+	tenant.EchoService
+}
 
 // Echo implements the EchoServiceImpl interface.
 func (s *EchoServiceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r *tenant.EchoResponse, err error) {
