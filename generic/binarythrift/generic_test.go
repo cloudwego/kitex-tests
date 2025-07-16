@@ -125,7 +125,7 @@ func TestBidiStreaming(t *testing.T) {
 					addr.String(), client.WithTransportProtocol(protocol))
 				req := &tenant.EchoRequest{Msg: "hello world"}
 				buf := thrift.FastMarshal(req)
-				stream, err := genericClient.BidirectionalStreaming(context.Background(), "EchoServer")
+				stream, err := genericClient.BidirectionalStreaming(context.Background(), "EchoBidi")
 				test.Assert(t, err == nil)
 				err = stream.Send(stream.Context(), buf)
 				test.Assert(t, err == nil)
