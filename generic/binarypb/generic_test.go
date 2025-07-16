@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/transport"
 
@@ -133,4 +134,59 @@ func TestBidiStreaming(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestClientStreamingV1(t *testing.T) {
+	genericClient := newGenericClient(generic.BinaryPbGeneric(serviceName, packageName),
+		genCodeAddr.String(), client.WithTransportProtocol(transport.GRPC))
+	req := &pbapi.MockReq{Message: "hello world"}
+	buf, _ := req.Marshal(nil)
+	stream, err := genericclient.NewClientStreaming(context.Background(), genericClient, "ClientStreamingTest")
+	test.Assert(t, err == nil)
+	err = stream.Send(buf)
+	test.Assert(t, err == nil)
+
+	res, err := stream.CloseAndRecv()
+	test.Assert(t, err == nil)
+
+	resp := &pbapi.MockResp{}
+	err = resp.Unmarshal(res.([]byte))
+	test.Assert(t, err == nil)
+	test.Assert(t, resp.Message == "hello world")
+}
+
+func TestServerStreamingV1(t *testing.T) {
+	genericClient := newGenericClient(generic.BinaryPbGeneric(serviceName, packageName),
+		genCodeAddr.String(), client.WithTransportProtocol(transport.GRPC))
+	req := &pbapi.MockReq{Message: "hello world"}
+	buf, _ := req.Marshal(nil)
+	stream, err := genericclient.NewServerStreaming(context.Background(), genericClient, "ServerStreamingTest", buf)
+	test.Assert(t, err == nil)
+
+	res, err := stream.Recv()
+	test.Assert(t, err == nil)
+
+	resp := &pbapi.MockResp{}
+	err = resp.Unmarshal(res.([]byte))
+	test.Assert(t, err == nil)
+	test.Assert(t, resp.Message == "hello world")
+}
+
+func TestBidiStreamingV1(t *testing.T) {
+	genericClient := newGenericClient(generic.BinaryPbGeneric(serviceName, packageName),
+		genCodeAddr.String(), client.WithTransportProtocol(transport.GRPC))
+	req := &pbapi.MockReq{Message: "hello world"}
+	buf, _ := req.Marshal(nil)
+	stream, err := genericclient.NewBidirectionalStreaming(context.Background(), genericClient, "BidirectionalStreamingTest")
+	test.Assert(t, err == nil)
+	err = stream.Send(buf)
+	test.Assert(t, err == nil)
+
+	res, err := stream.Recv()
+	test.Assert(t, err == nil)
+
+	resp := &pbapi.MockResp{}
+	err = resp.Unmarshal(res.([]byte))
+	test.Assert(t, err == nil)
+	test.Assert(t, resp.Message == "hello world")
 }
