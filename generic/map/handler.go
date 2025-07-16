@@ -95,8 +95,6 @@ func (s *GenericServiceImpl) GenericCall(ctx context.Context, method string, req
 	return getReturnedResponseMap(), nil
 }
 
-var _ generic.ServiceV2 = (*GenericServiceImplV2)(nil)
-
 type GenericServiceImplV2 struct{}
 
 func (s *GenericServiceImplV2) GenericCall(ctx context.Context, service, method string, request interface{}) (response interface{}, err error) {

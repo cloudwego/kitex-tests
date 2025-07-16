@@ -70,7 +70,7 @@ func TestMain(m *testing.M) {
 	gsvc.Stop()
 }
 
-func TestClient(t *testing.T) {
+func TestPingPong(t *testing.T) {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	test.Assert(t, err == nil)
 	g, err := generic.JSONThriftGeneric(p)
@@ -83,7 +83,7 @@ func TestClient(t *testing.T) {
 	test.Assert(t, err == nil)
 }
 
-func TestGeneric(t *testing.T) {
+func TestOneway(t *testing.T) {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	test.Assert(t, err == nil)
 	g, err := generic.JSONThriftGeneric(p)

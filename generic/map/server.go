@@ -88,7 +88,7 @@ func runGenericServerV2() server.Server {
 	}
 	ln := serverutils.Listen()
 	genericV2Address = ln.Addr().String()
-	svc := genericserver.NewServerV2(&GenericServiceImplV2{}, g, server.WithListener(ln),
+	svc := genericserver.NewServerV2(generic.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
 		server.WithExitWaitTime(500*time.Millisecond),

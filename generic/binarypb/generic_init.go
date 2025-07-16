@@ -52,15 +52,11 @@ func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.
 	return cli
 }
 
-func newGenericServer(pingPongHandler genericserver.PingPongUnknownHandler,
-	streamingHandler genericserver.StreamingUnknownHandler, ln net.Listener, opts ...server.Option) server.Server {
+func newGenericServer(handler *genericserver.UnknownServiceOrMethodHandler, ln net.Listener, opts ...server.Option) server.Server {
 	opts = append(opts, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
-	svr := genericserver.NewUnknownServiceOrMethodServer(&genericserver.UnknownServiceOrMethodHandler{
-		PingPongHandler:      pingPongHandler,
-		BidiStreamingHandler: streamingHandler,
-	}, opts...)
+	svr := genericserver.NewUnknownServiceOrMethodServer(handler, opts...)
 	go func() {
 		err := svr.Run()
 		if err != nil {
