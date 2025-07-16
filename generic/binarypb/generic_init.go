@@ -23,7 +23,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/cloudwego/gopkg/protocol/thrift"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
@@ -33,11 +32,14 @@ import (
 	"github.com/cloudwego/kitex/server/genericserver"
 	"github.com/cloudwego/kitex/transport"
 
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi/mock"
 )
 
-const serviceName = "TestService"
+const (
+	serviceName = "Mock"
+	packageName = "pbapi"
+)
 
 func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.Option) genericclient.Client {
 	cliOpts = append(cliOpts, client.WithHostPorts(targetIPPort),
@@ -70,21 +72,21 @@ func pingPongUnknownHandler(ctx context.Context, service, method string, request
 	if service != serviceName && ri.Config().TransportProtocol() != transport.Framed {
 		return nil, fmt.Errorf("service not match")
 	}
-	if method != "PingPong" && method != "Unary" {
+	if method != "UnaryTest" {
 		return nil, fmt.Errorf("method not match")
 	}
-	args := &echo.TestServicePingPongArgs{}
-	err = thrift.FastUnmarshal(request.([]byte), args)
+	args := &mock.UnaryTestArgs{}
+	err = args.Unmarshal(request.([]byte))
 	if err != nil {
 		return nil, err
 	}
 	if args.Req.Message != "hello world" {
 		return nil, fmt.Errorf("message not match")
 	}
-	res := &echo.TestServicePingPongResult{
-		Success: &echo.EchoClientResponse{Message: "hello world"},
+	res := &mock.UnaryTestResult{
+		Success: &pbapi.MockResp{Message: "hello world"},
 	}
-	buf := thrift.FastMarshal(res)
+	buf, _ := res.Marshal(nil)
 	return buf, nil
 }
 
@@ -92,7 +94,7 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 	if service != serviceName {
 		return fmt.Errorf("service not match")
 	}
-	if method == "PingPong" || method == "Unary" {
+	if method == "UnaryTest" {
 		for {
 			req, err := stream.Recv(ctx)
 			if err == io.EOF {
@@ -101,23 +103,23 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 			if err != nil {
 				return err
 			}
-			request := &echo.TestServicePingPongArgs{}
-			err = thrift.FastUnmarshal(req.([]byte), request)
+			request := &mock.UnaryTestArgs{}
+			err = request.Unmarshal(req.([]byte))
 			if err != nil {
 				return err
 			}
 			if request.Req.Message != "hello world" {
 				return fmt.Errorf("message not match")
 			}
-			response := &echo.TestServicePingPongResult{Success: &echo.EchoClientResponse{Message: "hello world"}}
-			buf := thrift.FastMarshal(response)
+			response := &mock.UnaryTestResult{Success: &pbapi.MockResp{Message: "hello world"}}
+			buf, _ := response.Marshal(nil)
 			err = stream.Send(ctx, buf)
 			if err != nil {
 				return err
 			}
 		}
 	} else {
-		if method != "EchoClient" && method != "EchoServer" && method != "EchoBidi" {
+		if method != "ClientStreamingTest" && method != "ServerStreamingTest" && method != "BidirectionalStreamingTest" {
 			return fmt.Errorf("method not match")
 		}
 		for {
@@ -128,16 +130,16 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 			if err != nil {
 				return err
 			}
-			request := &echo.EchoClientRequest{}
-			err = thrift.FastUnmarshal(req.([]byte), request)
+			request := &pbapi.MockReq{}
+			err = request.Unmarshal(req.([]byte))
 			if err != nil {
 				return err
 			}
 			if request.Message != "hello world" {
 				return fmt.Errorf("message not match")
 			}
-			response := &echo.EchoClientResponse{Message: "hello world"}
-			buf := thrift.FastMarshal(response)
+			response := &pbapi.MockResp{Message: "hello world"}
+			buf, _ := response.Marshal(nil)
 			err = stream.Send(ctx, buf)
 			if err != nil {
 				return err
@@ -146,9 +148,9 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 	}
 }
 
-func newMockTestServer(handler echo.TestService, ln net.Listener, opts ...server.Option) server.Server {
+func newMockTestServer(handler pbapi.Mock, ln net.Listener, opts ...server.Option) server.Server {
 	opts = append(opts, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
-	svr := testservice.NewServer(handler, opts...)
+	svr := mock.NewServer(handler, opts...)
 	go func() {
 		err := svr.Run()
 		if err != nil {
@@ -160,25 +162,18 @@ func newMockTestServer(handler echo.TestService, ln net.Listener, opts ...server
 	return svr
 }
 
-type serviceImpl struct {
-}
+var _ pbapi.Mock = &StreamingTestImpl{}
 
-func (s *serviceImpl) PingPong(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
+type StreamingTestImpl struct{}
+
+func (s *StreamingTestImpl) UnaryTest(ctx context.Context, req *pbapi.MockReq) (resp *pbapi.MockResp, err error) {
 	if req.Message != "hello world" {
 		return nil, fmt.Errorf("message not match")
 	}
-	return &echo.EchoClientResponse{Message: "hello world"}, nil
+	return &pbapi.MockResp{Message: "hello world"}, nil
 }
 
-func (s *serviceImpl) Unary(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
-	if req.Message != "hello world" {
-		return nil, fmt.Errorf("message not match")
-	}
-	r = &echo.EchoClientResponse{Message: "hello world"}
-	return
-}
-
-func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_EchoClientServer) (err error) {
+func (s *StreamingTestImpl) ClientStreamingTest(ctx context.Context, stream pbapi.Mock_ClientStreamingTestServer) (err error) {
 	for {
 		req, err := stream.Recv(ctx)
 		if err != nil {
@@ -191,20 +186,20 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 			return fmt.Errorf("message not match")
 		}
 	}
-	return stream.SendAndClose(ctx, &echo.EchoClientResponse{Message: "hello world"})
+	return stream.SendAndClose(ctx, &pbapi.MockResp{Message: "hello world"})
 }
 
-func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientRequest, stream echo.TestService_EchoServerServer) (err error) {
+func (s *StreamingTestImpl) ServerStreamingTest(ctx context.Context, req *pbapi.MockReq, stream pbapi.Mock_ServerStreamingTestServer) (err error) {
 	if req.Message != "hello world" {
 		return fmt.Errorf("message not match")
 	}
-	resp := &echo.EchoClientResponse{
+	resp := &pbapi.MockResp{
 		Message: "hello world",
 	}
 	return stream.Send(ctx, resp)
 }
 
-func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_EchoBidiServer) (err error) {
+func (s *StreamingTestImpl) BidirectionalStreamingTest(ctx context.Context, stream pbapi.Mock_BidirectionalStreamingTestServer) (err error) {
 	for {
 		req, err := stream.Recv(ctx)
 		if err == io.EOF {
@@ -216,7 +211,7 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 		if req.Message != "hello world" {
 			return fmt.Errorf("message not match")
 		}
-		res := &echo.EchoClientResponse{Message: "hello world"}
+		res := &pbapi.MockResp{Message: "hello world"}
 		err = stream.Send(ctx, res)
 		if err != nil {
 			return err
