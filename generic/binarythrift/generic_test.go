@@ -13,9 +13,9 @@ import (
 	"github.com/cloudwego/kitex/server/genericserver"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
 )
 
 var (
@@ -45,16 +45,16 @@ func TestGenericCall(t *testing.T) {
 				genericClient := newGenericClient(generic.BinaryThriftGenericV2(serviceName),
 					addr.String(), client.WithTransportProtocol(protocol))
 
-				args := echo.NewTestServicePingPongArgs()
-				args.Req = &echo.EchoClientRequest{Message: "hello world"}
+				args := tenant.NewEchoServiceEchoArgs()
+				args.Request = &tenant.EchoRequest{Msg: "hello world"}
 				buf := thrift.FastMarshal(args)
-				res, err := genericClient.GenericCall(context.Background(), "PingPong", buf)
+				res, err := genericClient.GenericCall(context.Background(), "Echo", buf)
 				test.Assert(t, err == nil)
 
-				resp := echo.NewTestServicePingPongResult()
+				resp := tenant.NewEchoServiceEchoResult()
 				err = thrift.FastUnmarshal(res.([]byte), resp)
 				test.Assert(t, err == nil)
-				test.Assert(t, resp.Success.Message == "hello world")
+				test.Assert(t, resp.Success.Msg == "hello world")
 			})
 		}
 	}
@@ -68,7 +68,7 @@ func TestClientStreaming(t *testing.T) {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
 				genericClient := newGenericClient(generic.BinaryThriftGenericV2(serviceName),
 					addr.String(), client.WithTransportProtocol(protocol))
-				req := &echo.EchoClientRequest{Message: "hello world"}
+				req := &tenant.EchoRequest{Msg: "hello world"}
 				buf := thrift.FastMarshal(req)
 				stream, err := genericClient.ClientStreaming(context.Background(), "EchoClient")
 				test.Assert(t, err == nil)
@@ -78,10 +78,10 @@ func TestClientStreaming(t *testing.T) {
 				res, err := stream.CloseAndRecv(stream.Context())
 				test.Assert(t, err == nil)
 
-				resp := &echo.EchoClientResponse{}
+				resp := &tenant.EchoResponse{}
 				err = thrift.FastUnmarshal(res.([]byte), resp)
 				test.Assert(t, err == nil)
-				test.Assert(t, resp.Message == "hello world")
+				test.Assert(t, resp.Msg == "hello world")
 			})
 		}
 	}
@@ -95,7 +95,7 @@ func TestServerStreaming(t *testing.T) {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
 				genericClient := newGenericClient(generic.BinaryThriftGenericV2(serviceName),
 					addr.String(), client.WithTransportProtocol(protocol))
-				req := &echo.EchoClientRequest{Message: "hello world"}
+				req := &tenant.EchoRequest{Msg: "hello world"}
 				buf := thrift.FastMarshal(req)
 				stream, err := genericClient.ServerStreaming(context.Background(), "EchoServer", buf)
 				test.Assert(t, err == nil)
@@ -103,10 +103,10 @@ func TestServerStreaming(t *testing.T) {
 				res, err := stream.Recv(stream.Context())
 				test.Assert(t, err == nil)
 
-				resp := &echo.EchoClientResponse{}
+				resp := &tenant.EchoResponse{}
 				err = thrift.FastUnmarshal(res.([]byte), resp)
 				test.Assert(t, err == nil)
-				test.Assert(t, resp.Message == "hello world")
+				test.Assert(t, resp.Msg == "hello world")
 
 				_, err = stream.Recv(stream.Context())
 				test.Assert(t, err == io.EOF)
@@ -123,7 +123,7 @@ func TestBidiStreaming(t *testing.T) {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
 				genericClient := newGenericClient(generic.BinaryThriftGenericV2(serviceName),
 					addr.String(), client.WithTransportProtocol(protocol))
-				req := &echo.EchoClientRequest{Message: "hello world"}
+				req := &tenant.EchoRequest{Msg: "hello world"}
 				buf := thrift.FastMarshal(req)
 				stream, err := genericClient.BidirectionalStreaming(context.Background(), "EchoServer")
 				test.Assert(t, err == nil)
@@ -136,10 +136,10 @@ func TestBidiStreaming(t *testing.T) {
 				res, err := stream.Recv(stream.Context())
 				test.Assert(t, err == nil)
 
-				resp := &echo.EchoClientResponse{}
+				resp := &tenant.EchoResponse{}
 				err = thrift.FastUnmarshal(res.([]byte), resp)
 				test.Assert(t, err == nil)
-				test.Assert(t, resp.Message == "hello world")
+				test.Assert(t, resp.Msg == "hello world")
 
 				_, err = stream.Recv(stream.Context())
 				test.Assert(t, err == io.EOF)

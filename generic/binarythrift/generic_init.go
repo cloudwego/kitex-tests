@@ -33,11 +33,11 @@ import (
 	"github.com/cloudwego/kitex/server/genericserver"
 	"github.com/cloudwego/kitex/transport"
 
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
 )
 
-const serviceName = "TestService"
+const serviceName = "EchoService"
 
 func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.Option) genericclient.Client {
 	cliOpts = append(cliOpts, client.WithHostPorts(targetIPPort),
@@ -71,19 +71,19 @@ func pingPongUnknownHandler(ctx context.Context, service, method string, request
 	if service != serviceName && ri.Config().TransportProtocol() != transport.Framed {
 		return nil, fmt.Errorf("service not match")
 	}
-	if method != "PingPong" && method != "Unary" {
+	if method != "Echo" {
 		return nil, fmt.Errorf("method not match")
 	}
-	args := &echo.TestServicePingPongArgs{}
+	args := &tenant.EchoServiceEchoArgs{}
 	err = thrift.FastUnmarshal(request.([]byte), args)
 	if err != nil {
 		return nil, err
 	}
-	if args.Req.Message != "hello world" {
+	if args.Request.Msg != "hello world" {
 		return nil, fmt.Errorf("message not match")
 	}
-	res := &echo.TestServicePingPongResult{
-		Success: &echo.EchoClientResponse{Message: "hello world"},
+	res := &tenant.EchoServiceEchoResult{
+		Success: &tenant.EchoResponse{Msg: "hello world"},
 	}
 	buf := thrift.FastMarshal(res)
 	return buf, nil
@@ -93,7 +93,7 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 	if service != serviceName {
 		return fmt.Errorf("service not match")
 	}
-	if method == "PingPong" || method == "Unary" {
+	if method == "Echo" {
 		for {
 			req, err := stream.Recv(ctx)
 			if err == io.EOF {
@@ -102,15 +102,15 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 			if err != nil {
 				return err
 			}
-			request := &echo.TestServicePingPongArgs{}
+			request := &tenant.EchoServiceEchoArgs{}
 			err = thrift.FastUnmarshal(req.([]byte), request)
 			if err != nil {
 				return err
 			}
-			if request.Req.Message != "hello world" {
+			if request.Request.Msg != "hello world" {
 				return fmt.Errorf("message not match")
 			}
-			response := &echo.TestServicePingPongResult{Success: &echo.EchoClientResponse{Message: "hello world"}}
+			response := &tenant.EchoServiceEchoResult{Success: &tenant.EchoResponse{Msg: "hello world"}}
 			buf := thrift.FastMarshal(response)
 			err = stream.Send(ctx, buf)
 			if err != nil {
@@ -129,15 +129,15 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 			if err != nil {
 				return err
 			}
-			request := &echo.EchoClientRequest{}
+			request := &tenant.EchoRequest{}
 			err = thrift.FastUnmarshal(req.([]byte), request)
 			if err != nil {
 				return err
 			}
-			if request.Message != "hello world" {
+			if request.Msg != "hello world" {
 				return fmt.Errorf("message not match")
 			}
-			response := &echo.EchoClientResponse{Message: "hello world"}
+			response := &tenant.EchoResponse{Msg: "hello world"}
 			buf := thrift.FastMarshal(response)
 			err = stream.Send(ctx, buf)
 			if err != nil {
@@ -147,11 +147,11 @@ func streamingUnknownHandler(ctx context.Context, service, method string, stream
 	}
 }
 
-func newMockTestServer(handler echo.TestService, ln net.Listener, opts ...server.Option) server.Server {
+func newMockTestServer(handler tenant.EchoService, ln net.Listener, opts ...server.Option) server.Server {
 	opts = append(opts, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
-	svr := testservice.NewServer(handler, opts...)
+	svr := echoservice.NewServer(handler, opts...)
 	go func() {
 		err := svr.Run()
 		if err != nil {
@@ -164,24 +164,17 @@ func newMockTestServer(handler echo.TestService, ln net.Listener, opts ...server
 }
 
 type serviceImpl struct {
+	tenant.EchoService
 }
 
-func (s *serviceImpl) PingPong(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
-	if req.Message != "hello world" {
+func (s *serviceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r *tenant.EchoResponse, err error) {
+	if req.Msg != "hello world" {
 		return nil, fmt.Errorf("message not match")
 	}
-	return &echo.EchoClientResponse{Message: "hello world"}, nil
+	return &tenant.EchoResponse{Msg: "hello world"}, nil
 }
 
-func (s *serviceImpl) Unary(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
-	if req.Message != "hello world" {
-		return nil, fmt.Errorf("message not match")
-	}
-	r = &echo.EchoClientResponse{Message: "hello world"}
-	return
-}
-
-func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_EchoClientServer) (err error) {
+func (s *serviceImpl) EchoClient(ctx context.Context, stream tenant.EchoService_EchoClientServer) (err error) {
 	for {
 		req, err := stream.Recv(ctx)
 		if err != nil {
@@ -190,24 +183,24 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 			}
 			return err
 		}
-		if req.Message != "hello world" {
+		if req.Msg != "hello world" {
 			return fmt.Errorf("message not match")
 		}
 	}
-	return stream.SendAndClose(ctx, &echo.EchoClientResponse{Message: "hello world"})
+	return stream.SendAndClose(ctx, &tenant.EchoResponse{Msg: "hello world"})
 }
 
-func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientRequest, stream echo.TestService_EchoServerServer) (err error) {
-	if req.Message != "hello world" {
+func (s *serviceImpl) EchoServer(ctx context.Context, req *tenant.EchoRequest, stream tenant.EchoService_EchoServerServer) (err error) {
+	if req.Msg != "hello world" {
 		return fmt.Errorf("message not match")
 	}
-	resp := &echo.EchoClientResponse{
-		Message: "hello world",
+	resp := &tenant.EchoResponse{
+		Msg: "hello world",
 	}
 	return stream.Send(ctx, resp)
 }
 
-func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_EchoBidiServer) (err error) {
+func (s *serviceImpl) EchoBidi(ctx context.Context, stream tenant.EchoService_EchoBidiServer) (err error) {
 	for {
 		req, err := stream.Recv(ctx)
 		if err == io.EOF {
@@ -216,10 +209,10 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 		if err != nil {
 			return err
 		}
-		if req.Message != "hello world" {
+		if req.Msg != "hello world" {
 			return fmt.Errorf("message not match")
 		}
-		res := &echo.EchoClientResponse{Message: "hello world"}
+		res := &tenant.EchoResponse{Msg: "hello world"}
 		err = stream.Send(ctx, res)
 		if err != nil {
 			return err
