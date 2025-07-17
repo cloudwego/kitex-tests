@@ -1,0 +1,73 @@
+/*
+ * Copyright 2021 CloudWeGo Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package http;
+
+option go_package = "protobuf/http";
+
+// ReqItem structure
+message ReqItem {
+  int64 id = 1;  // Corresponds to optional i64 id in Thrift
+  string text = 2;  // Corresponds to optional string text in Thrift
+}
+
+// BizCommonParam structure
+message BizCommonParam {
+  int64 api_version = 1;  // Corresponds to optional i64 api_version in Thrift
+  int32 token = 2;  // Corresponds to optional i32 token in Thrift
+}
+
+// BizRequest structure
+message BizRequest {
+  int64 v_int64 = 1;  // Corresponds to optional i64 v_int64 in Thrift
+  string text = 2;  // Corresponds to optional string text in Thrift
+  int32 token = 3;  // Corresponds to optional i32 token in Thrift
+  map<int64, ReqItem> req_items_map = 4;  // Corresponds to optional map<i64, ReqItem> req_items_map in Thrift
+  ReqItem some = 5;  // Corresponds to optional ReqItem some in Thrift
+  repeated string req_items = 6;  // Corresponds to optional list<string> req_items in Thrift
+  int32 api_version = 7;  // Corresponds to optional i32 api_version in Thrift
+  int64 uid = 8;  // Corresponds to optional i64 uid in Thrift
+  repeated int64 cids = 9;  // Corresponds to optional list<i64> cids in Thrift
+  repeated string vids = 10;  // Corresponds to optional list<string> vids in Thrift
+}
+
+// RspItem structure
+message RspItem {
+  int64 item_id = 1;  // Corresponds to optional i64 item_id in Thrift
+  string text = 2;  // Corresponds to optional string text in Thrift
+}
+
+// BizResponse structure
+message BizResponse {
+  string T = 1;  // Corresponds to optional string T in Thrift
+  map<int64, RspItem> rsp_items = 2;  // Corresponds to optional map<i64, RspItem> rsp_items in Thrift
+  int32 v_enum = 3;  // Corresponds to optional i32 v_enum in Thrift
+  repeated RspItem rsp_item_list = 4;  // Corresponds to optional list<RspItem> rsp_item_list in Thrift
+  int32 http_code = 5;  // Corresponds to optional i32 http_code in Thrift
+  repeated int64 item_count = 6;  // Corresponds to optional list<i64> item_count in Thrift
+}
+
+// BizService service
+service BizService {
+  // BizMethod1 RPC method
+  rpc BizMethod1(BizRequest) returns (BizResponse);
+  // BizMethod2 RPC method
+  rpc BizMethod2(BizRequest) returns (BizResponse);
+  // BizMethod3 RPC method
+  rpc BizMethod3(BizRequest) returns (BizResponse);
+}
