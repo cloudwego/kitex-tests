@@ -54,7 +54,7 @@ func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.
 	return cli
 }
 
-func pingPongUnknownHandler(ctx context.Context, service, method string, request interface{}) (response interface{}, err error) {
+func defaultUnknownHandler(ctx context.Context, service, method string, request interface{}) (response interface{}, err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if (service != unknownServiceName && service != serviceName) && ri.Config().TransportProtocol() != transport.Framed {
 		return nil, fmt.Errorf("service not match")
@@ -66,6 +66,22 @@ func pingPongUnknownHandler(ctx context.Context, service, method string, request
 		return nil, fmt.Errorf("message not match")
 	}
 	return []byte(unknownMessage), nil
+}
+
+func ttstreamUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
+	ri := rpcinfo.GetRPCInfo(ctx)
+	if ri.Config().TransportProtocol() != transport.TTHeaderStreaming {
+		return fmt.Errorf("transport protocol not match")
+	}
+	return streamingUnknownHandler(ctx, service, method, stream)
+}
+
+func grpcUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
+	ri := rpcinfo.GetRPCInfo(ctx)
+	if ri.Config().TransportProtocol() != transport.GRPC {
+		return fmt.Errorf("transport protocol not match")
+	}
+	return streamingUnknownHandler(ctx, service, method, stream)
 }
 
 func streamingUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
@@ -98,9 +114,10 @@ func newMockTestServer(handler tenant.EchoService, ln net.Listener, opts ...serv
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	svr := echoservice.NewServer(handler, opts...)
-	err := genericserver.RegisterUnknownServiceOrMethodHandler(svr, &genericserver.UnknownServiceOrMethodHandler{
-		PingPongHandler:  pingPongUnknownHandler,
-		StreamingHandler: streamingUnknownHandler,
+	err := genericserver.RegisterUnknownServiceOrMethodHandler(svr, &generic.UnknownServiceOrMethodHandler{
+		DefaultHandler:  defaultUnknownHandler,
+		GRPCHandler:     grpcUnknownHandler,
+		TTStreamHandler: ttstreamUnknownHandler,
 	})
 	if err != nil {
 		panic(err)

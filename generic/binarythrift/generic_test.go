@@ -10,7 +10,6 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/generic"
-	"github.com/cloudwego/kitex/server/genericserver"
 	"github.com/cloudwego/kitex/transport"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
@@ -30,8 +29,8 @@ func TestMain(m *testing.M) {
 	genericAddr = genericLn.Addr()
 
 	newMockTestServer(&serviceImpl{}, genCodeLn)
-	newGenericServer(&genericserver.UnknownServiceOrMethodHandler{
-		PingPongHandler: pingPongUnknownHandler, StreamingHandler: streamingUnknownHandler}, genericLn)
+	newGenericServer(&generic.UnknownServiceOrMethodHandler{
+		DefaultHandler: pingPongUnknownHandler, TTStreamHandler: ttstreamUnknownHandler, GRPCHandler: grpcUnknownHandler}, genericLn)
 
 	m.Run()
 }
