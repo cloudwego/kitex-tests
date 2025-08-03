@@ -173,6 +173,7 @@ go mod init github.com/cloudwego/kitex-tests
 if [[ -n $LOCAL_REPO ]]; then
     go mod edit -replace github.com/cloudwego/kitex=${LOCAL_REPO}
     go mod edit -replace github.com/cloudwego/kitex/pkg/protocol/bthrift=${LOCAL_REPO}/pkg/protocol/bthrift
+    go mod edit -replace github.com/cloudwego/gopkg=github.com/DMwangnima/gopkg@v0.1.2-0.20250725034155-32a16467e57a
 else
     go get github.com/cloudwego/kitex@$KITEX_LATEST_VERSION
 fi

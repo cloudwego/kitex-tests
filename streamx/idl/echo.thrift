@@ -35,3 +35,9 @@ service TestService {
 service EmptyService {
 
 }
+
+service TestCancelService {
+    EchoClientResponse CancelBidi(1: EchoClientRequest req) (streaming.mode="bidirectional")
+    EchoClientResponse CancelClient(1: EchoClientRequest req) (streaming.mode="client")
+    EchoClientResponse CancelServer(1: EchoClientRequest req) (streaming.mode="server")
+}
