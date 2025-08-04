@@ -29,7 +29,6 @@ import (
 	"github.com/cloudwego/kitex/pkg/endpoint/cep"
 	"github.com/cloudwego/kitex/pkg/endpoint/sep"
 	"github.com/cloudwego/kitex/pkg/kerrors"
-	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/metadata"
 	"github.com/cloudwego/kitex/pkg/remote/trans/ttstream"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
@@ -40,7 +39,6 @@ import (
 	"github.com/cloudwego/kitex/transport"
 
 	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/streamx"
 	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
 	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
@@ -301,7 +299,7 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 	return nil
 }
 
-func runServer(listenaddr string) server.Server {
+func runNormalServer(listenaddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
 	svr := testservice.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second), server.WithTracer(streamx.NewTracer()),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler), server.WithMetaHandler(transmeta.ServerHTTP2Handler),
@@ -373,17 +371,6 @@ func runServer(listenaddr string) server.Server {
 		}
 	}()
 	return svr
-}
-
-var thriftTestAddr string
-
-func TestMain(m *testing.M) {
-	thriftTestAddr = serverutils.NextListenAddr()
-	klog.SetLevel(klog.LevelFatal)
-	svc := runServer(thriftTestAddr)
-	serverutils.Wait(thriftTestAddr)
-	m.Run()
-	svc.Stop()
 }
 
 func TestGRPCStreamingThrift(t *testing.T) {
