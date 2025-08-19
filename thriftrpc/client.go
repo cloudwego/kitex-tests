@@ -21,10 +21,16 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/bytedance/gopkg/cloud/metainfo"
+
 	stability_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability"
 	stservice_apache_codec "github.com/cloudwego/kitex-tests/kitex_gen_apache_codec/thrift/stability/stservice"
 
-	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/pkg/connpool"
+	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/cloudwego/kitex/transport"
+	"github.com/cloudwego/netpoll"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
@@ -32,11 +38,6 @@ import (
 	stability_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability"
 	stservice_slim "github.com/cloudwego/kitex-tests/kitex_gen_slim/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/pkg/utils"
-	"github.com/cloudwego/kitex/client"
-	"github.com/cloudwego/kitex/pkg/connpool"
-	"github.com/cloudwego/kitex/pkg/klog"
-	"github.com/cloudwego/kitex/transport"
-	"github.com/cloudwego/netpoll"
 )
 
 func init() {
@@ -91,9 +92,9 @@ func generateClientOptionsFromParam(param *ClientInitParam, opts ...client.Optio
 		opts = append(opt, opts...)
 	}
 
-	if param.Protocol != transport.PurePayload {
-		opts = append(opts, client.WithTransportProtocol(param.Protocol))
-	}
+	// reset protocol for testing buffered protocol
+	opts = append(opts, client.WithTransportProtocol(transport.PurePayload))
+	opts = append(opts, client.WithTransportProtocol(param.Protocol))
 
 	switch param.ConnMode {
 	case LongConnection:
