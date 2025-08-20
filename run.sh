@@ -195,6 +195,7 @@ if $IS_GO_118; then
   # fix the version when running go1.18
   fixed_version google.golang.org/grpc v1.56.3
   fixed_version google.golang.org/protobuf v1.34.1
+  fixed_version github.com/jhump/protoreflect v1.8.2
 fi
 
 go mod tidy
