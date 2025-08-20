@@ -137,7 +137,7 @@ func TestUnknownException(t *testing.T) {
 	test.Assert(t, err == nil, err)
 	_, err = clientB.Echo2(context.Background(), &multi_service.Request{Message: "multi_service req"})
 	test.Assert(t, err != nil)
-	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown method Echo2")
+	test.DeepEqual(t, err.Error(), "remote or network error[remote]: unknown method Echo2 (service ServiceB)")
 }
 
 func TestUnknownExceptionWithMultiService(t *testing.T) {
