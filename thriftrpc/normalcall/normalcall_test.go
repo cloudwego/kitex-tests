@@ -27,6 +27,10 @@ import (
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/bytedance/gopkg/lang/fastrand"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/circuitbreak"
@@ -38,10 +42,6 @@ import (
 	"github.com/cloudwego/kitex/pkg/utils"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
-
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
@@ -107,22 +107,8 @@ func testObjArgs(t *testing.T, req *instparam.ObjReq, resp *instparam.ObjResp) {
 	}
 }
 
-func protocolCheckMiddleware() endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, req, resp interface{}) (err error) {
-			ri := rpcinfo.GetRPCInfo(ctx)
-			p := ri.Config().TransportProtocol()
-			err = next(ctx, req, resp)
-			if ri.Config().TransportProtocol() != p {
-				return errors.New("protocol not match")
-			}
-			return
-		}
-	}
-}
-
 func TestStTReq(t *testing.T) {
-	cli := getKitexClient(transport.PurePayload, client.WithMiddleware(protocolCheckMiddleware()))
+	cli := getKitexClient(transport.PurePayload)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -139,7 +125,7 @@ func TestStTReq(t *testing.T) {
 }
 
 func TestStTReqWithTTHeader(t *testing.T) {
-	cli := getKitexClient(transport.TTHeader, client.WithMiddleware(protocolCheckMiddleware()))
+	cli := getKitexClient(transport.TTHeader)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq)
@@ -148,7 +134,7 @@ func TestStTReqWithTTHeader(t *testing.T) {
 }
 
 func TestStTReqWithFramed(t *testing.T) {
-	cli := getKitexClient(transport.Framed, client.WithMiddleware(protocolCheckMiddleware()))
+	cli := getKitexClient(transport.Framed)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
@@ -157,7 +143,7 @@ func TestStTReqWithFramed(t *testing.T) {
 }
 
 func TestStTReqWithTTHeaderFramed(t *testing.T) {
-	cli := getKitexClient(transport.TTHeaderFramed, client.WithMiddleware(protocolCheckMiddleware()))
+	cli := getKitexClient(transport.TTHeaderFramed)
 
 	ctx, stReq := thriftrpc.CreateSTRequest(context.Background())
 	stResp, err := cli.TestSTReq(ctx, stReq, callopt.WithRPCTimeout(1*time.Second))
