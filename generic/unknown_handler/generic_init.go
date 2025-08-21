@@ -68,22 +68,6 @@ func defaultUnknownHandler(ctx context.Context, service, method string, request 
 	return []byte(unknownMessage), nil
 }
 
-func ttstreamUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
-	ri := rpcinfo.GetRPCInfo(ctx)
-	if ri.Config().TransportProtocol() != transport.TTHeaderStreaming {
-		return fmt.Errorf("transport protocol not match")
-	}
-	return streamingUnknownHandler(ctx, service, method, stream)
-}
-
-func grpcUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
-	ri := rpcinfo.GetRPCInfo(ctx)
-	if ri.Config().TransportProtocol() != transport.GRPC {
-		return fmt.Errorf("transport protocol not match")
-	}
-	return streamingUnknownHandler(ctx, service, method, stream)
-}
-
 func streamingUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
 	if service != unknownServiceName && service != serviceName {
 		return fmt.Errorf("service not match")
@@ -114,10 +98,9 @@ func newMockTestServer(handler tenant.EchoService, ln net.Listener, opts ...serv
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	svr := echoservice.NewServer(handler, opts...)
-	err := genericserver.RegisterUnknownServiceOrMethodHandler(svr, &generic.UnknownServiceOrMethodHandler{
-		DefaultHandler:  defaultUnknownHandler,
-		GRPCHandler:     grpcUnknownHandler,
-		TTStreamHandler: ttstreamUnknownHandler,
+	err := genericserver.RegisterUnknownServiceOrMethodHandler(svr, &genericserver.UnknownServiceOrMethodHandler{
+		DefaultHandler:   defaultUnknownHandler,
+		StreamingHandler: streamingUnknownHandler,
 	})
 	if err != nil {
 		panic(err)

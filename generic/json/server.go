@@ -27,6 +27,7 @@ import (
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/stability/stservice"
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
+	"github.com/cloudwego/kitex-tests/pkg/utils"
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
@@ -89,7 +90,7 @@ func runGenericServerV2(ln net.Listener) server.Server {
 	if err != nil {
 		panic(err)
 	}
-	svc := genericserver.NewServerV2(generic.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
+	svc := genericserver.NewServerV2(utils.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
 		server.WithExitWaitTime(500*time.Millisecond))

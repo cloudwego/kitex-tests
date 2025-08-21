@@ -50,7 +50,7 @@ func newGenericClient(g generic.Generic, targetIPPort string, cliOpts ...client.
 	return cli
 }
 
-func newGenericServer(handler *generic.UnknownServiceOrMethodHandler, ln net.Listener, opts ...server.Option) server.Server {
+func newGenericServer(handler *genericserver.UnknownServiceOrMethodHandler, ln net.Listener, opts ...server.Option) server.Server {
 	opts = append(opts, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
@@ -87,22 +87,6 @@ func pingPongUnknownHandler(ctx context.Context, service, method string, request
 	}
 	buf := thrift.FastMarshal(res)
 	return buf, nil
-}
-
-func ttstreamUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
-	ri := rpcinfo.GetRPCInfo(ctx)
-	if ri.Config().TransportProtocol() != transport.TTHeaderStreaming {
-		return fmt.Errorf("transport protocol not match")
-	}
-	return streamingUnknownHandler(ctx, service, method, stream)
-}
-
-func grpcUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
-	ri := rpcinfo.GetRPCInfo(ctx)
-	if ri.Config().TransportProtocol() != transport.GRPC {
-		return fmt.Errorf("transport protocol not match")
-	}
-	return streamingUnknownHandler(ctx, service, method, stream)
 }
 
 func streamingUnknownHandler(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {

@@ -26,6 +26,7 @@ import (
 	"github.com/cloudwego/kitex/server/genericserver"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
+	"github.com/cloudwego/kitex-tests/pkg/utils"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
@@ -88,7 +89,7 @@ func runGenericServerV2() server.Server {
 	}
 	ln := serverutils.Listen()
 	genericV2Address = ln.Addr().String()
-	svc := genericserver.NewServerV2(generic.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
+	svc := genericserver.NewServerV2(utils.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
 		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
 		server.WithExitWaitTime(500*time.Millisecond),
