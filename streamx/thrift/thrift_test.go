@@ -387,21 +387,22 @@ func TestMain(m *testing.M) {
 }
 
 func TestGRPCStreamingThrift(t *testing.T) {
-	runClient(t, transport.TTHeader|transport.GRPCStreaming)
+	runClient(t, transport.TTHeader|transport.GRPCStreaming, thriftPingPong_gRPCStreaming)
 }
 
 func TestGRPCThrift(t *testing.T) {
-	runClient(t, transport.GRPC)
+	runClient(t, transport.GRPC, gRPCUnary_gRPCStreaming)
 }
 
 func TestTTHeaderStreaming(t *testing.T) {
-	runClient(t, transport.TTHeader)
+	runClient(t, transport.TTHeader, thriftPingPong_TTHeaderStreaming)
 	// test.Assert(t, atomic.LoadUint32(&ttmh.executed) == 1)
 	test.Assert(t, atomic.LoadUint32(&tthh.executed) == 1)
 }
 
-func runClient(t *testing.T, prot transport.Protocol) {
+func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr), client.WithTracer(streamx.NewTracer()),
+		client.WithTracer(newStreamingProtocolCheckTracer(t, cliType)),
 		client.WithTransportProtocol(prot),
 		client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
 		client.WithUnaryOptions(client.WithUnaryRPCTimeout(200*time.Millisecond),
@@ -585,4 +586,73 @@ func runClient(t *testing.T, prot transport.Protocol) {
 	bizErr, _ := kerrors.FromBizStatusError(err)
 	test.Assert(t, bizErr.BizStatusCode() == 404)
 	test.Assert(t, bizErr.BizMessage() == "not found")
+}
+
+type clientType string
+
+const (
+	gRPCUnary_gRPCStreaming          clientType = "gRPCUnary_gRPCStreaming"
+	thriftPingPong_gRPCStreaming     clientType = "thriftPingPong_gRPCStreaming"
+	thriftPingPong_TTHeaderStreaming clientType = "thriftPingPong_TTHeaderStreaming"
+)
+
+type streamingProtocolCheckTracer struct {
+	t       *testing.T
+	cliType clientType
+}
+
+func newStreamingProtocolCheckTracer(t *testing.T, cliType clientType) *streamingProtocolCheckTracer {
+	return &streamingProtocolCheckTracer{
+		t:       t,
+		cliType: cliType,
+	}
+}
+
+func (tracer *streamingProtocolCheckTracer) Start(ctx context.Context) context.Context {
+	return ctx
+}
+
+func (tracer *streamingProtocolCheckTracer) Finish(ctx context.Context) {
+	t := tracer.t
+	ri := rpcinfo.GetRPCInfo(ctx)
+	test.Assert(t, ri != nil)
+	mode := ri.Invocation().StreamingMode()
+	prot := ri.Config().TransportProtocol()
+	switch ri.To().Method() {
+	case "EchoBidi":
+		test.Assert(t, mode == serviceinfo.StreamingBidirectional, mode)
+		switch tracer.cliType {
+		case gRPCUnary_gRPCStreaming, thriftPingPong_gRPCStreaming:
+			test.Assert(t, prot == transport.GRPC, prot)
+		case thriftPingPong_TTHeaderStreaming:
+			test.Assert(t, prot&transport.TTHeaderStreaming == transport.TTHeaderStreaming, prot)
+		}
+	case "EchoClient":
+		test.Assert(t, mode == serviceinfo.StreamingClient, mode)
+		switch tracer.cliType {
+		case gRPCUnary_gRPCStreaming, thriftPingPong_gRPCStreaming:
+			test.Assert(t, prot == transport.GRPC, prot)
+		case thriftPingPong_TTHeaderStreaming:
+			test.Assert(t, prot&transport.TTHeaderStreaming == transport.TTHeaderStreaming, prot)
+		}
+	case "EchoServer":
+		test.Assert(t, mode == serviceinfo.StreamingServer, mode)
+		switch tracer.cliType {
+		case gRPCUnary_gRPCStreaming, thriftPingPong_gRPCStreaming:
+			test.Assert(t, prot == transport.GRPC, prot)
+		case thriftPingPong_TTHeaderStreaming:
+			test.Assert(t, prot&transport.TTHeaderStreaming == transport.TTHeaderStreaming, prot)
+		}
+	case "PingPong", "Unary":
+		test.Assert(t, mode == serviceinfo.StreamingNone, mode)
+		switch tracer.cliType {
+		case gRPCUnary_gRPCStreaming:
+			test.Assert(t, prot == transport.GRPC, prot)
+		case thriftPingPong_gRPCStreaming:
+			test.Assert(t, prot&transport.GRPC == 0, prot)
+		case thriftPingPong_TTHeaderStreaming:
+			test.Assert(t, prot&transport.TTHeaderStreaming == 0, prot)
+		}
+	}
+	return
 }
