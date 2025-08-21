@@ -17,6 +17,7 @@ package tests
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,14 +30,16 @@ import (
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 var (
-	testaddr    string
-	genericAddr string
-	req         = map[string]interface{}{
+	testaddr      string
+	genericAddr   string
+	genericV2Addr string
+	req           = map[string]interface{}{
 		"Msg": "hello",
 		"I8":  int8(1),
 		"I16": int16(1),
@@ -63,33 +66,43 @@ func TestMain(m *testing.M) {
 	testaddr = ln1.Addr().String()
 	ln2 := serverutils.Listen()
 	genericAddr = ln2.Addr().String()
+	ln3 := serverutils.Listen()
+	genericV2Addr = ln3.Addr().String()
 	svc := runServer(ln1)
 	gsvc := runGenericServer(ln2)
+	gsvc2 := runGenericServerV2(ln3)
 	m.Run()
 	svc.Stop()
 	gsvc.Stop()
+	gsvc2.Stop()
 }
 
-func TestClient(t *testing.T) {
+func newGenericClient(destService string, g generic.Generic, opts ...client.Option) (genericclient.Client, error) {
+	opts = append(opts, client.WithMetaHandler(transmeta.ClientTTHeaderHandler))
+	opts = append(opts, client.WithMetaHandler(transmeta.ClientHTTP2Handler))
+	return genericclient.NewClient(destService, g, opts...)
+}
+
+func TestPingPong(t *testing.T) {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	test.Assert(t, err == nil)
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	_, err = cli.GenericCall(context.Background(), "Echo", string(reqStr))
 	test.Assert(t, err == nil)
 }
 
-func TestGeneric(t *testing.T) {
+func TestOneway(t *testing.T) {
 	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
 	test.Assert(t, err == nil)
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	req := map[string]interface{}{
@@ -128,12 +141,11 @@ func TestBizErr(t *testing.T) {
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g,
+	cli, err := newGenericClient("a.b.c", g,
 		client.WithHostPorts(genericAddr),
-		client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
 		client.WithTransportProtocol(transport.TTHeader))
 	test.Assert(t, err == nil)
-	_, err = cli.GenericCall(context.Background(), "Echo", nil)
+	_, err = cli.GenericCall(context.Background(), "Echo", `{"Msg":"biz_error"}`)
 	bizerr, ok := kerrors.FromBizStatusError(err)
 	test.Assert(t, ok)
 	test.Assert(t, bizerr.BizStatusCode() == 404)
@@ -146,9 +158,100 @@ func TestCombinedServicesParseMode(t *testing.T) {
 	g, err := generic.JSONThriftGeneric(p)
 	test.Assert(t, err == nil)
 
-	cli, err := genericclient.NewClient("a.b.c", g, client.WithHostPorts(testaddr))
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(testaddr))
 	test.Assert(t, err == nil)
 
 	_, err = cli.GenericCall(context.Background(), "Echo", string(reqStr))
 	test.Assert(t, err == nil)
+}
+
+func TestGenericServiceImplV2_ClientStreaming(t *testing.T) {
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+			test.Assert(t, err == nil)
+			g, err := generic.JSONThriftGeneric(p)
+			test.Assert(t, err == nil)
+
+			cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericV2Addr), client.WithTransportProtocol(protocol))
+			test.Assert(t, err == nil)
+
+			stream, err := cli.ClientStreaming(context.Background(), "EchoClient")
+			test.Assert(t, err == nil)
+
+			err = stream.Send(stream.Context(), `{"Msg":"hello world"}`)
+			test.Assert(t, err == nil)
+
+			resp, err := stream.CloseAndRecv(stream.Context())
+			test.Assert(t, err == nil)
+			var response tenant.EchoResponse
+			err = json.Unmarshal([]byte(resp.(string)), &response)
+			test.Assert(t, err == nil)
+			test.Assert(t, response.Msg == "world")
+		})
+	}
+}
+
+func TestGenericServiceImplV2_ServerStreaming(t *testing.T) {
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+			test.Assert(t, err == nil)
+			g, err := generic.JSONThriftGeneric(p)
+			test.Assert(t, err == nil)
+
+			cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericV2Addr), client.WithTransportProtocol(protocol))
+			test.Assert(t, err == nil)
+
+			stream, err := cli.ServerStreaming(context.Background(), "EchoServer", `{"Msg":"hello world"}`)
+			test.Assert(t, err == nil)
+
+			resp, err := stream.Recv(stream.Context())
+			test.Assert(t, err == nil)
+			var response tenant.EchoResponse
+			err = json.Unmarshal([]byte(resp.(string)), &response)
+			test.Assert(t, err == nil)
+			test.Assert(t, response.Msg == "world")
+
+			_, err = stream.Recv(stream.Context())
+			test.Assert(t, err == io.EOF)
+		})
+	}
+}
+
+func TestGenericServiceImplV2_BidiStreaming(t *testing.T) {
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+			test.Assert(t, err == nil)
+			g, err := generic.JSONThriftGeneric(p)
+			test.Assert(t, err == nil)
+
+			cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(genericV2Addr), client.WithTransportProtocol(protocol))
+			test.Assert(t, err == nil)
+
+			stream, err := cli.BidirectionalStreaming(context.Background(), "EchoBidi")
+			test.Assert(t, err == nil)
+
+			err = stream.Send(stream.Context(), `{"Msg":"hello world"}`)
+			test.Assert(t, err == nil)
+
+			err = stream.CloseSend(stream.Context())
+			test.Assert(t, err == nil)
+
+			resp, err := stream.Recv(stream.Context())
+			test.Assert(t, err == nil)
+
+			var response tenant.EchoResponse
+			err = json.Unmarshal([]byte(resp.(string)), &response)
+			test.Assert(t, err == nil)
+			test.Assert(t, response.Msg == "world")
+
+			_, err = stream.Recv(stream.Context())
+			test.Assert(t, err == io.EOF)
+		})
+	}
 }

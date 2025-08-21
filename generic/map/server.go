@@ -18,13 +18,16 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"time"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
-	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/server/genericserver"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
+	"github.com/cloudwego/kitex-tests/pkg/utils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 func assert(expected, actual interface{}) error {
@@ -36,12 +39,15 @@ func assert(expected, actual interface{}) error {
 }
 
 func runServer(ln net.Listener) server.Server {
-	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithListener(ln))
+	svc := echoservice.NewServer(new(EchoServiceImpl), server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)
 		}
 	}()
+	time.Sleep(100 * time.Millisecond)
 	return svc
 }
 
@@ -58,11 +64,41 @@ func runGenericServer() server.Server {
 	}
 	ln := serverutils.Listen()
 	genericAddress = ln.Addr().String()
-	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithListener(ln), server.WithMetaHandler(transmeta.ServerTTHeaderHandler))
+	svc := genericserver.NewServer(&GenericServiceImpl{}, g, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler))
 	go func() {
 		if err := svc.Run(); err != nil {
 			panic(err)
 		}
 	}()
+	time.Sleep(100 * time.Millisecond)
+	return svc
+}
+
+var genericV2Address string
+
+func runGenericServerV2() server.Server {
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	if err != nil {
+		panic(err)
+	}
+	g, err := generic.MapThriftGeneric(p)
+	if err != nil {
+		panic(err)
+	}
+	ln := serverutils.Listen()
+	genericV2Address = ln.Addr().String()
+	svc := genericserver.NewServerV2(utils.ServiceV2Iface2ServiceV2(&GenericServiceImplV2{}), g, server.WithListener(ln),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
+		server.WithExitWaitTime(500*time.Millisecond),
+	)
+	go func() {
+		if err := svc.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	time.Sleep(100 * time.Millisecond)
 	return svc
 }

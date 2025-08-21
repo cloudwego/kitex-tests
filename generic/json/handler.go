@@ -16,36 +16,60 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"sync/atomic"
 
-	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
+	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
 )
 
+var returnedResponse = &tenant.EchoResponse{
+	Msg:       "world",
+	I8:        1,
+	I16:       1,
+	I32:       1,
+	I64:       1,
+	Binary:    []byte("world"),
+	Map:       map[string]string{"hello": "world"},
+	Set:       []string{"hello", "world"},
+	List:      []string{"hello", "world"},
+	ErrorCode: tenant.ErrorCode_FAILURE,
+	Info: &tenant.Info{
+		Map: map[string]string{"hello": "world"},
+		ID:  233333,
+	},
+}
+
+func getReturnedResponseString() string {
+	b, err := json.Marshal(returnedResponse)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 // EchoServiceImpl implements the last service interface defined in the IDL.
-type EchoServiceImpl struct{}
+type EchoServiceImpl struct {
+	tenant.EchoService
+}
 
 // Echo implements the EchoServiceImpl interface.
 func (s *EchoServiceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r *tenant.EchoResponse, err error) {
 	if err := assertRequest(req); err != nil {
 		return nil, err
 	}
-	return &tenant.EchoResponse{
-		Msg:       "world",
-		I8:        1,
-		I16:       1,
-		I32:       1,
-		I64:       1,
-		Binary:    []byte("world"),
-		Map:       map[string]string{"hello": "world"},
-		Set:       []string{"hello", "world"},
-		List:      []string{"hello", "world"},
-		ErrorCode: tenant.ErrorCode_FAILURE,
-		Info: &tenant.Info{
-			Map: map[string]string{"hello": "world"},
-			ID:  233333,
-		},
-	}, nil
+	b, err := json.Marshal(returnedResponse)
+	if err != nil {
+		return nil, err
+	}
+	var resp tenant.EchoResponse
+	if err := json.Unmarshal(b, &resp); err != nil {
+		return nil, err
+	}
+	return &resp, nil
 }
 
 var checkNum int32
@@ -61,7 +85,53 @@ func (s *EchoServiceImpl) EchoOneway(ctx context.Context, req *tenant.EchoReques
 type GenericServiceImpl struct{}
 
 func (s *GenericServiceImpl) GenericCall(ctx context.Context, method string, request interface{}) (response interface{}, err error) {
-	return nil, kerrors.NewBizStatusError(404, "not found")
+	var req tenant.EchoRequest
+	_ = json.Unmarshal([]byte(request.(string)), &req)
+	if req.Msg == "biz_error" {
+		return nil, kerrors.NewBizStatusError(404, "not found")
+	}
+	return getReturnedResponseString(), nil
+}
+
+type GenericServiceImplV2 struct{}
+
+func (s *GenericServiceImplV2) GenericCall(ctx context.Context, service, method string, request interface{}) (response interface{}, err error) {
+	return getReturnedResponseString(), nil
+}
+
+func (s *GenericServiceImplV2) ClientStreaming(ctx context.Context, service, method string, stream generic.ClientStreamingServer) (err error) {
+	req, err := stream.Recv(ctx)
+	if err != nil {
+		return err
+	}
+	var request tenant.EchoRequest
+	_ = json.Unmarshal([]byte(req.(string)), &request)
+	if request.Msg != "hello world" {
+		return errors.New("request msg not match")
+	}
+	return stream.SendAndClose(ctx, getReturnedResponseString())
+}
+
+func (s *GenericServiceImplV2) ServerStreaming(ctx context.Context, service, method string, request interface{}, stream generic.ServerStreamingServer) (err error) {
+	var req tenant.EchoRequest
+	_ = json.Unmarshal([]byte(request.(string)), &req)
+	if req.Msg != "hello world" {
+		return errors.New("request msg not match")
+	}
+	return stream.Send(ctx, getReturnedResponseString())
+}
+
+func (s *GenericServiceImplV2) BidiStreaming(ctx context.Context, service, method string, stream generic.BidiStreamingServer) (err error) {
+	req, err := stream.Recv(ctx)
+	if err != nil {
+		return err
+	}
+	var request tenant.EchoRequest
+	_ = json.Unmarshal([]byte(req.(string)), &request)
+	if request.Msg != "hello world" {
+		return errors.New("request msg not match")
+	}
+	return stream.Send(ctx, getReturnedResponseString())
 }
 
 func assertRequest(req *tenant.EchoRequest) error {
