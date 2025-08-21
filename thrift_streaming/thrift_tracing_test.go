@@ -27,10 +27,6 @@ import (
 	"time"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
-	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
 	"github.com/cloudwego/kitex/client/streamclient"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/kerrors"
@@ -40,6 +36,11 @@ import (
 	"github.com/cloudwego/kitex/pkg/stats"
 	"github.com/cloudwego/kitex/pkg/streaming"
 	"github.com/cloudwego/kitex/server"
+
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo"
+	"github.com/cloudwego/kitex-tests/thrift_streaming/kitex_gen/echo/echoservice"
 )
 
 /*
@@ -96,8 +97,6 @@ func (t *testTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo, 
 			klog.Errorf("recvSize = %v, ri.Stats().RecvSize() = %v", t.recvSize, ri.Stats().RecvSize())
 			panic("recvSize != ri.Stats().RecvSize()")
 		}
-	default:
-		panic(fmt.Sprintf("unknown event: %d", event.Event()))
 	}
 }
 

@@ -19,6 +19,8 @@ import (
 	"errors"
 	"io"
 	"net"
+	"runtime/debug"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -34,6 +36,7 @@ import (
 	"github.com/cloudwego/kitex/pkg/remote/trans/ttstream"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/serviceinfo"
+	"github.com/cloudwego/kitex/pkg/stats"
 	"github.com/cloudwego/kitex/pkg/streaming"
 	"github.com/cloudwego/kitex/pkg/transmeta"
 	"github.com/cloudwego/kitex/server"
@@ -216,6 +219,8 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream tenant.EchoService_
 				if *ri.Invocation().Extra("test_stream_send_event").(*int) != 1 {
 					return errors.New("send event call times is not 1")
 				}
+				// wait for data frame processed first
+				time.Sleep(50 * time.Millisecond)
 			}
 			return err
 		}
@@ -281,6 +286,8 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *tenant.EchoRequest, s
 	if *ri.Invocation().Extra("test_stream_send_event").(*int) != maxReceiveTimes {
 		return errors.New("send event call times is not maxReceiveTimes")
 	}
+	// wait for data frame processed first
+	time.Sleep(50 * time.Millisecond)
 	return nil
 }
 
@@ -384,8 +391,11 @@ func TestTTHeaderStreaming(t *testing.T) {
 }
 
 func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
+	eventTracer := &streamingDetailedEventTracer{}
+	eventTracer.SetT(t)
 	cli := echoservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr), client.WithTracer(streamx.NewTracer()),
 		client.WithTracer(newStreamingProtocolCheckTracer(t, cliType)),
+		client.WithTracer(eventTracer),
 		client.WithTransportProtocol(prot),
 		client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
 		client.WithUnaryOptions(client.WithUnaryRPCTimeout(200*time.Millisecond),
@@ -480,6 +490,7 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	test.Assert(t, b == 1)
 
 	// test bidi bidiStream middleware
+	eventTracer.Reset()
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
 	bidiStream, err := cli.EchoBidi(ctx)
 	test.Assert(t, err == nil)
@@ -493,9 +504,9 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 		test.Assert(t, res.Msg == "pong")
 	}
 	err = bidiStream.CloseSend(ctx)
-	test.Assert(t, err == nil)
+	test.Assert(t, err == nil, err)
 	_, err = bidiStream.Recv(ctx)
-	test.Assert(t, err == io.EOF)
+	test.Assert(t, err == io.EOF, err, err)
 	test.Assert(t, c == 1)
 	test.Assert(t, d == 1)
 	test.Assert(t, e == maxReceiveTimes+1)
@@ -508,8 +519,17 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	td, err := bidiStream.Trailer()
 	test.Assert(t, err == nil)
 	test.Assert(t, td["trailerkey"] == "trailervalue")
+	eventTracer.Verify(
+		stats.StreamSendHeader, stats.StreamSend, stats.StreamRecvHeader, stats.StreamRecv,
+		stats.StreamSend, stats.StreamRecv, stats.StreamSend, stats.StreamRecv,
+		stats.StreamSend, stats.StreamRecv, stats.StreamSend, stats.StreamRecv,
+		stats.StreamSend, stats.StreamRecv, stats.StreamSend, stats.StreamRecv,
+		stats.StreamSend, stats.StreamRecv, stats.StreamSend, stats.StreamRecv,
+		stats.StreamSend, stats.StreamRecv, stats.StreamSendTrailer, stats.StreamRecvTrailer,
+	)
 
 	// test client bidiStream middleware
+	eventTracer.Reset()
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
 	cliStream, err := cli.EchoClient(ctx)
 	test.Assert(t, err == nil)
@@ -531,11 +551,28 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	hd, err = cliStream.Header()
 	test.Assert(t, err == nil)
 	test.Assert(t, hd["headerkey"] == "headervalue")
-	td, err = cliStream.Trailer()
-	test.Assert(t, err == nil)
-	test.Assert(t, td["trailerkey"] == "trailervalue")
+	for {
+		td, err = cliStream.Trailer()
+		test.Assert(t, err == nil)
+		if len(td) == 0 {
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		test.Assert(t, td["trailerkey"] == "trailervalue", td)
+		break
+	}
+	eventTracer.Verify(
+		stats.StreamSendHeader,
+		stats.StreamSend, stats.StreamSend, stats.StreamSend, stats.StreamSend, stats.StreamSend,
+		stats.StreamSend, stats.StreamSend, stats.StreamSend, stats.StreamSend, stats.StreamSend,
+		stats.StreamSendTrailer,
+		stats.StreamRecvHeader,
+		stats.StreamRecv,
+		stats.StreamRecvTrailer,
+	)
 
 	// test server bidiStream middleware
+	eventTracer.Reset()
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
 	serverStream, err := cli.EchoServer(ctx, &tenant.EchoRequest{
 		Msg: "ping",
@@ -561,6 +598,14 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	td, err = serverStream.Trailer()
 	test.Assert(t, err == nil)
 	test.Assert(t, td["trailerkey"] == "trailervalue")
+	eventTracer.Verify(
+		stats.StreamSendHeader, stats.StreamSend,
+		stats.StreamSendTrailer,
+		stats.StreamRecvHeader,
+		stats.StreamRecv, stats.StreamRecv, stats.StreamRecv, stats.StreamRecv, stats.StreamRecv,
+		stats.StreamRecv, stats.StreamRecv, stats.StreamRecv, stats.StreamRecv, stats.StreamRecv,
+		stats.StreamRecvTrailer,
+	)
 
 	// test biz error
 	bidiStream, err = cli.EchoBidi(ctx)
@@ -640,4 +685,62 @@ func (tracer *streamingProtocolCheckTracer) Finish(ctx context.Context) {
 		}
 	}
 	return
+}
+
+type ctxTestKey struct{}
+
+func newCtxWithCtxTestKey(ctx context.Context) context.Context {
+	return context.WithValue(ctx, ctxTestKey{}, "test")
+}
+
+func ctxTestKeyExist(ctx context.Context) bool {
+	return ctx.Value(ctxTestKey{}) != nil
+}
+
+type streamingDetailedEventTracer struct {
+	mu       sync.Mutex
+	t        *testing.T
+	eventBuf []stats.Event
+}
+
+func (tracer *streamingDetailedEventTracer) Start(ctx context.Context) context.Context {
+	tracer.mu.Lock()
+	defer tracer.mu.Unlock()
+	t := tracer.t
+	ri := rpcinfo.GetRPCInfo(ctx)
+	test.Assert(t, ri != nil)
+	return newCtxWithCtxTestKey(ctx)
+}
+
+func (tracer *streamingDetailedEventTracer) Finish(ctx context.Context) {}
+
+func (tracer *streamingDetailedEventTracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo, event rpcinfo.Event) {
+	tracer.mu.Lock()
+	defer tracer.mu.Unlock()
+	t := tracer.t
+	// make sure ReportStreamEvent is invoked after tracer.Start finished
+	test.Assert(t, ctxTestKeyExist(ctx))
+	tracer.eventBuf = append(tracer.eventBuf, event.Event())
+}
+
+func (tracer *streamingDetailedEventTracer) Verify(expects ...stats.Event) {
+	tracer.mu.Lock()
+	defer tracer.mu.Unlock()
+	t := tracer.t
+	test.Assert(t, len(expects) == len(tracer.eventBuf), tracer.eventBuf, string(debug.Stack()))
+	for i, expect := range expects {
+		test.Assert(t, expect.Index() == tracer.eventBuf[i].Index(), tracer.eventBuf)
+	}
+}
+
+func (tracer *streamingDetailedEventTracer) SetT(t *testing.T) {
+	tracer.mu.Lock()
+	defer tracer.mu.Unlock()
+	tracer.t = t
+}
+
+func (tracer *streamingDetailedEventTracer) Reset() {
+	tracer.mu.Lock()
+	defer tracer.mu.Unlock()
+	tracer.eventBuf = tracer.eventBuf[:0]
 }

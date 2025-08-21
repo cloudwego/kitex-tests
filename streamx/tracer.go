@@ -37,14 +37,15 @@ func (t *tracer) Finish(ctx context.Context) {
 }
 
 func (t *tracer) ReportStreamEvent(ctx context.Context, ri rpcinfo.RPCInfo, event rpcinfo.Event) {
-	if event.Event() == stats.StreamSend {
+	switch event.Event() {
+	case stats.StreamSend:
 		if ri.Invocation().Extra("test_stream_send_event") == nil {
 			var count int
 			ri.Invocation().(rpcinfo.InvocationSetter).SetExtra("test_stream_send_event", &count)
 		}
 		count := ri.Invocation().Extra("test_stream_send_event").(*int)
 		*count++
-	} else {
+	case stats.StreamRecv:
 		if ri.Invocation().Extra("test_stream_recv_event") == nil {
 			var count int
 			ri.Invocation().(rpcinfo.InvocationSetter).SetExtra("test_stream_recv_event", &count)
