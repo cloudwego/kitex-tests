@@ -131,7 +131,8 @@ echo -e "\ngenerating code for testing ...\n"
 rm -rf kitex_gen
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/stability.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/http.thrift
-kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
+kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/http.proto
+kitex_cmd -streamx -module github.com/cloudwego/kitex-tests ./idl/tenant.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests -combine-service ./idl/combine_service.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service.thrift
 kitex_cmd -module github.com/cloudwego/kitex-tests ./idl/thrift_multi_service_2.thrift
@@ -142,7 +143,7 @@ kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/grpc_multi_service_2.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/pb_multi_service.proto
 kitex_cmd -module github.com/cloudwego/kitex-tests -I idl -combine-service ./idl/combine_service.proto
-kitex_cmd -module github.com/cloudwego/kitex-tests -I idl ./idl/pbapi.proto
+kitex_cmd -streamx -module github.com/cloudwego/kitex-tests -I idl ./idl/pbapi.proto
 
 rm -rf kitex_gen_slim
 kitex_cmd -module github.com/cloudwego/kitex-tests -thrift template=slim -gen-path kitex_gen_slim ./idl/stability.thrift
@@ -158,8 +159,6 @@ protoc --go-grpc_out=grpc_gen/. ./idl/grpc_demo_2.proto
 
 # generate thrift streaming code
 LOCAL_REPO=$LOCAL_REPO ./thrift_streaming/generate.sh
-# generate thrift streaming code with streamx mode
-cd ./streamx && rm -rf ./kitex_gen && kitex_cmd -streamx -I idl ./idl/echo.thrift && kitex_cmd -streamx -I idl ./idl/echo.proto && cd -
 
 echo -e "\ngenerating code for testing ... done\n"
 
@@ -196,6 +195,7 @@ if $IS_GO_118; then
   # fix the version when running go1.18
   fixed_version google.golang.org/grpc v1.56.3
   fixed_version google.golang.org/protobuf v1.34.1
+  fixed_version github.com/jhump/protoreflect v1.8.2
 fi
 
 go mod tidy
