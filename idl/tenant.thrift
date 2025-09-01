@@ -57,4 +57,7 @@ struct EchoResponse {
 service EchoService {
     EchoResponse Echo(1: EchoRequest request);
     oneway void EchoOneway(1: EchoRequest request);
+    EchoResponse EchoBidi(1: EchoRequest request) (streaming.mode="bidirectional"),
+    EchoResponse EchoClient(1: EchoRequest request) (streaming.mode="client"),
+    EchoResponse EchoServer(1: EchoRequest request) (streaming.mode="server"),
 }

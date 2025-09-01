@@ -39,26 +39,27 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/echoservice"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex-tests/streamx"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echo/testservice"
 )
 
 const maxReceiveTimes = 10
 
 type serviceImpl struct {
+	tenant.EchoService
 }
 
-func (s *serviceImpl) PingPong(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
+func (s *serviceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r *tenant.EchoResponse, err error) {
 	if v, ok := metainfo.GetValue(ctx, "METAKEY"); !ok || v != "METAVALUE" {
 		return nil, errors.New("metainfo is not set")
 	}
-	if req.Message == "test_unary_timeout" {
+	if req.Msg == "test_unary_timeout" {
 		time.Sleep(500 * time.Millisecond)
-		return &echo.EchoClientResponse{
-			Message: "pong",
+		return &tenant.EchoResponse{
+			Msg: "pong",
 		}, nil
 	}
 	if ctx.Value("test_unary_middleware_builder").(string) != "test_unary_middleware_builder" {
@@ -67,33 +68,15 @@ func (s *serviceImpl) PingPong(ctx context.Context, req *echo.EchoClientRequest)
 	if ctx.Value("test_unary_middleware").(string) != "test_unary_middleware" {
 		return nil, errors.New("test_unary_middleware is not set")
 	}
-	if req.Message != "ping" {
+	if req.Msg != "ping" {
 		return nil, errors.New("invalid message")
 	}
-	return &echo.EchoClientResponse{
-		Message: "pong",
+	return &tenant.EchoResponse{
+		Msg: "pong",
 	}, nil
 }
 
-func (s *serviceImpl) Unary(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
-	if v, ok := metainfo.GetValue(ctx, "METAKEY"); !ok || v != "METAVALUE" {
-		return nil, errors.New("metainfo is not set")
-	}
-	if req.Message != "ping" {
-		return nil, errors.New("invalid message")
-	}
-	if ctx.Value("test_unary_middleware_builder").(string) != "test_unary_middleware_builder" {
-		return nil, errors.New("test_unary_middleware_builder is not set")
-	}
-	if ctx.Value("test_unary_middleware").(string) != "test_unary_middleware" {
-		return nil, errors.New("test_unary_middleware is not set")
-	}
-	return &echo.EchoClientResponse{
-		Message: "pong",
-	}, nil
-}
-
-func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_EchoBidiServer) (err error) {
+func (s *serviceImpl) EchoBidi(ctx context.Context, stream tenant.EchoService_EchoBidiServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -157,15 +140,15 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 			}
 			return err
 		}
-		if req.Message == "biz_error" {
+		if req.Msg == "biz_error" {
 			return kerrors.NewBizStatusError(404, "not found")
 		}
 		receivedTimes++
-		if req.Message != "ping" {
+		if req.Msg != "ping" {
 			return errors.New("invalid message")
 		}
-		err = stream.Send(ctx, &echo.EchoClientResponse{
-			Message: "pong",
+		err = stream.Send(ctx, &tenant.EchoResponse{
+			Msg: "pong",
 		})
 		if err != nil {
 			return err
@@ -173,7 +156,7 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 	}
 }
 
-func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_EchoClientServer) (err error) {
+func (s *serviceImpl) EchoClient(ctx context.Context, stream tenant.EchoService_EchoClientServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -218,8 +201,8 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 				if *ri.Invocation().Extra("test_stream_recv_event").(*int) != maxReceiveTimes {
 					return errors.New("recv event call times is not maxReceiveTimes")
 				}
-				err = stream.SendAndClose(ctx, &echo.EchoClientResponse{
-					Message: "pong",
+				err = stream.SendAndClose(ctx, &tenant.EchoResponse{
+					Msg: "pong",
 				})
 				if err != nil {
 					return err
@@ -237,13 +220,13 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 			return err
 		}
 		receivedTimes++
-		if req.Message != "ping" {
+		if req.Msg != "ping" {
 			return errors.New("invalid message")
 		}
 	}
 }
 
-func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientRequest, stream echo.TestService_EchoServerServer) (err error) {
+func (s *serviceImpl) EchoServer(ctx context.Context, req *tenant.EchoRequest, stream tenant.EchoService_EchoServerServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -269,7 +252,7 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 	var b, d int
 	ctx = context.WithValue(ctx, "test_stream_send_middleware", &b)
 	ctx = context.WithValue(ctx, "test_stream_send_middleware_builder", &d)
-	if req.Message != "ping" {
+	if req.Msg != "ping" {
 		return errors.New("invalid message")
 	}
 	err = stream.SendHeader(map[string]string{
@@ -279,8 +262,8 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 		return err
 	}
 	for i := 0; i < maxReceiveTimes; i++ {
-		err := stream.Send(ctx, &echo.EchoClientResponse{
-			Message: "pong",
+		err := stream.Send(ctx, &tenant.EchoResponse{
+			Msg: "pong",
 		})
 		if err != nil {
 			return err
@@ -303,7 +286,7 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 
 func runServer(listenaddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svr := testservice.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second), server.WithTracer(streamx.NewTracer()),
+	svr := echoservice.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second), server.WithTracer(streamx.NewTracer()),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler), server.WithMetaHandler(transmeta.ServerHTTP2Handler),
 		server.WithUnaryOptions(server.WithUnaryMiddleware(func(next endpoint.UnaryEndpoint) endpoint.UnaryEndpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
@@ -401,7 +384,7 @@ func TestTTHeaderStreaming(t *testing.T) {
 }
 
 func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
-	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr), client.WithTracer(streamx.NewTracer()),
+	cli := echoservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr), client.WithTracer(streamx.NewTracer()),
 		client.WithTracer(newStreamingProtocolCheckTracer(t, cliType)),
 		client.WithTransportProtocol(prot),
 		client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
@@ -481,16 +464,18 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	// set metadata kv
 	ctx = metadata.AppendToOutgoingContext(ctx, "metadatakey", "metadatavalue")
 
-	_, err := cli.PingPong(ctx, &echo.EchoClientRequest{
-		Message: "test_unary_timeout",
+	_, err := cli.Echo(ctx, &tenant.EchoRequest{
+		Msg: "test_unary_timeout",
 	})
 	test.Assert(t, kerrors.IsTimeoutError(err))
 
 	// test uanry middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
-	res, err := cli.Unary(ctx, &echo.EchoClientRequest{"ping"})
+	res, err := cli.Echo(ctx, &tenant.EchoRequest{
+		Msg: "ping",
+	})
 	test.Assert(t, err == nil)
-	test.Assert(t, res.Message == "pong")
+	test.Assert(t, res.Msg == "pong")
 	test.Assert(t, a == 1)
 	test.Assert(t, b == 1)
 
@@ -499,13 +484,13 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	bidiStream, err := cli.EchoBidi(ctx)
 	test.Assert(t, err == nil)
 	for i := 0; i < maxReceiveTimes; i++ {
-		err = bidiStream.Send(ctx, &echo.EchoClientRequest{
-			Message: "ping",
+		err = bidiStream.Send(ctx, &tenant.EchoRequest{
+			Msg: "ping",
 		})
 		test.Assert(t, err == nil)
 		res, err = bidiStream.Recv(ctx)
 		test.Assert(t, err == nil)
-		test.Assert(t, res.Message == "pong")
+		test.Assert(t, res.Msg == "pong")
 	}
 	err = bidiStream.CloseSend(ctx)
 	test.Assert(t, err == nil)
@@ -529,14 +514,14 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	cliStream, err := cli.EchoClient(ctx)
 	test.Assert(t, err == nil)
 	for i := 0; i < maxReceiveTimes; i++ {
-		err = cliStream.Send(ctx, &echo.EchoClientRequest{
-			Message: "ping",
+		err = cliStream.Send(ctx, &tenant.EchoRequest{
+			Msg: "ping",
 		})
 		test.Assert(t, err == nil)
 	}
 	res, err = cliStream.CloseAndRecv(ctx)
 	test.Assert(t, err == nil)
-	test.Assert(t, res.Message == "pong")
+	test.Assert(t, res.Msg == "pong")
 	test.Assert(t, c == 1)
 	test.Assert(t, d == 1)
 	test.Assert(t, e == 1)
@@ -552,14 +537,14 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 
 	// test server bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
-	serverStream, err := cli.EchoServer(ctx, &echo.EchoClientRequest{
-		Message: "ping",
+	serverStream, err := cli.EchoServer(ctx, &tenant.EchoRequest{
+		Msg: "ping",
 	})
 	test.Assert(t, err == nil)
 	for i := 0; i < maxReceiveTimes; i++ {
 		res, err = serverStream.Recv(ctx)
 		test.Assert(t, err == nil)
-		test.Assert(t, res.Message == "pong")
+		test.Assert(t, res.Msg == "pong")
 	}
 	_, err = serverStream.Recv(ctx)
 	test.Assert(t, err == io.EOF)
@@ -580,7 +565,7 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	// test biz error
 	bidiStream, err = cli.EchoBidi(ctx)
 	test.Assert(t, err == nil)
-	err = bidiStream.Send(bidiStream.Context(), &echo.EchoClientRequest{Message: "biz_error"})
+	err = bidiStream.Send(bidiStream.Context(), &tenant.EchoRequest{Msg: "biz_error"})
 	test.Assert(t, err == nil)
 	_, err = bidiStream.Recv(bidiStream.Context())
 	bizErr, _ := kerrors.FromBizStatusError(err)

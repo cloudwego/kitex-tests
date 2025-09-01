@@ -39,10 +39,10 @@ import (
 	"github.com/cloudwego/kitex/server"
 	"github.com/cloudwego/kitex/transport"
 
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi/mock"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
-	echo "github.com/cloudwego/kitex-tests/streamx/kitex_gen/echopb"
-	"github.com/cloudwego/kitex-tests/streamx/kitex_gen/echopb/testservice"
 )
 
 const maxReceiveTimes = 10
@@ -50,13 +50,13 @@ const maxReceiveTimes = 10
 type serviceImpl struct {
 }
 
-func (s *serviceImpl) Unary(ctx context.Context, req *echo.EchoClientRequest) (r *echo.EchoClientResponse, err error) {
+func (s *serviceImpl) UnaryTest(ctx context.Context, req *pbapi.MockReq) (r *pbapi.MockResp, err error) {
 	if v, ok := metainfo.GetValue(ctx, "METAKEY"); !ok || v != "METAVALUE" {
 		return nil, errors.New("metainfo is not set")
 	}
 	if req.Message == "test_unary_timeout" {
 		time.Sleep(500 * time.Millisecond)
-		return &echo.EchoClientResponse{
+		return &pbapi.MockResp{
 			Message: "pong",
 		}, nil
 	}
@@ -78,12 +78,12 @@ func (s *serviceImpl) Unary(ctx context.Context, req *echo.EchoClientRequest) (r
 		trailer := metadata.Pairs("unarytrailerkey", "unarytrailervalue")
 		nphttp2.SetTrailer(ctx, trailer)
 	}
-	return &echo.EchoClientResponse{
+	return &pbapi.MockResp{
 		Message: "pong",
 	}, nil
 }
 
-func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_EchoBidiServer) (err error) {
+func (s *serviceImpl) BidirectionalStreamingTest(ctx context.Context, stream pbapi.Mock_BidirectionalStreamingTestServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -145,7 +145,7 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 		if req.Message != "ping" {
 			return errors.New("invalid message")
 		}
-		err = stream.Send(ctx, &echo.EchoClientResponse{
+		err = stream.Send(ctx, &pbapi.MockResp{
 			Message: "pong",
 		})
 		if err != nil {
@@ -154,7 +154,7 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream echo.TestService_Echo
 	}
 }
 
-func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_EchoClientServer) (err error) {
+func (s *serviceImpl) ClientStreamingTest(ctx context.Context, stream pbapi.Mock_ClientStreamingTestServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -197,7 +197,7 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 				if c != maxReceiveTimes+1 {
 					return errors.New("recv middleware builder call times is not maxReceiveTimes")
 				}
-				err = stream.SendAndClose(ctx, &echo.EchoClientResponse{
+				err = stream.SendAndClose(ctx, &pbapi.MockResp{
 					Message: "pong",
 				})
 				if err != nil {
@@ -219,7 +219,7 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream echo.TestService_Ec
 	}
 }
 
-func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientRequest, stream echo.TestService_EchoServerServer) (err error) {
+func (s *serviceImpl) ServerStreamingTest(ctx context.Context, req *pbapi.MockReq, stream pbapi.Mock_ServerStreamingTestServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -255,7 +255,7 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 		return err
 	}
 	for i := 0; i < maxReceiveTimes; i++ {
-		err := stream.Send(ctx, &echo.EchoClientResponse{
+		err := stream.Send(ctx, &pbapi.MockResp{
 			Message: "pong",
 		})
 		if err != nil {
@@ -273,7 +273,7 @@ func (s *serviceImpl) EchoServer(ctx context.Context, req *echo.EchoClientReques
 
 func runServer(listenaddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenaddr)
-	svr := testservice.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second),
+	svr := mock.NewServer(&serviceImpl{}, server.WithServiceAddr(addr), server.WithExitWaitTime(1*time.Second),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler), server.WithMetaHandler(transmeta.ServerHTTP2Handler),
 		server.WithUnaryOptions(server.WithUnaryMiddleware(func(next endpoint.UnaryEndpoint) endpoint.UnaryEndpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
@@ -370,7 +370,7 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 		// grpc streaming has higher priority than ttheader streaming
 		prot |= transport.GRPCStreaming
 	}
-	cli := testservice.MustNewClient("service", client.WithHostPorts(thriftTestAddr),
+	cli := mock.MustNewClient("service", client.WithHostPorts(thriftTestAddr),
 		client.WithTransportProtocol(prot),
 		client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
 		client.WithUnaryOptions(client.WithUnaryRPCTimeout(200*time.Millisecond),
@@ -449,7 +449,7 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 	// set metadata kv
 	ctx = metadata.AppendToOutgoingContext(ctx, "metadatakey", "metadatavalue")
 
-	_, err := cli.Unary(ctx, &echo.EchoClientRequest{
+	_, err := cli.UnaryTest(ctx, &pbapi.MockReq{
 		Message: "test_unary_timeout",
 	})
 	test.Assert(t, kerrors.IsTimeoutError(err))
@@ -459,7 +459,7 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 	var header, trailer metadata.MD
 	ctx = nphttp2.GRPCHeader(ctx, &header)
 	ctx = nphttp2.GRPCTrailer(ctx, &trailer)
-	res, err := cli.Unary(ctx, &echo.EchoClientRequest{Message: "ping"})
+	res, err := cli.UnaryTest(ctx, &pbapi.MockReq{Message: "ping"})
 	test.Assert(t, err == nil)
 	test.Assert(t, res.Message == "pong")
 	test.Assert(t, a == 1)
@@ -471,10 +471,10 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 
 	// test bidi bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
-	bidiStream, err := cli.EchoBidi(ctx)
+	bidiStream, err := cli.BidirectionalStreamingTest(ctx)
 	test.Assert(t, err == nil)
 	for i := 0; i < maxReceiveTimes; i++ {
-		err = bidiStream.Send(ctx, &echo.EchoClientRequest{
+		err = bidiStream.Send(ctx, &pbapi.MockReq{
 			Message: "ping",
 		})
 		test.Assert(t, err == nil)
@@ -501,10 +501,10 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 
 	// test client bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
-	cliStream, err := cli.EchoClient(ctx)
+	cliStream, err := cli.ClientStreamingTest(ctx)
 	test.Assert(t, err == nil)
 	for i := 0; i < maxReceiveTimes; i++ {
-		err = cliStream.Send(ctx, &echo.EchoClientRequest{
+		err = cliStream.Send(ctx, &pbapi.MockReq{
 			Message: "ping",
 		})
 		test.Assert(t, err == nil)
@@ -527,7 +527,7 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 
 	// test server bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
-	serverStream, err := cli.EchoServer(ctx, &echo.EchoClientRequest{
+	serverStream, err := cli.ServerStreamingTest(ctx, &pbapi.MockReq{
 		Message: "ping",
 	})
 	test.Assert(t, err == nil)

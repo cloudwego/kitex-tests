@@ -18,15 +18,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
-	"github.com/cloudwego/kitex-tests/pkg/test"
-	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/jhump/protoreflect/dynamic"
+
+	khttp "github.com/cloudwego/kitex-tests/kitex_gen/protobuf/http"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 )
 
 var testaddr string
@@ -80,4 +85,76 @@ func TestClient(t *testing.T) {
 	test.DeepEqual(t, []interface{}{map[string]interface{}{"item_id": int64(1), "text": "1"}}, resp.Body["rsp_item_list"])
 	test.DeepEqual(t, int32(1), resp.StatusCode)
 	test.DeepEqual(t, "1,2,3", resp.Header.Get("item_count"))
+
+	// unknown method
+	url = "http://example.com/xxx"
+	req, err = http.NewRequest(http.MethodGet, url, nil)
+	test.Assert(t, err == nil, err)
+	customReq, err = generic.FromHTTPRequest(req)
+	test.Assert(t, err == nil, err)
+	respI, err = cli.GenericCall(context.Background(), "", customReq, callopt.WithRPCTimeout(time.Second))
+	test.Assert(t, err.Error() == "internal exception: non-existent method, service: BizService, method: ")
+}
+
+func TestHTTPPbClient(t *testing.T) {
+	p, err := generic.NewThriftFileProvider("../../idl/http.thrift")
+	test.Assert(t, err == nil, err)
+	pbIdl := "../../idl/http.proto"
+	pbf, err := os.Open(pbIdl)
+	test.Assert(t, err == nil)
+	pbContent, err := io.ReadAll(pbf)
+	test.Assert(t, err == nil)
+	pbf.Close()
+	pbp, err := generic.NewPbContentProvider(pbIdl, map[string]string{pbIdl: string(pbContent)})
+	test.Assert(t, err == nil)
+	g, err := generic.HTTPPbThriftGeneric(p, pbp)
+	test.Assert(t, err == nil)
+	cli := newGenericClient("a.b.c", g, testaddr)
+
+	pbData := &khttp.BizRequest{
+		Text: "text",
+		Some: &khttp.ReqItem{
+			Id:   1,
+			Text: "text",
+		},
+		ReqItemsMap: map[int64]*khttp.ReqItem{
+			1: {
+				Id:   1,
+				Text: "text",
+			},
+		},
+	}
+	buf, _ := pbData.Marshal(nil)
+
+	url := "http://example.com/life/client/1/1?v_int64=1&req_items=item1,item2,item3&cids=1,2,3&vids=1,2,3&api_version=1"
+	req, err := http.NewRequest(http.MethodGet, url, bytes.NewBuffer(buf))
+	test.Assert(t, err == nil)
+
+	req.Header.Set("token", "1")
+	customReq, err := generic.FromHTTPPbRequest(req)
+	test.Assert(t, err == nil)
+	respI, err := cli.GenericCall(context.Background(), "", customReq, callopt.WithRPCTimeout(time.Second))
+	test.Assert(t, err == nil)
+	resp, ok := respI.(*generic.HTTPResponse)
+	test.Assert(t, ok)
+	msg := resp.GeneralBody.(*dynamic.Message)
+
+	test.Assert(t, "1" == resp.Header.Get("T"))
+	rspItems := msg.GetMapFieldByName("rsp_items", int64(1))
+	test.Assert(t, rspItems.(*dynamic.Message).GetFieldByName("item_id") == int64(1))
+	test.Assert(t, msg.GetFieldByName("v_enum") == int32(0))
+	item := msg.GetRepeatedFieldByName("rsp_item_list", 0).(*dynamic.Message)
+	test.Assert(t, item.GetFieldByName("item_id") == int64(1))
+	test.Assert(t, item.GetFieldByName("text") == "1")
+	test.DeepEqual(t, int32(1), resp.StatusCode)
+	test.DeepEqual(t, "1,2,3", resp.Header.Get("item_count"))
+
+	// unknown method
+	url = "http://example.com/xxx"
+	req, err = http.NewRequest(http.MethodGet, url, nil)
+	test.Assert(t, err == nil, err)
+	customReq, err = generic.FromHTTPPbRequest(req)
+	test.Assert(t, err == nil, err)
+	respI, err = cli.GenericCall(context.Background(), "", customReq, callopt.WithRPCTimeout(time.Second))
+	test.Assert(t, err.Error() == "internal exception: non-existent method, service: BizService, method: ")
 }
