@@ -54,6 +54,12 @@ struct EchoResponse {
     11: Info Info
 }
 
+service TestCancelService {
+    EchoResponse CancelBidi(1: EchoRequest request) (streaming.mode="bidirectional"),
+    EchoResponse CancelClient(1: EchoRequest request) (streaming.mode="client"),
+    EchoResponse CancelServer(1: EchoRequest request) (streaming.mode="server"),
+}
+
 service EchoService {
     EchoResponse Echo(1: EchoRequest request);
     oneway void EchoOneway(1: EchoRequest request);
