@@ -19,10 +19,13 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex/client"
@@ -43,6 +46,7 @@ import (
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi/mock"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
+	"github.com/cloudwego/kitex-tests/streamx"
 )
 
 const maxReceiveTimes = 10
@@ -70,6 +74,7 @@ func (s *serviceImpl) UnaryTest(ctx context.Context, req *pbapi.MockReq) (r *pba
 		return nil, errors.New("test_unary_middleware is not set")
 	}
 	ri := rpcinfo.GetRPCInfo(ctx)
+	var returnErrMode string
 	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
 		// create and send header
 		header := metadata.Pairs("unaryheaderkey", "unaryheadervalue")
@@ -77,10 +82,17 @@ func (s *serviceImpl) UnaryTest(ctx context.Context, req *pbapi.MockReq) (r *pba
 		// create and set trailer
 		trailer := metadata.Pairs("unarytrailerkey", "unarytrailervalue")
 		nphttp2.SetTrailer(ctx, trailer)
+		md, ok := metadata.FromIncomingContext(ctx)
+		if ok {
+			if modeArr := md[streamx.ReturnErrModeKey]; len(modeArr) > 0 {
+				returnErrMode = md[streamx.ReturnErrModeKey][0]
+			}
+		}
+		err = streamx.GRPCReturnErr(returnErrMode)
 	}
 	return &pbapi.MockResp{
 		Message: "pong",
-	}, nil
+	}, err
 }
 
 func (s *serviceImpl) BidirectionalStreamingTest(ctx context.Context, stream pbapi.Mock_BidirectionalStreamingTestServer) (err error) {
@@ -156,10 +168,15 @@ func (s *serviceImpl) BidirectionalStreamingTest(ctx context.Context, stream pba
 
 func (s *serviceImpl) ClientStreamingTest(ctx context.Context, stream pbapi.Mock_ClientStreamingTestServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
-	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
+	var returnErrMode string
+	isGRPC := ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC
+	if isGRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok || md["metadatakey"][0] != "metadatavalue" {
 			return errors.New("metadata is not set")
+		}
+		if modeArr := md[streamx.ReturnErrModeKey]; len(modeArr) > 0 {
+			returnErrMode = md[streamx.ReturnErrModeKey][0]
 		}
 	}
 	if v, ok := metainfo.GetValue(ctx, "METAKEY"); !ok || v != "METAVALUE" {
@@ -208,6 +225,9 @@ func (s *serviceImpl) ClientStreamingTest(ctx context.Context, stream pbapi.Mock
 				}
 				if d != 1 {
 					return errors.New("send middleware builder call times is not 1")
+				}
+				if isGRPC {
+					return streamx.GRPCReturnErr(returnErrMode)
 				}
 			}
 			return err
@@ -454,7 +474,7 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 	})
 	test.Assert(t, kerrors.IsTimeoutError(err))
 
-	// test uanry middleware
+	// test unary middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
 	var header, trailer metadata.MD
 	ctx = nphttp2.GRPCHeader(ctx, &header)
@@ -466,7 +486,18 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 	test.Assert(t, b == 1)
 	if isGRPCStreaming {
 		test.Assert(t, header["unaryheaderkey"][0] == "unaryheadervalue")
-		// test.Assert(t, trailer["unarytrailerkey"][0] == "unarytrailervalue") // fix a bug, could be removed if decode grpc receive buffer twice is done.
+		test.Assert(t, trailer["unarytrailerkey"][0] == "unarytrailervalue")
+	}
+
+	// test gRPC unary retrieving biz error
+	if isGRPCStreaming {
+		nCtx := metadata.AppendToOutgoingContext(ctx, streamx.ReturnErrModeKey, streamx.ReturnBizErr)
+		res, err = cli.UnaryTest(nCtx, &pbapi.MockReq{Message: "ping"})
+		test.Assert(t, err != nil)
+		bizErr, ok := kerrors.FromBizStatusError(err)
+		test.Assert(t, ok, err)
+		test.Assert(t, bizErr.BizStatusCode() == 10000, err)
+		test.Assert(t, bizErr.BizMessage() == "biz", err)
 	}
 
 	// test bidi bidiStream middleware
@@ -524,6 +555,45 @@ func runClient(t *testing.T, isGRPCStreaming bool) {
 	td, err = cliStream.Trailer()
 	test.Assert(t, err == nil)
 	test.Assert(t, td["trailerkey"] == "trailervalue")
+
+	// test gRPC client bidiStream retrieving errors
+	if isGRPCStreaming {
+		testcases := []string{
+			streamx.ReturnGRPCErr,
+			streamx.ReturnBizErr,
+			streamx.ReturnOtherErr,
+		}
+		for _, tc := range testcases {
+			nCtx := metadata.AppendToOutgoingContext(ctx, streamx.ReturnErrModeKey, tc)
+			cliStream, err = cli.ClientStreamingTest(nCtx)
+			test.Assert(t, err == nil, err)
+			for i := 0; i < maxReceiveTimes; i++ {
+				err = cliStream.Send(cliStream.Context(), &pbapi.MockReq{
+					Message: "ping",
+				})
+				test.Assert(t, err == nil)
+			}
+			res, err = cliStream.CloseAndRecv(cliStream.Context())
+			test.Assert(t, err != nil)
+			switch tc {
+			case streamx.ReturnGRPCErr:
+				st, ok := status.FromError(err)
+				test.Assert(t, ok)
+				test.Assert(t, st.Code() == codes.Internal, st)
+				test.Assert(t, st.Message() == "grpc [biz error]", st)
+			case streamx.ReturnBizErr:
+				bizErr, ok := kerrors.FromBizStatusError(err)
+				test.Assert(t, ok)
+				test.Assert(t, bizErr.BizStatusCode() == 10000, bizErr)
+				test.Assert(t, bizErr.BizMessage() == "biz", bizErr)
+			case streamx.ReturnOtherErr:
+				st, ok := status.FromError(err)
+				test.Assert(t, ok)
+				test.Assert(t, st.Code() == codes.Internal, st)
+				test.Assert(t, strings.Contains(st.Message(), "other [biz error]"), st)
+			}
+		}
+	}
 
 	// test server bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
