@@ -211,7 +211,11 @@ export GOMAXPROCS=$(( 3 * $nproc / 4 ))
 echo -e "\nrunning tests ... \n"
 
 # skip kitex_gen dirs which have no tests
-test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/`
+if $IS_GO_118; then
+  test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/ | grep -v generic/proxy`
+else
+  test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/`
+fi
 
 if [[ -n $LOCAL_REPO && -n $CI ]]; then
     # only generate coverage file in ci env
