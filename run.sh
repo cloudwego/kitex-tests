@@ -36,11 +36,11 @@ export PATH=$PATH_BIN:$PATH
 # coz other runners in the same host may share path like GOMODCACHE, GOCACHE
 export GOBIN=$PATH_BIN
 
-# Fix some dependency versions to ensure compatibility when testing with Go 1.19
-# TODO: Remove this if Go 1.19 is no longer supported
-IS_GO_119=false
-if [[ `go version` == *"go1.19"* ]]; then
-  IS_GO_119=true
+# Fix some dependency versions to ensure compatibility when testing with Go 1.18
+# TODO: Remove this if Go 1.18 is no longer supported
+IS_GO_118=false
+if [[ `go version` == *"go1.18"* ]]; then
+  IS_GO_118=true
 fi
 
 PROTOC_VERSION=v3.20.2
@@ -87,8 +87,8 @@ echo -e "\ninstalling missing commands\n"
 
 PROTOC_GEN_GO_VERSION="latest"
 PROTOC_GEN_GO_GRPC_VERSION="latest"
-if $IS_GO_119; then
-  # fix the version when running go1.19
+if $IS_GO_118; then
+  # fix the version when running go1.18
   PROTOC_GEN_GO_VERSION="v1.31.0"
   PROTOC_GEN_GO_GRPC_VERSION="v1.3.0"
 fi
@@ -191,8 +191,8 @@ fixed_version google.golang.org/genproto/googleapis/rpc v0.0.0-20250227231956-55
 # can we get rid of it one day? used in kitexgrpc/normalcall/normalcall_test.go
 fixed_version github.com/shirou/gopsutil/v3 v3.24.5
 
-if $IS_GO_119; then
-  # fix the version when running go1.19
+if $IS_GO_118; then
+  # fix the version when running go1.18
   fixed_version google.golang.org/grpc v1.56.3
   fixed_version google.golang.org/protobuf v1.34.1
   fixed_version github.com/jhump/protoreflect v1.8.2
