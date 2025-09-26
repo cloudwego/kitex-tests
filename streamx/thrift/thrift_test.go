@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,7 +30,9 @@ import (
 	"github.com/cloudwego/kitex/pkg/endpoint/cep"
 	"github.com/cloudwego/kitex/pkg/endpoint/sep"
 	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/metadata"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 	"github.com/cloudwego/kitex/pkg/remote/trans/ttstream"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/pkg/serviceinfo"
@@ -69,9 +72,20 @@ func (s *serviceImpl) Echo(ctx context.Context, req *tenant.EchoRequest) (r *ten
 	if req.Msg != "ping" {
 		return nil, errors.New("invalid message")
 	}
+	ri := rpcinfo.GetRPCInfo(ctx)
+	var returnErrMode string
+	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
+		md, ok := metadata.FromIncomingContext(ctx)
+		if ok {
+			if modeArr := md[streamx.ReturnErrModeKey]; len(modeArr) > 0 {
+				returnErrMode = md[streamx.ReturnErrModeKey][0]
+			}
+		}
+		err = streamx.GRPCReturnErr(returnErrMode)
+	}
 	return &tenant.EchoResponse{
 		Msg: "pong",
-	}, nil
+	}, err
 }
 
 func (s *serviceImpl) EchoBidi(ctx context.Context, stream tenant.EchoService_EchoBidiServer) (err error) {
@@ -156,10 +170,15 @@ func (s *serviceImpl) EchoBidi(ctx context.Context, stream tenant.EchoService_Ec
 
 func (s *serviceImpl) EchoClient(ctx context.Context, stream tenant.EchoService_EchoClientServer) (err error) {
 	ri := rpcinfo.GetRPCInfo(ctx)
-	if ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC {
+	var returnErrMode string
+	isGRPC := ri.Config().TransportProtocol()&transport.GRPC == transport.GRPC
+	if isGRPC {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok || md["metadatakey"][0] != "metadatavalue" {
 			return errors.New("metadata is not set")
+		}
+		if modeArr := md[streamx.ReturnErrModeKey]; len(modeArr) > 0 {
+			returnErrMode = md[streamx.ReturnErrModeKey][0]
 		}
 	}
 	if v, ok := metainfo.GetValue(ctx, "METAKEY"); !ok || v != "METAVALUE" {
@@ -213,6 +232,9 @@ func (s *serviceImpl) EchoClient(ctx context.Context, stream tenant.EchoService_
 				}
 				if *ri.Invocation().Extra("test_stream_send_event").(*int) != 1 {
 					return errors.New("send event call times is not 1")
+				}
+				if isGRPC {
+					return streamx.GRPCReturnErr(returnErrMode)
 				}
 			}
 			return err
@@ -466,6 +488,19 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	test.Assert(t, a == 1)
 	test.Assert(t, b == 1)
 
+	// test gRPC unary retrieving biz error
+	if cliType == gRPCUnary_gRPCStreaming {
+		nCtx := metadata.AppendToOutgoingContext(ctx, streamx.ReturnErrModeKey, streamx.ReturnBizErr)
+		res, err = cli.Echo(nCtx, &tenant.EchoRequest{
+			Msg: "ping",
+		})
+		test.Assert(t, err != nil)
+		bizErr, ok := kerrors.FromBizStatusError(err)
+		test.Assert(t, ok, err)
+		test.Assert(t, bizErr.BizStatusCode() == 10000, err)
+		test.Assert(t, bizErr.BizMessage() == "biz", err)
+	}
+
 	// test bidi bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
 	bidiStream, err := cli.EchoBidi(ctx)
@@ -521,6 +556,45 @@ func runClient(t *testing.T, prot transport.Protocol, cliType clientType) {
 	td, err = cliStream.Trailer()
 	test.Assert(t, err == nil)
 	test.Assert(t, td["trailerkey"] == "trailervalue")
+
+	// test gRPC client bidiStream retrieving errors
+	if cliType == gRPCUnary_gRPCStreaming || cliType == thriftPingPong_gRPCStreaming {
+		testcases := []string{
+			streamx.ReturnGRPCErr,
+			streamx.ReturnBizErr,
+			streamx.ReturnOtherErr,
+		}
+		for _, tc := range testcases {
+			nCtx := metadata.AppendToOutgoingContext(ctx, streamx.ReturnErrModeKey, tc)
+			cliStream, err = cli.EchoClient(nCtx)
+			test.Assert(t, err == nil, err)
+			for i := 0; i < maxReceiveTimes; i++ {
+				err = cliStream.Send(cliStream.Context(), &tenant.EchoRequest{
+					Msg: "ping",
+				})
+				test.Assert(t, err == nil)
+			}
+			res, err = cliStream.CloseAndRecv(cliStream.Context())
+			test.Assert(t, err != nil)
+			switch tc {
+			case streamx.ReturnGRPCErr:
+				st, ok := status.FromError(err)
+				test.Assert(t, ok)
+				test.Assert(t, st.Code() == codes.Internal, st)
+				test.Assert(t, st.Message() == "grpc [biz error]", st)
+			case streamx.ReturnBizErr:
+				bizErr, ok := kerrors.FromBizStatusError(err)
+				test.Assert(t, ok)
+				test.Assert(t, bizErr.BizStatusCode() == 10000, bizErr)
+				test.Assert(t, bizErr.BizMessage() == "biz", bizErr)
+			case streamx.ReturnOtherErr:
+				st, ok := status.FromError(err)
+				test.Assert(t, ok)
+				test.Assert(t, st.Code() == codes.Internal, st)
+				test.Assert(t, strings.Contains(st.Message(), "other [biz error]"), st)
+			}
+		}
+	}
 
 	// test server bidiStream middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
