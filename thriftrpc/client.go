@@ -243,7 +243,6 @@ func CreateObjReq(ctx context.Context) (context.Context, *instparam.ObjReq) {
 // CreateSHMIPCKitexClient creates a Kitex client with SHMIPC transport
 func CreateSHMIPCKitexClient(param *ClientInitParam, opts ...client.Option) stservice.Client {
 	shmipcSockPath := "./kitex_tests_shmipc.sock"
-	udsSockPath := "./kitex_tests_uds.sock"
 
 	// Set default host ports for shmipc
 	if len(param.HostPorts) == 0 {
@@ -253,12 +252,13 @@ func CreateSHMIPCKitexClient(param *ClientInitParam, opts ...client.Option) stse
 	opts = generateClientOptionsFromParam(param, opts...)
 
 	// Add SHMIPC specific options
+	shmipcAddr, _ := net.ResolveUnixAddr("unix", shmipcSockPath)
 	opts = append(opts,
 		client.WithTransportProtocol(transport.TTHeaderFramed),
 		client.WithTransHandlerFactory(shmipc.NewCliTransHandlerFactory()),
-		client.WithConnPool(shmipc.NewFallbackShmIPCPool(nil,
-			&net.UnixAddr{Net: "unix", Name: shmipcSockPath},
-			&net.UnixAddr{Net: "unix", Name: udsSockPath},
+		client.WithConnPool(shmipc.NewFallbackShmIPCPool(shmipc.NewDefaultOptions(),
+			shmipcAddr,
+			shmipcAddr,
 			param.TargetServiceName, nil)),
 		client.WithLongConnection(
 			connpool.IdleConfig{

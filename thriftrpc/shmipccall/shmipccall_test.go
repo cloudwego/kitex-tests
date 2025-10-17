@@ -17,7 +17,6 @@ package shmipccall
 import (
 	"context"
 	"errors"
-	"net"
 	"os"
 	"testing"
 	"time"
@@ -46,15 +45,10 @@ func TestMain(m *testing.M) {
 	// Cleanup socket files before starting
 	cleanupSocketFiles()
 
-	// Create Unix domain socket listener for server
-	ln, err := net.Listen("unix", udsSockPath)
-	if err != nil {
-		panic(err)
-	}
-	testaddr = udsSockPath
+	testaddr = shmipcSockPath
 
 	svr := thriftrpc.RunSHMIPCServer(&thriftrpc.ServerInitParam{
-		Listener: ln,
+		Listener: nil, // SHMIPC server will create its own listener
 	}, nil)
 
 	m.Run()
