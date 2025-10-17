@@ -18,6 +18,7 @@ import (
 	"context"
 	"math"
 	"math/rand"
+	"net"
 	"runtime"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/connpool"
 	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/cloudwego/kitex/pkg/remote/trans/shmipc"
 	"github.com/cloudwego/kitex/transport"
 	"github.com/cloudwego/netpoll"
 
@@ -236,4 +238,35 @@ func CreateObjReq(ctx context.Context) (context.Context, *instparam.ObjReq) {
 	ctx = metainfo.WithValue(ctx, "TK", "TV")
 	ctx = metainfo.WithPersistentValue(ctx, "PK", "PV")
 	return ctx, req
+}
+
+// CreateSHMIPCKitexClient creates a Kitex client with SHMIPC transport
+func CreateSHMIPCKitexClient(param *ClientInitParam, opts ...client.Option) stservice.Client {
+	shmipcSockPath := "./kitex_tests_shmipc.sock"
+	udsSockPath := "./kitex_tests_uds.sock"
+
+	// Set default host ports for shmipc
+	if len(param.HostPorts) == 0 {
+		param.HostPorts = []string{shmipcSockPath}
+	}
+
+	opts = generateClientOptionsFromParam(param, opts...)
+
+	// Add SHMIPC specific options
+	opts = append(opts,
+		client.WithTransportProtocol(transport.TTHeaderFramed),
+		client.WithTransHandlerFactory(shmipc.NewCliTransHandlerFactory()),
+		client.WithConnPool(shmipc.NewFallbackShmIPCPool(nil,
+			&net.UnixAddr{Net: "unix", Name: shmipcSockPath},
+			&net.UnixAddr{Net: "unix", Name: udsSockPath},
+			param.TargetServiceName, nil)),
+		client.WithLongConnection(
+			connpool.IdleConfig{
+				MaxIdlePerAddress: 1000,
+				MaxIdleGlobal:     1000 * 10,
+				MaxIdleTimeout:    30 * time.Second,
+			}),
+	)
+
+	return stservice.MustNewClient(param.TargetServiceName, opts...)
 }

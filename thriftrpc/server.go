@@ -21,6 +21,10 @@ import (
 	"time"
 
 	"github.com/cloudwego/kitex/pkg/limit"
+	"github.com/cloudwego/kitex/pkg/remote"
+	"github.com/cloudwego/kitex/pkg/remote/trans"
+	"github.com/cloudwego/kitex/pkg/remote/trans/netpoll"
+	"github.com/cloudwego/kitex/pkg/remote/trans/shmipc"
 	"github.com/cloudwego/kitex/server"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/instparam"
@@ -309,4 +313,33 @@ func (S *STServiceApacheCodecHandler) CircuitBreakTest(ctx context.Context, req 
 		FlagMsg: req.FlagMsg,
 	}
 	return resp, nil
+}
+
+// RunSHMIPCServer creates and runs a SHMIPC server
+func RunSHMIPCServer(param *ServerInitParam, handler stability.STService, opts ...server.Option) server.Server {
+	shmipcSockPath := "./kitex_tests_shmipc.sock"
+	udsSockPath := "./kitex_tests_uds.sock"
+
+	opts = generateServerOptionsFromParam(param, opts...)
+	if handler == nil {
+		handler = new(STServiceHandler)
+	}
+
+	// Add SHMIPC specific options
+	opts = append(opts,
+		server.WithServiceAddr(&net.UnixAddr{Net: "unix", Name: udsSockPath}),
+		server.WithTransServerFactory(trans.NewMultipleTransServerFactory([]remote.TransServerFactory{
+			shmipc.NewTransServerFactory(nil, &net.UnixAddr{Net: "unix", Name: shmipcSockPath}),
+			netpoll.NewTransServerFactory()})),
+		server.WithTransHandlerFactory(shmipc.NewSvrTransHandlerFactory()),
+	)
+
+	svr := stservice.NewServer(handler, opts...)
+
+	go func() {
+		if err := svr.Run(); err != nil {
+			panic(err)
+		}
+	}()
+	return svr
 }
