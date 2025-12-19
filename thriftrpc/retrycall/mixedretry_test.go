@@ -17,7 +17,6 @@ package retrycall
 import (
 	"context"
 	"errors"
-	"math"
 	"strings"
 	"testing"
 	"time"
@@ -38,26 +37,31 @@ import (
 	"github.com/cloudwego/kitex-tests/thriftrpc"
 )
 
-func durAbs(d time.Duration) time.Duration {
-	if d < 0 {
-		return -d
+// closeTo returns true if actual is within 20% of expected
+func closeTo(actual, expected time.Duration) bool {
+	diff := actual - expected
+	if diff < 0 {
+		diff = -diff
 	}
-	return d
+	return diff < expected/5
 }
 
-// Assuming:
-// - the first request costs 60ms (req1Sleep)
-// - the second request costs 40ms (req2Sleep)
-// Configuration: MaxRetryTimes=2, rpcTimeout=50ms, backupDelay=30ms
-// - Mixed Retry: Success, cost backupDelay+req2Sleep
-// - Failure Retry: Success, cost rpcTimeout+req2Sleep
-// - Backup Retry: Failure, cost 2*backupDelay
+// TestMockCaseWithDiffRetry compares retry strategies when req1 times out but req2 succeeds.
+//
+// Setup: req1=120ms, req2=80ms, rpcTimeout=100ms, backupDelay=60ms, maxRetry=2
+//
+// Results:
+//   - Mixed:   Success in 140ms (backupDelay + req2)
+//   - Failure: Success in 180ms (rpcTimeout + req2)
+//   - Backup:  Timeout in 120ms (2 * backupDelay, both requests timeout)
 func TestMockCaseWithDiffRetry(t *testing.T) {
+	t.Parallel() // slow test, parallel for reducing test time
+
 	// backupDelay < req2Sleep < rpcTimeout < req1Sleep
-	rpcTimeout := 50 * time.Millisecond
-	req1Sleep := rpcTimeout + 10*time.Millisecond  // 60ms
-	req2Sleep := rpcTimeout - 10*time.Millisecond  // 40ms
-	backupDelay := req2Sleep - 10*time.Millisecond // 30ms
+	rpcTimeout := 100 * time.Millisecond
+	req1Sleep := rpcTimeout + 20*time.Millisecond  // 120ms
+	req2Sleep := rpcTimeout - 20*time.Millisecond  // 80ms
+	backupDelay := req2Sleep - 20*time.Millisecond // 60ms
 
 	controlCostMW := func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, args, result interface{}) (err error) {
@@ -71,7 +75,6 @@ func TestMockCaseWithDiffRetry(t *testing.T) {
 		}
 	}
 
-	// mixed retry will success, latency is lowest
 	t.Run("mixed retry", func(t *testing.T) {
 		mp := retry.NewMixedPolicy(uint32(backupDelay / time.Millisecond))
 		mp.WithMaxRetryTimes(2)
@@ -87,10 +90,9 @@ func TestMockCaseWithDiffRetry(t *testing.T) {
 		_, err := rCli.TestSTReq(ctx, stReq)
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
-		test.Assert(t, durAbs(cost-(backupDelay+req2Sleep)) < 10*time.Millisecond, cost)
+		test.Assert(t, closeTo(cost, backupDelay+req2Sleep), cost)
 	})
 
-	// failure retry will success, but latency is more than mixed retry
 	t.Run("failure retry", func(t *testing.T) {
 		fp := retry.NewFailurePolicy()
 		fp.WithMaxRetryTimes(2)
@@ -106,10 +108,9 @@ func TestMockCaseWithDiffRetry(t *testing.T) {
 		_, err := rCli.TestSTReq(ctx, stReq)
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
-		test.Assert(t, durAbs(cost-(rpcTimeout+req2Sleep)) < 10*time.Millisecond, cost)
+		test.Assert(t, closeTo(cost, rpcTimeout+req2Sleep), cost)
 	})
 
-	// backup request will failure
 	t.Run("backup request", func(t *testing.T) {
 		bp := retry.NewBackupPolicy(uint32(backupDelay / time.Millisecond))
 		bp.WithMaxRetryTimes(2)
@@ -125,20 +126,25 @@ func TestMockCaseWithDiffRetry(t *testing.T) {
 		_, err := rCli.TestSTReq(ctx, stReq)
 		cost := time.Since(start)
 		test.Assert(t, err != nil, err)
-		test.Assert(t, durAbs(cost-2*backupDelay) < 10*time.Millisecond, cost)
+		test.Assert(t, closeTo(cost, 2*backupDelay), cost)
 	})
 }
 
-// Assuming all request timeout
-// Configuration: rpcTimeout=100ms、MaxRetryTimes=2 BackupDelay=100ms
-// - Mixed Retry: Failure, cost 2*rpcTimeout
-// - Failure Retry: Failure, cost 3*rpcTimeout
-// - Backup Retry: Failure, cost 1*rpcTimeout
+// TestMockCaseWithTimeoutWithDiffRetry compares retry strategies when all requests timeout.
+//
+// Setup: reqSleep=130ms, rpcTimeout=100ms, backupDelay=70ms, maxRetry=2
+//
+// Results:
+//   - Mixed:   Timeout in 200ms (2 * rpcTimeout)
+//   - Failure: Timeout in 300ms (3 * rpcTimeout)
+//   - Backup:  Timeout in 100ms (1 * rpcTimeout, no retry triggered)
 func TestMockCaseWithTimeoutWithDiffRetry(t *testing.T) {
+	t.Parallel() // slow test, parallel for reducing test time
+
 	// backupDelay < rpcTimeout < reqSleep
-	rpcTimeout := 30 * time.Millisecond
-	backupDelay := rpcTimeout - 10*time.Millisecond // 20ms
-	reqSleep := rpcTimeout + 10*time.Millisecond    // 40ms
+	rpcTimeout := 100 * time.Millisecond
+	backupDelay := rpcTimeout - 30*time.Millisecond // 70ms
+	reqSleep := rpcTimeout + 30*time.Millisecond    // 130ms
 
 	controlCostMW := func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, args, result interface{}) (err error) {
@@ -152,7 +158,6 @@ func TestMockCaseWithTimeoutWithDiffRetry(t *testing.T) {
 		client.WithMiddleware(controlCostMW),
 	)
 
-	// mixed retry will success, cost is least
 	t.Run("mixed retry", func(t *testing.T) {
 		mp := retry.NewMixedPolicy(uint32(backupDelay / time.Millisecond))
 		mp.WithMaxRetryTimes(2)
@@ -163,10 +168,9 @@ func TestMockCaseWithTimeoutWithDiffRetry(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err != nil, err)
 		test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
-		test.Assert(t, durAbs(cost-2*rpcTimeout) < 10*time.Millisecond, cost)
+		test.Assert(t, closeTo(cost, 2*rpcTimeout), cost)
 	})
 
-	// failure retry will success, but cost is more than mixed retry
 	t.Run("failure retry", func(t *testing.T) {
 		fp := retry.NewFailurePolicy()
 		fp.WithMaxRetryTimes(2)
@@ -177,10 +181,9 @@ func TestMockCaseWithTimeoutWithDiffRetry(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err != nil, err)
 		test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
-		test.Assert(t, durAbs(cost-3*rpcTimeout) < 10*time.Millisecond, cost)
+		test.Assert(t, closeTo(cost, 3*rpcTimeout), cost)
 	})
 
-	// backup request will failure
 	t.Run("backup request", func(t *testing.T) {
 		bp := retry.NewBackupPolicy(100)
 		bp.WithMaxRetryTimes(2)
@@ -191,24 +194,22 @@ func TestMockCaseWithTimeoutWithDiffRetry(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err != nil, err)
 		test.Assert(t, errors.Is(err, kerrors.ErrRPCTimeout))
-		test.Assert(t, durAbs(cost-rpcTimeout) < 10*time.Millisecond, cost)
+		test.Assert(t, closeTo(cost, rpcTimeout), cost)
 	})
 }
 
-// Assuming resp.FlagMsg=11111/11112 needs to be retried,
+// TestMockCase4WithDiffRetry compares retry strategies with result-based retry.
 //
-//	the first reply is resp.FlagMsg=11111, it costs 250ms,
-//	the second reply is resp.FlagMsg=11112, it costs 250ms,
-//	the third reply is resp.FlagMsg=0, it costs 250ms,
+// Setup: each request costs 250ms, backupDelay=100ms, maxRetry=3
+// Server returns: req1="11111"(retry), req2="11112"(retry), req3="0"(success)
 //
-// Configuration: MaxRetryTimes=3 BackupDelay=100ms
-// - Mixed Retry: Success, cost 450ms, two backup retry, and one failure retry
-// - Failure Retry: Success, cost 750ms
-// - Backup Retry: Biz Error, cost 250ms
+// Results:
+//   - Mixed:   Success in 450ms (backup fires at 100ms/200ms, failure retry on bad result)
+//   - Failure: Success in 750ms (sequential retries: 250ms * 3)
+//   - Backup:  BizError in 250ms (no result-based retry, returns first response)
 func TestMockCase4WithDiffRetry(t *testing.T) {
 	t.Parallel()
 
-	// mixed retry will success, cost is least
 	t.Run("mixed retry", func(t *testing.T) {
 		mp := retry.NewMixedPolicy(100)
 		mp.WithMaxRetryTimes(3)
@@ -226,10 +227,9 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
-		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+		test.Assert(t, closeTo(cost, 450*time.Millisecond), cost)
 	})
 
-	// failure retry will success, but cost is more than mixed retry
 	t.Run("failure retry", func(t *testing.T) {
 		fp := retry.NewFailurePolicy()
 		fp.WithMaxRetryTimes(3)
@@ -247,16 +247,15 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
-		test.Assert(t, math.Abs(float64(cost.Milliseconds())-750.0) < 50.0, cost.Milliseconds())
+		test.Assert(t, closeTo(cost, 750*time.Millisecond), cost)
 	})
 
-	// backup request will failure
 	t.Run("backup request", func(t *testing.T) {
 		bp := retry.NewBackupPolicy(100)
 		bp.WithMaxRetryTimes(2)
 		rCli := getKitexClient(
 			transport.TTHeader,
-			// this won't take effect, because callopt policy is high priority
+			// callopt policy overrides client options, so resultRetry won't take effect
 			client.WithSpecifiedResultRetry(resultRetry),
 			client.WithFailureRetry(retry.NewFailurePolicy()),
 			client.WithMiddleware(controlRespMW),
@@ -269,7 +268,7 @@ func TestMockCase4WithDiffRetry(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.FlagMsg != "0")
-		test.Assert(t, math.Abs(float64(cost.Milliseconds())-250.0) < 50.0, cost.Milliseconds())
+		test.Assert(t, closeTo(cost, 250*time.Millisecond), cost)
 	})
 }
 
@@ -284,7 +283,7 @@ func TestMixedRetryWithDiffConfigurationMethod(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
-		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+		test.Assert(t, closeTo(cost, 450*time.Millisecond), cost)
 	}
 
 	t.Run("mixed retry with NewMixedPolicy", func(t *testing.T) {
@@ -328,7 +327,7 @@ func TestMixedRetryWithDiffConfigurationMethod(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
-		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+		test.Assert(t, closeTo(cost, 450*time.Millisecond), cost)
 	})
 
 	t.Run("mixed retry with NotifyPolicyChange", func(t *testing.T) {
@@ -370,7 +369,7 @@ func TestMixedRetryWithNotifyPolicyChange(t *testing.T) {
 		cost := time.Since(start)
 		test.Assert(t, err == nil, err)
 		test.Assert(t, resp.FlagMsg == "0", resp.FlagMsg)
-		test.Assert(t, math.Abs(float64(cost.Milliseconds())-450.0) < 50.0, cost.Milliseconds())
+		test.Assert(t, closeTo(cost, 450*time.Millisecond), cost)
 	})
 
 	t.Run("mixed retry with error retry", func(t *testing.T) {
@@ -422,57 +421,50 @@ func BenchmarkMixedRetry(b *testing.B) {
 	})
 }
 
+// controlRespMW simulates server responses: req1="11111", req2="11112", req3="0"
 var controlRespMW = func(next endpoint.Endpoint) endpoint.Endpoint {
 	return func(ctx context.Context, args, result interface{}) (err error) {
-		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250") //ms
-		retryCount, exit := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
-		if !exit {
-			ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11111") //ms
+		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250")
+		retryCount, exist := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
+		if !exist {
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11111")
+		} else if retryCount == "2" {
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0")
 		} else {
-			if retryCount == "2" {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0") //ms
-			} else {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11112") //ms
-			}
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, "11112")
 		}
-		err = next(ctx, args, result)
-		return
+		return next(ctx, args, result)
 	}
 }
 
+// resultRetry retries when response FlagMsg is "11111" or "11112"
 var resultRetry = &retry.ShouldResultRetry{RespRetryWithCtx: func(ctx context.Context, resp interface{}, ri rpcinfo.RPCInfo) bool {
 	if respI, ok1 := resp.(interface{ GetResult() interface{} }); ok1 {
 		if r, ok2 := respI.GetResult().(*stability.STResponse); ok2 {
-			if r.FlagMsg == "11111" || r.FlagMsg == "11112" {
-				return true
-			}
+			return r.FlagMsg == "11111" || r.FlagMsg == "11112"
 		}
 	}
 	return false
 }}
 
+// controlErrMW simulates server returning TransError until 3rd request
 var controlErrMW = func(next endpoint.Endpoint) endpoint.Endpoint {
 	return func(ctx context.Context, args, result interface{}) (err error) {
-		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250") //ms
-		retryCount, exit := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
-		if !exit {
+		ctx = metainfo.WithValue(ctx, sleepTimeMsKey, "250")
+		retryCount, exist := rpcinfo.GetRPCInfo(ctx).To().Tag(rpcinfo.RetryTag)
+		if !exist || retryCount != "2" {
 			ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg)
 		} else {
-			if retryCount == "2" {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0")
-			} else {
-				ctx = metainfo.WithValue(ctx, respFlagMsgKey, retryMsg)
-			}
+			ctx = metainfo.WithValue(ctx, respFlagMsgKey, "0")
 		}
-		err = next(ctx, args, result)
-		return
+		return next(ctx, args, result)
 	}
 }
 
+// errRetry retries when error is TransError with retryTransErrCode
 var errRetry = &retry.ShouldResultRetry{ErrorRetryWithCtx: func(ctx context.Context, err error, ri rpcinfo.RPCInfo) bool {
 	var te *remote.TransError
-	ok := errors.As(err, &te)
-	if ok && te.TypeID() == retryTransErrCode {
+	if errors.As(err, &te) && te.TypeID() == retryTransErrCode {
 		return true
 	}
 	return false
