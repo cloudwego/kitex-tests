@@ -76,19 +76,19 @@ func (s *ServiceBImpl) EchoB(stream grpc_multi_service.ServiceB_EchoBServer) err
 	return nil
 }
 
-func GetServer(hostport string) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-
-	svr := server.NewServer(server.WithServiceAddr(addr))
+func GetServer(ln net.Listener) server.Server {
+	svr := server.NewServer(server.WithListener(ln))
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	serviceb.RegisterService(svr, new(ServiceBImpl))
-
 	return svr
 }
 
 func TestMultiService(t *testing.T) {
-	hostport := "localhost:9898"
-	svr := GetServer(hostport)
+	ln, err := net.Listen("tcp", ":0")
+	test.Assert(t, err == nil, err)
+	hostport := ln.Addr().String()
+
+	svr := GetServer(ln)
 	go svr.Run()
 	defer svr.Stop()
 
@@ -118,9 +118,11 @@ func TestMultiService(t *testing.T) {
 }
 
 func TestUnknownException(t *testing.T) {
-	hostport := "localhost:9899"
-	addr, _ := net.ResolveTCPAddr("tcp", hostport)
-	svr := server.NewServer(server.WithServiceAddr(addr))
+	ln, err := net.Listen("tcp", ":0")
+	test.Assert(t, err == nil, err)
+	hostport := ln.Addr().String()
+
+	svr := server.NewServer(server.WithListener(ln))
 	servicea.RegisterService(svr, new(ServiceAImpl))
 	go svr.Run()
 	defer svr.Stop()
@@ -138,8 +140,11 @@ func TestUnknownException(t *testing.T) {
 }
 
 func TestUnknownExceptionWithMultiService(t *testing.T) {
-	hostport := "localhost:9900"
-	svr := GetServer(hostport)
+	ln, err := net.Listen("tcp", ":0")
+	test.Assert(t, err == nil, err)
+	hostport := ln.Addr().String()
+
+	svr := GetServer(ln)
 	go svr.Run()
 	defer svr.Stop()
 

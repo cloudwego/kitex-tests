@@ -49,10 +49,8 @@ func handler(ctx context.Context, methodName string, stream streaming.Stream) er
 	return stream.SendMsg(resp)
 }
 
-func GetServer(ip string, hasHandler bool) server.Server {
-	addr, _ := net.ResolveTCPAddr("tcp", ip)
-	var opts []server.Option
-	opts = append(opts, server.WithServiceAddr(addr))
+func GetServer(ln net.Listener, hasHandler bool) server.Server {
+	opts := []server.Option{server.WithListener(ln)}
 	if hasHandler {
 		opts = append(opts, server.WithGRPCUnknownServiceHandler(handler))
 	}
@@ -61,13 +59,15 @@ func GetServer(ip string, hasHandler bool) server.Server {
 
 // TestUnknownServiceError test if the server send unknown method err when there is no matching method.
 func TestUnknownServiceError(t *testing.T) {
-	ip := "localhost:9899" // avoid conflict with other tests
-	svr := GetServer(ip, false)
+	ln, err := net.Listen("tcp", ":0")
+	test.Assert(t, err == nil, err)
+
+	svr := GetServer(ln, false)
 	go svr.Run()
 	defer svr.Stop()
 
 	time.Sleep(50 * time.Millisecond)
-	client, err := servicea.NewClient("grpcService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	client, err := servicea.NewClient("grpcService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ln.Addr().String()))
 	test.Assert(t, err == nil, err)
 	defer clientutils.CallClose(client)
 
@@ -79,13 +79,15 @@ func TestUnknownServiceError(t *testing.T) {
 
 // TestUnknownServiceHandler test if handler works when there is no matching method on server.
 func TestUnknownServiceHandler(t *testing.T) {
-	ip := "localhost:9898"
-	svr := GetServer(ip, true)
+	ln, err := net.Listen("tcp", ":0")
+	test.Assert(t, err == nil, err)
+
+	svr := GetServer(ln, true)
 	go svr.Run()
 	defer svr.Stop()
 
 	time.Sleep(50 * time.Millisecond)
-	client, err := servicea.NewClient("grpcService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ip))
+	client, err := servicea.NewClient("grpcService", client.WithTransportProtocol(transport.GRPC), client.WithHostPorts(ln.Addr().String()))
 	test.Assert(t, err == nil, err)
 	defer clientutils.CallClose(client)
 
