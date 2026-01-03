@@ -25,8 +25,7 @@ func NewTracer() stats.Tracer {
 	return &tracer{}
 }
 
-type tracer struct {
-}
+type tracer struct{}
 
 func (t *tracer) Start(ctx context.Context) context.Context {
 	return ctx
