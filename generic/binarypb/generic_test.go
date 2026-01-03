@@ -55,7 +55,7 @@ func TestMain(m *testing.M) {
 
 func TestGenericCall(t *testing.T) {
 	addresses := []net.Addr{genericAddr, genCodeAddr}
-	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader, transport.TTHeaderStreaming | transport.TTHeader}
 	for i, addr := range addresses {
 		for _, protocol := range protocols {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
@@ -78,7 +78,9 @@ func TestGenericCall(t *testing.T) {
 
 func TestClientStreaming(t *testing.T) {
 	addresses := []net.Addr{genericAddr, genCodeAddr}
-	protocols := []transport.Protocol{transport.GRPCStreaming, transport.GRPC}
+	protocols := []transport.Protocol{transport.GRPCStreaming, transport.GRPC} // Todo: add ttstream test back when ttstream with pb is merged
+	//transport.TTHeaderStreaming,
+
 	for i, addr := range addresses {
 		for _, protocol := range protocols {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
@@ -105,7 +107,9 @@ func TestClientStreaming(t *testing.T) {
 
 func TestServerStreaming(t *testing.T) {
 	addresses := []net.Addr{genericAddr, genCodeAddr}
-	protocols := []transport.Protocol{transport.GRPCStreaming, transport.GRPC}
+	protocols := []transport.Protocol{transport.GRPCStreaming, transport.GRPC} // Todo: add ttstream test back when ttstream with pb is merged
+	//transport.TTHeaderStreaming,
+
 	for i, addr := range addresses {
 		for _, protocol := range protocols {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
@@ -133,7 +137,9 @@ func TestServerStreaming(t *testing.T) {
 
 func TestBidiStreaming(t *testing.T) {
 	addresses := []net.Addr{genericAddr, genCodeAddr}
-	protocols := []transport.Protocol{transport.GRPCStreaming, transport.GRPC}
+	protocols := []transport.Protocol{transport.GRPCStreaming, transport.GRPC} // Todo: add ttstream test back when ttstream with pb is merged
+	//transport.TTHeaderStreaming,
+
 	for i, addr := range addresses {
 		for _, protocol := range protocols {
 			t.Run(strconv.Itoa(i)+protocol.String(), func(t *testing.T) {
