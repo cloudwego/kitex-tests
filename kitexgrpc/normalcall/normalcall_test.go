@@ -100,10 +100,10 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("reuse", func(t *testing.T) {
+	t.Run("gRPC would not reuse rpcinfo", func(t *testing.T) {
 		_, err := cli.CallUnary(ctx, &grpc_demo.Request{Name: "1"})
 		test.Assert(t, err == nil, err)
-		test.Assert(t, ri.Invocation().MethodName() == "", ri.Invocation().MethodName()) // zeroed
+		test.Assert(t, ri.Invocation().MethodName() != "", ri.Invocation().MethodName())
 	})
 
 	t.Run("disable reuse", func(t *testing.T) {
