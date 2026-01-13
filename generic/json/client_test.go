@@ -166,7 +166,7 @@ func TestCombinedServicesParseMode(t *testing.T) {
 }
 
 func TestGenericServiceImplV2_ClientStreaming(t *testing.T) {
-	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader, transport.TTHeaderStreaming | transport.TTHeader}
 	for _, protocol := range protocols {
 		t.Run(protocol.String(), func(t *testing.T) {
 			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
@@ -194,7 +194,7 @@ func TestGenericServiceImplV2_ClientStreaming(t *testing.T) {
 }
 
 func TestGenericServiceImplV2_ServerStreaming(t *testing.T) {
-	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader, transport.TTHeaderStreaming | transport.TTHeader}
 	for _, protocol := range protocols {
 		t.Run(protocol.String(), func(t *testing.T) {
 			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
@@ -222,7 +222,7 @@ func TestGenericServiceImplV2_ServerStreaming(t *testing.T) {
 }
 
 func TestGenericServiceImplV2_BidiStreaming(t *testing.T) {
-	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader}
+	protocols := []transport.Protocol{transport.Framed, transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader, transport.TTHeaderStreaming | transport.TTHeader}
 	for _, protocol := range protocols {
 		t.Run(protocol.String(), func(t *testing.T) {
 			p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")

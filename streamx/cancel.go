@@ -1,0 +1,616 @@
+// Copyright 2026 CloudWeGo Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package streamx
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/bytedance/gopkg/cloud/metainfo"
+	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/callopt/streamcall"
+	"github.com/cloudwego/kitex/pkg/kerrors"
+	"github.com/cloudwego/kitex/pkg/klog"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
+	"github.com/cloudwego/kitex/pkg/rpcinfo"
+	"github.com/cloudwego/kitex/pkg/streaming"
+	"github.com/cloudwego/kitex/pkg/transmeta"
+	"github.com/cloudwego/kitex/server"
+	"github.com/cloudwego/kitex/transport"
+
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi"
+	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/pbapi/testpbcancelservice"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant"
+	"github.com/cloudwego/kitex-tests/kitex_gen/thrift/tenant/testcancelservice"
+	"github.com/cloudwego/kitex-tests/pkg/test"
+)
+
+var (
+	CancelFinishChan = make(chan struct{}, 1)
+	CancelTChan      = make(chan *testing.T, 1)
+	CancelSendChan   = make(chan struct{}, 1)
+)
+
+const (
+	clientStreamingWithoutSendingAnyReq    string = "client_streaming_without_sending_any_req"
+	clientStreamingDuringNormalInteraction string = "client_streaming_during_normal_interaction"
+	clientStreamingDeferCancel             string = "client_streaming_defer_cancel"
+
+	serverStreamingRemoteRespondingSlowly  string = "server_streaming_remote_responding_slowly"
+	serverStreamingDuringNormalInteraction string = "server_streaming_during_normal_interaction"
+	serverStreamingDeferCancel             string = "server_streaming_defer_cancel"
+
+	bidiStreamingIndependentSendRecv string = "bidi_streaming_independent_send_recv"
+
+	scenarioKey       = "SCENARIO"
+	bizSpecialMessage = "biz_special_message"
+)
+
+func RunTestCancelServer(listenAddr string) server.Server {
+	addr, _ := net.ResolveTCPAddr("tcp", listenAddr)
+	svr := testcancelservice.NewServer(&cancelThriftImpl{},
+		server.WithServiceAddr(addr),
+		server.WithExitWaitTime(1*time.Second),
+		server.WithTracer(NewTracer()),
+		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
+		server.WithMetaHandler(transmeta.ServerHTTP2Handler),
+	)
+	err := testpbcancelservice.RegisterService(svr, &cancelPbImpl{})
+	if err != nil {
+		panic(err)
+	}
+	go func() {
+		if err := svr.Run(); err != nil {
+			println(err)
+		}
+	}()
+	return svr
+}
+
+type cancelThriftImpl struct{}
+
+func (s cancelThriftImpl) CancelBidi(ctx context.Context, stream tenant.TestCancelService_CancelBidiServer) (err error) {
+	return commonCancelBidiImpl[tenant.EchoRequest, tenant.EchoResponse, tenant.TestCancelService_CancelBidiServer](
+		ctx, stream,
+		func(s string) *tenant.EchoResponse {
+			return &tenant.EchoResponse{Msg: s}
+		},
+	)
+}
+
+func (s cancelThriftImpl) CancelClient(ctx context.Context, stream tenant.TestCancelService_CancelClientServer) (err error) {
+	return commonCancelClientImpl[tenant.EchoRequest, tenant.EchoResponse, tenant.TestCancelService_CancelClientServer](ctx, stream)
+}
+
+func (s cancelThriftImpl) CancelServer(ctx context.Context, req *tenant.EchoRequest, stream tenant.TestCancelService_CancelServerServer) (err error) {
+	return commonCancelServerImpl[tenant.EchoResponse, tenant.TestCancelService_CancelServerServer](
+		ctx, stream,
+		func(s string) *tenant.EchoResponse {
+			return &tenant.EchoResponse{Msg: s}
+		},
+	)
+}
+
+type cancelPbImpl struct{}
+
+func (s cancelPbImpl) CancelPbBidi(ctx context.Context, stream pbapi.TestPbCancelService_CancelPbBidiServer) (err error) {
+	return commonCancelBidiImpl[pbapi.MockReq, pbapi.MockResp, pbapi.TestPbCancelService_CancelPbBidiServer](
+		ctx, stream,
+		func(s string) *pbapi.MockResp {
+			return &pbapi.MockResp{Message: s}
+		},
+	)
+}
+
+func (s cancelPbImpl) CancelPbClient(ctx context.Context, stream pbapi.TestPbCancelService_CancelPbClientServer) (err error) {
+	return commonCancelClientImpl[pbapi.MockReq, pbapi.MockResp, pbapi.TestPbCancelService_CancelPbClientServer](ctx, stream)
+}
+
+func (s cancelPbImpl) CancelPbServer(ctx context.Context, req *pbapi.MockReq, stream pbapi.TestPbCancelService_CancelPbServerServer) (err error) {
+	return commonCancelServerImpl[pbapi.MockResp, pbapi.TestPbCancelService_CancelPbServerServer](
+		ctx, stream,
+		func(s string) *pbapi.MockResp {
+			return &pbapi.MockResp{Message: s}
+		},
+	)
+}
+
+func isGRPCFunc(t *testing.T, ctx context.Context) bool {
+	ri := rpcinfo.GetRPCInfo(ctx)
+	test.Assert(t, ri != nil, ctx)
+	switch ri.Config().TransportProtocol() {
+	case transport.GRPC:
+		return true
+	case transport.TTHeaderStreaming:
+		return false
+	default:
+		t.Fatal(fmt.Sprintf("not expected transport protocol: %v", ri.Config().TransportProtocol()))
+		return false
+	}
+}
+
+func commonCancelBidiImpl[Req, Res any, Stream streaming.BidiStreamingServer[Req, Res]](
+	ctx context.Context, stream Stream,
+	resGetter func(string) *Res,
+) error {
+	defer func() {
+		CancelFinishChan <- struct{}{}
+	}()
+	t := <-CancelTChan
+	scenario, ok := getScenario(ctx)
+	test.Assert(t, ok)
+	isGRPC := isGRPCFunc(t, ctx)
+
+	switch scenario {
+	case bidiStreamingIndependentSendRecv:
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for {
+				_, rErr := stream.Recv(ctx)
+				if rErr == nil {
+					continue
+				}
+				verifyServerSideCancelCase(t, ctx, rErr, isGRPC)
+				break
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for {
+				res := resGetter(scenario)
+				sErr := stream.Send(ctx, res)
+				if sErr == nil {
+					time.Sleep(50 * time.Millisecond)
+					continue
+				}
+				verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
+				break
+			}
+		}()
+		wg.Wait()
+	}
+
+	return nil
+}
+
+func commonCancelClientImpl[Req, Res any, Stream streaming.ClientStreamingServer[Req, Res]](
+	ctx context.Context, stream Stream,
+) error {
+	defer func() {
+		CancelFinishChan <- struct{}{}
+	}()
+	t := <-CancelTChan
+	isGRPC := isGRPCFunc(t, ctx)
+
+	scenario, ok := getScenario(ctx)
+	test.Assert(t, ok)
+	switch scenario {
+	case clientStreamingWithoutSendingAnyReq:
+		// the first Recv result would be err
+		_, rErr := stream.Recv(ctx)
+		test.Assert(t, rErr != nil)
+		t.Logf("scenario[%s] Recv err: %v", scenario, rErr)
+		verifyServerSideCancelCase(t, ctx, rErr, isGRPC)
+	case clientStreamingDuringNormalInteraction:
+		for {
+			_, rErr := stream.Recv(ctx)
+			if rErr == nil {
+				continue
+			}
+			t.Logf("scenario[%s] Recv err: %v", scenario, rErr)
+			verifyServerSideCancelCase(t, ctx, rErr, isGRPC)
+			break
+		}
+	case clientStreamingDeferCancel:
+		for {
+			_, rErr := stream.Recv(ctx)
+			if rErr == nil {
+				continue
+			}
+			t.Logf("scenario[%s] Recv err: %v", scenario, rErr)
+			verifyServerSideCancelCase(t, ctx, rErr, isGRPC)
+			break
+		}
+	}
+	return nil
+}
+
+func commonCancelServerImpl[Res any, Stream streaming.ServerStreamingServer[Res]](
+	ctx context.Context, stream Stream,
+	resGetter func(string) *Res,
+) error {
+	defer func() {
+		CancelFinishChan <- struct{}{}
+	}()
+	t := <-CancelTChan
+	isGRPC := isGRPCFunc(t, ctx)
+
+	scenario, ok := getScenario(ctx)
+	test.Assert(t, ok)
+	switch scenario {
+	case serverStreamingRemoteRespondingSlowly:
+		<-CancelSendChan
+		// in case Rst Frame has not been processed due to dispatch or other reasons
+		// we start a loop to Send until returning err
+		for {
+			res := resGetter(scenario)
+			sErr := stream.Send(ctx, res)
+			if sErr == nil {
+				time.Sleep(50 * time.Millisecond)
+				continue
+			}
+			t.Logf("scenario[%s] Recv err: %v", scenario, sErr)
+			verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
+			break
+		}
+	case serverStreamingDuringNormalInteraction:
+		for {
+			res := resGetter(scenario)
+			sErr := stream.Send(ctx, res)
+			if sErr == nil {
+				time.Sleep(50 * time.Millisecond)
+				continue
+			}
+			klog.CtxErrorf(ctx, "scenario[%s] Recv err: %v", scenario, sErr)
+			verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
+			break
+		}
+	case serverStreamingDeferCancel:
+		for i := 0; i < 5; i++ {
+			res := resGetter(scenario)
+			sErr := stream.Send(ctx, res)
+			test.Assert(t, sErr == nil, sErr)
+		}
+		specialRes := resGetter(bizSpecialMessage)
+		sErr := stream.Send(ctx, specialRes)
+		test.Assert(t, sErr == nil, sErr)
+		// waiting for remote service cancel
+		for {
+			res := resGetter(scenario)
+			sErr = stream.Send(ctx, res)
+			if sErr == nil {
+				time.Sleep(50 * time.Millisecond)
+				continue
+			}
+			t.Logf("scenario[%s] Recv err: %v", scenario, sErr)
+			verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
+			break
+		}
+	}
+	return nil
+}
+
+func setScenario(ctx context.Context, scenario string) context.Context {
+	return metainfo.WithValue(ctx, scenarioKey, scenario)
+}
+
+func getScenario(ctx context.Context) (string, bool) {
+	return metainfo.GetValue(ctx, scenarioKey)
+}
+
+func verifyClientSideCancelCase(t *testing.T, ctx context.Context, err error, isGRPC bool) {
+	verifyCancelContext(t, ctx)
+	verifyClientSideCancelErr(t, err, isGRPC)
+}
+
+func verifyServerSideCancelCase(t *testing.T, ctx context.Context, err error, isGRPC bool) {
+	verifyCancelContext(t, ctx)
+	verifyServerSideCancelErr(t, err, isGRPC)
+}
+
+func verifyCancelContext(t *testing.T, ctx context.Context) {
+	var ctxDone bool
+	select {
+	case <-ctx.Done():
+		ctxDone = true
+	default:
+	}
+	test.Assert(t, ctxDone)
+}
+
+func verifyClientSideCancelErr(t *testing.T, err error, isGRPC bool) {
+	if isGRPC {
+		st, ok := status.FromError(err)
+		test.Assert(t, ok)
+		test.Assert(t, st.Code() == codes.Canceled, st)
+	} else {
+		test.Assert(t, errors.Is(err, kerrors.ErrStreamingCanceled), err)
+	}
+}
+
+func verifyServerSideCancelErr(t *testing.T, err error, isGRPC bool) {
+	if isGRPC {
+		st, ok := status.FromError(err)
+		test.Assert(t, ok)
+		test.Assert(t, st.Code() == codes.Canceled, st)
+	} else {
+		test.Assert(t, errors.Is(err, kerrors.ErrStreamingCanceled), err)
+		test.Assert(t, strings.Contains(err.Error(), "canceled path"), err)
+	}
+}
+
+type cancelClient[Req, Res any] interface {
+	CancelBidi(ctx context.Context, callOptions ...streamcall.Option) (stream streaming.BidiStreamingClient[Req, Res], err error)
+	CancelClient(ctx context.Context, callOptions ...streamcall.Option) (stream streaming.ClientStreamingClient[Req, Res], err error)
+	CancelServer(ctx context.Context, Req *Req, callOptions ...streamcall.Option) (stream streaming.ServerStreamingClient[Res], err error)
+}
+
+type thriftCancelClient struct {
+	cli testcancelservice.Client
+}
+
+func (t thriftCancelClient) CancelBidi(ctx context.Context, callOptions ...streamcall.Option) (stream streaming.BidiStreamingClient[tenant.EchoRequest, tenant.EchoResponse], err error) {
+	return t.cli.CancelBidi(ctx, callOptions...)
+}
+
+func (t thriftCancelClient) CancelClient(ctx context.Context, callOptions ...streamcall.Option) (stream streaming.ClientStreamingClient[tenant.EchoRequest, tenant.EchoResponse], err error) {
+	return t.cli.CancelClient(ctx, callOptions...)
+}
+
+func (t thriftCancelClient) CancelServer(ctx context.Context, req *tenant.EchoRequest, callOptions ...streamcall.Option) (stream streaming.ServerStreamingClient[tenant.EchoResponse], err error) {
+	return t.cli.CancelServer(ctx, req, callOptions...)
+}
+
+type pbCancelClient struct {
+	cli testpbcancelservice.Client
+}
+
+func (p pbCancelClient) CancelBidi(ctx context.Context, callOptions ...streamcall.Option) (stream streaming.BidiStreamingClient[pbapi.MockReq, pbapi.MockResp], err error) {
+	return p.cli.CancelPbBidi(ctx, callOptions...)
+}
+
+func (p pbCancelClient) CancelClient(ctx context.Context, callOptions ...streamcall.Option) (stream streaming.ClientStreamingClient[pbapi.MockReq, pbapi.MockResp], err error) {
+	return p.cli.CancelPbClient(ctx, callOptions...)
+}
+
+func (p pbCancelClient) CancelServer(ctx context.Context, req *pbapi.MockReq, callOptions ...streamcall.Option) (stream streaming.ServerStreamingClient[pbapi.MockResp], err error) {
+	return p.cli.CancelPbServer(ctx, req, callOptions...)
+}
+
+func TestThriftCancel(t *testing.T, addr string) {
+	cliSvcName := "client-side cancel service"
+	reqGetter := func(s string) *tenant.EchoRequest {
+		return &tenant.EchoRequest{Msg: s}
+	}
+	resMsgSetter := func(p *tenant.EchoResponse) string {
+		return p.Msg
+	}
+
+	t.Run("TTHeader Streaming", func(t *testing.T) {
+		ttstreamCli := testcancelservice.MustNewClient("service",
+			client.WithHostPorts(addr),
+			client.WithMetaHandler(transmeta.ClientHTTP2Handler),
+			client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+			client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{
+				ServiceName: cliSvcName,
+			}),
+		)
+		commonTestCancel[tenant.EchoRequest, tenant.EchoResponse](t, thriftCancelClient{ttstreamCli}, false, reqGetter, resMsgSetter)
+	})
+	t.Run("GRPC", func(t *testing.T) {
+		grpcCli := testcancelservice.MustNewClient("service",
+			client.WithHostPorts(addr),
+			client.WithTransportProtocol(transport.GRPCStreaming),
+			client.WithMetaHandler(transmeta.ClientHTTP2Handler),
+			client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+			client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{
+				ServiceName: cliSvcName,
+			}),
+		)
+		commonTestCancel[tenant.EchoRequest, tenant.EchoResponse](t, thriftCancelClient{grpcCli}, true, reqGetter, resMsgSetter)
+	})
+}
+
+func TestPbCancel(t *testing.T, addr string) {
+	cliSvcName := "client-side cancel service"
+	reqGetter := func(s string) *pbapi.MockReq {
+		return &pbapi.MockReq{Message: s}
+	}
+	resMsgSetter := func(p *pbapi.MockResp) string {
+		return p.Message
+	}
+
+	t.Run("TTHeader Streaming", func(t *testing.T) {
+		ttstreamCli := testpbcancelservice.MustNewClient("service",
+			client.WithHostPorts(addr),
+			client.WithTransportProtocol(transport.PurePayload),
+			client.WithTransportProtocol(transport.TTHeaderStreaming),
+			client.WithMetaHandler(transmeta.ClientHTTP2Handler),
+			client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+			client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{
+				ServiceName: cliSvcName,
+			}),
+		)
+		commonTestCancel[pbapi.MockReq, pbapi.MockResp](t, pbCancelClient{ttstreamCli}, false, reqGetter, resMsgSetter)
+	})
+	t.Run("GRPC", func(t *testing.T) {
+		grpcCli := testpbcancelservice.MustNewClient("service",
+			client.WithHostPorts(addr),
+			client.WithTransportProtocol(transport.GRPCStreaming),
+			client.WithMetaHandler(transmeta.ClientHTTP2Handler),
+			client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
+			client.WithClientBasicInfo(&rpcinfo.EndpointBasicInfo{
+				ServiceName: cliSvcName,
+			}),
+		)
+		commonTestCancel[pbapi.MockReq, pbapi.MockResp](t, pbCancelClient{grpcCli}, true, reqGetter, resMsgSetter)
+	})
+}
+
+func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], isGRPC bool,
+	reqGetter func(string) *Req, resMsgGetter func(*Res) string,
+) {
+	t.Run(clientStreamingWithoutSendingAnyReq, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, clientStreamingWithoutSendingAnyReq)
+		cliSt, err := cli.CancelClient(ctx)
+		test.Assert(t, err == nil, err)
+		cancel()
+		// todo: modify this timeout
+		time.Sleep(6 * time.Second)
+		err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingWithoutSendingAnyReq))
+		verifyClientSideCancelCase(t, cliSt.Context(), err, isGRPC)
+	})
+	t.Run(clientStreamingDuringNormalInteraction, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, clientStreamingDuringNormalInteraction)
+		cliSt, err := cli.CancelClient(ctx)
+		test.Assert(t, err == nil, err)
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			cancel()
+		}()
+		for {
+			err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingDuringNormalInteraction))
+			if err == nil {
+				time.Sleep(50 * time.Millisecond)
+				continue
+			}
+			verifyClientSideCancelCase(t, cliSt.Context(), err, isGRPC)
+			break
+		}
+	})
+	t.Run(clientStreamingDeferCancel, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, clientStreamingDeferCancel)
+		cliSt, err := cli.CancelClient(ctx)
+		test.Assert(t, err == nil, err)
+		defer cancel()
+		for i := 0; i < 10; i++ {
+			err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingDeferCancel))
+			test.Assert(t, err == nil, err)
+		}
+	})
+	t.Run(serverStreamingRemoteRespondingSlowly, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, serverStreamingRemoteRespondingSlowly)
+		srvSt, err := cli.CancelServer(ctx, reqGetter(serverStreamingRemoteRespondingSlowly))
+		test.Assert(t, err == nil, err)
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+		CancelSendChan <- struct{}{}
+		_, err = srvSt.Recv(srvSt.Context())
+		verifyClientSideCancelCase(t, srvSt.Context(), err, isGRPC)
+	})
+	t.Run(serverStreamingDuringNormalInteraction, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, serverStreamingDuringNormalInteraction)
+		srvSt, err := cli.CancelServer(ctx, reqGetter(serverStreamingDuringNormalInteraction))
+		test.Assert(t, err == nil, err)
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			cancel()
+		}()
+		for {
+			res, err := srvSt.Recv(srvSt.Context())
+			if err == nil {
+				test.Assert(t, resMsgGetter(res) == serverStreamingDuringNormalInteraction, res)
+				continue
+			}
+			verifyClientSideCancelCase(t, srvSt.Context(), err, isGRPC)
+			break
+		}
+	})
+	t.Run(serverStreamingDeferCancel, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, serverStreamingDeferCancel)
+		srvSt, err := cli.CancelServer(ctx, reqGetter(serverStreamingDeferCancel))
+		test.Assert(t, err == nil, err)
+		defer cancel()
+		for {
+			res, err := srvSt.Recv(srvSt.Context())
+			test.Assert(t, err == nil, err)
+			// special exit sign that has been agreed with downstream in the business
+			if resMsgGetter(res) == bizSpecialMessage {
+				break
+			}
+			test.Assert(t, resMsgGetter(res) == serverStreamingDeferCancel)
+		}
+	})
+	t.Run(bidiStreamingIndependentSendRecv, func(t *testing.T) {
+		defer func() {
+			<-CancelFinishChan
+		}()
+		CancelTChan <- t
+		ctx, cancel := context.WithCancel(context.Background())
+		ctx = setScenario(ctx, bidiStreamingIndependentSendRecv)
+		bidiSt, err := cli.CancelBidi(ctx)
+		test.Assert(t, err == nil, err)
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			cancel()
+		}()
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for {
+				sErr := bidiSt.Send(bidiSt.Context(), reqGetter(bidiStreamingIndependentSendRecv))
+				if sErr == nil {
+					time.Sleep(50 * time.Millisecond)
+					continue
+				}
+				verifyClientSideCancelCase(t, bidiSt.Context(), sErr, isGRPC)
+				break
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for {
+				res, rErr := bidiSt.Recv(bidiSt.Context())
+				if rErr == nil {
+					test.Assert(t, resMsgGetter(res) == bidiStreamingIndependentSendRecv, res)
+					continue
+				}
+				verifyClientSideCancelCase(t, bidiSt.Context(), rErr, isGRPC)
+				break
+			}
+		}()
+		wg.Wait()
+	})
+}
