@@ -33,3 +33,9 @@ service Mock {
   rpc ServerStreamingTest (MockReq) returns (stream MockResp) {}
   rpc BidirectionalStreamingTest (stream MockReq) returns (stream MockResp) {}
 }
+
+service TestPbCancelService {
+  rpc CancelPbBidi(stream MockReq) returns (stream MockResp) {}
+  rpc CancelPbClient(stream MockReq) returns (MockResp) {}
+  rpc CancelPbServer(MockReq) returns (stream MockResp) {}
+}
