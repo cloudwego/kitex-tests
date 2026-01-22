@@ -230,12 +230,13 @@ type eventHandleTestSuite struct {
 }
 
 type ServerEventHandlerTracer struct {
-	testChan chan eventHandleTestSuite
+	testChan       chan eventHandleTestSuite
+	testFinishChan chan struct{}
 }
 
-func newServerEventHandlerTracer() (*ServerEventHandlerTracer, chan eventHandleTestSuite) {
+func newServerEventHandlerTracer(testFinishChan chan struct{}) (*ServerEventHandlerTracer, chan eventHandleTestSuite) {
 	ch := make(chan eventHandleTestSuite, 1)
-	return &ServerEventHandlerTracer{testChan: ch}, ch
+	return &ServerEventHandlerTracer{testChan: ch, testFinishChan: testFinishChan}, ch
 }
 
 func (s *ServerEventHandlerTracer) Start(ctx context.Context) context.Context {
@@ -246,4 +247,7 @@ func (s *ServerEventHandlerTracer) Finish(ctx context.Context) {
 	suite := <-s.testChan
 	suite.hdl.assertCalledTimes(suite.t, suite.calledTimes)
 	suite.hdl.Reset()
+	if s.testFinishChan != nil {
+		s.testFinishChan <- struct{}{}
+	}
 }

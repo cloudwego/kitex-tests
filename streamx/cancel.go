@@ -67,7 +67,7 @@ const (
 
 func RunTestCancelServer(listenAddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenAddr)
-	evtHdlTracer, testChan := newServerEventHandlerTracer()
+	evtHdlTracer, testChan := newServerEventHandlerTracer(nil)
 	hdl := newServerMockEventHandler(testChan)
 	svr := testcancelservice.NewServer(&cancelThriftImpl{evtHdl: hdl},
 		server.WithServiceAddr(addr),
@@ -412,7 +412,7 @@ func verifyClientSideCancelErr(t *testing.T, err error, isGRPC bool) {
 	if isGRPC {
 		st, ok := status.FromError(err)
 		test.Assert(t, ok)
-		test.Assert(t, st.Code() == codes.Canceled, st)
+		test.Assert(t, st.Code() == codes.Canceled, st.Code())
 	} else {
 		test.Assert(t, errors.Is(err, kerrors.ErrStreamingCanceled), err)
 	}
@@ -422,7 +422,7 @@ func verifyServerSideCancelErr(t *testing.T, err error, isGRPC bool) {
 	if isGRPC {
 		st, ok := status.FromError(err)
 		test.Assert(t, ok)
-		test.Assert(t, st.Code() == codes.Canceled, st)
+		test.Assert(t, st.Code() == codes.Canceled, st.Code())
 	} else {
 		test.Assert(t, errors.Is(err, kerrors.ErrStreamingCanceled), err)
 		test.Assert(t, strings.Contains(err.Error(), "canceled path"), err)

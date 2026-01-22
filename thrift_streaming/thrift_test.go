@@ -30,12 +30,15 @@ import (
 
 	"github.com/bytedance/gopkg/cloud/metainfo"
 	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/callopt/streamcall"
 	"github.com/cloudwego/kitex/client/streamclient"
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/logid"
 	"github.com/cloudwego/kitex/pkg/remote"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/metadata"
+	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 	"github.com/cloudwego/kitex/pkg/streaming"
 	"github.com/cloudwego/kitex/pkg/utils/contextmap"
 	"github.com/cloudwego/kitex/server"
@@ -672,6 +675,60 @@ func TestTimeoutRecvSend(t *testing.T) {
 		test.Assert(t, err == nil, err)
 		_, err = stream.Recv()
 		test.Assertf(t, err != nil, "err = %v", err)
+	})
+
+	t.Run("client recv timeout config", func(t *testing.T) {
+		cli := echoservice.MustNewStreamClient("service", streamclient.WithHostPorts(thriftAddr),
+			streamclient.WithRecvMiddleware(func(next endpoint.RecvEndpoint) endpoint.RecvEndpoint {
+				return func(stream streaming.Stream, message interface{}) (err error) {
+					time.Sleep(time.Millisecond * 100)
+					return next(stream, message)
+				}
+			},
+			),
+			streamclient.ConvertOptionFrom(client.WithStreamOptions(client.WithStreamRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 50 * time.Millisecond}))),
+		)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		ctx = metainfo.WithValue(ctx, KeyCount, "1")
+		ctx = AddKeyValueHTTP2(ctx, KeyServerSendTimeoutMS, "100")
+		stream, err := cli.EchoBidirectional(ctx)
+		test.Assert(t, err == nil, err)
+
+		err = stream.Send(&echo.EchoRequest{Message: "request"})
+		test.Assertf(t, err == nil, "err = %v", err)
+
+		_, err = stream.Recv()
+		test.Assertf(t, err != nil, "err = %v", err)
+		st, ok := status.FromError(err)
+		test.Assert(t, ok, err)
+		test.Assert(t, st.Code() == codes.RecvDeadlineExceeded, st.Code())
+	})
+
+	t.Run("streamcall recv timeout config", func(t *testing.T) {
+		cli := echoservice.MustNewStreamClient("service", streamclient.WithHostPorts(thriftAddr),
+			streamclient.WithRecvMiddleware(func(next endpoint.RecvEndpoint) endpoint.RecvEndpoint {
+				return func(stream streaming.Stream, message interface{}) (err error) {
+					time.Sleep(time.Millisecond * 100)
+					return next(stream, message)
+				}
+			}),
+		)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		ctx = metainfo.WithValue(ctx, KeyCount, "1")
+		ctx = AddKeyValueHTTP2(ctx, KeyServerSendTimeoutMS, "100")
+		stream, err := cli.EchoBidirectional(ctx, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 50 * time.Millisecond}))
+		test.Assert(t, err == nil, err)
+
+		err = stream.Send(&echo.EchoRequest{Message: "request"})
+		test.Assertf(t, err == nil, "err = %v", err)
+
+		_, err = stream.Recv()
+		test.Assertf(t, err != nil, "err = %v", err)
+		st, ok := status.FromError(err)
+		test.Assert(t, ok, err)
+		test.Assert(t, st.Code() == codes.RecvDeadlineExceeded, st.Code())
 	})
 }
 

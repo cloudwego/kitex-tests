@@ -26,15 +26,17 @@ import (
 )
 
 var (
-	thriftTestAddr       string
-	thriftTestCancelAddr string
+	thriftTestAddr        string
+	thriftTestCancelAddr  string
+	thriftTestTimeoutAddr string
 )
 
 func TestMain(m *testing.M) {
 	var normalSrv server.Server
 	var cancelSrv server.Server
+	var timeoutSrv server.Server
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		thriftTestAddr = serverutils.NextListenAddr()
@@ -47,10 +49,17 @@ func TestMain(m *testing.M) {
 		cancelSrv = streamx.RunTestCancelServer(thriftTestCancelAddr)
 		serverutils.Wait(thriftTestCancelAddr)
 	}()
+	go func() {
+		defer wg.Done()
+		thriftTestTimeoutAddr = serverutils.NextListenAddr()
+		timeoutSrv = streamx.RunTestTimeoutServer(thriftTestTimeoutAddr)
+		serverutils.Wait(thriftTestTimeoutAddr)
+	}()
 	wg.Wait()
 	m.Run()
 	normalSrv.Stop()
 	cancelSrv.Stop()
+	timeoutSrv.Stop()
 	log.Print("streamx thrift test finished")
 }
 
@@ -60,4 +69,8 @@ func TestNormal(t *testing.T) {
 
 func TestCancel(t *testing.T) {
 	streamx.TestThriftCancel(t, thriftTestCancelAddr)
+}
+
+func TestTimeout(t *testing.T) {
+	streamx.TestThriftTimeout(t, thriftTestTimeoutAddr)
 }

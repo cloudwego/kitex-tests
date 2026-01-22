@@ -60,6 +60,12 @@ service TestCancelService {
     EchoResponse CancelServer(1: EchoRequest request) (streaming.mode="server"),
 }
 
+service TestTimeoutService {
+    EchoResponse RecvTimeoutBidi(1: EchoRequest request) (streaming.mode="bidirectional"),
+    EchoResponse RecvTimeoutClient(1: EchoRequest request) (streaming.mode="client"),
+    EchoResponse RecvTimeoutServer(1: EchoRequest request) (streaming.mode="server"),
+}
+
 service EchoService {
     EchoResponse Echo(1: EchoRequest request);
     oneway void EchoOneway(1: EchoRequest request);
