@@ -39,3 +39,9 @@ service TestPbCancelService {
   rpc CancelPbClient(stream MockReq) returns (MockResp) {}
   rpc CancelPbServer(MockReq) returns (stream MockResp) {}
 }
+
+service TestPbTimeoutService {
+  rpc RecvTimeoutPbBidi(stream MockReq) returns (stream MockResp) {}
+  rpc RecvTimeoutPbClient(stream MockReq) returns (MockResp) {}
+  rpc RecvTimeoutPbServer(MockReq) returns (stream MockResp) {}
+}

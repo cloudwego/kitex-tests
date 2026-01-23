@@ -26,15 +26,17 @@ import (
 )
 
 var (
-	pbTestAddr   string
-	pbCancelAddr string
+	pbTestAddr    string
+	pbCancelAddr  string
+	pbTimeoutAddr string
 )
 
 func TestMain(m *testing.M) {
 	var normalSrv server.Server
 	var cancelSrv server.Server
+	var timeoutSrv server.Server
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 	go func() {
 		defer wg.Done()
 		pbTestAddr = serverutils.NextListenAddr()
@@ -47,10 +49,17 @@ func TestMain(m *testing.M) {
 		cancelSrv = streamx.RunTestCancelServer(pbCancelAddr)
 		serverutils.Wait(pbCancelAddr)
 	}()
+	go func() {
+		defer wg.Done()
+		pbTimeoutAddr = serverutils.NextListenAddr()
+		timeoutSrv = streamx.RunTestTimeoutServer(pbTimeoutAddr)
+		serverutils.Wait(pbTimeoutAddr)
+	}()
 	wg.Wait()
 	m.Run()
 	normalSrv.Stop()
 	cancelSrv.Stop()
+	timeoutSrv.Stop()
 	log.Print("streamx pb test finished")
 }
 
@@ -60,4 +69,8 @@ func TestNormal(t *testing.T) {
 
 func TestCancel(t *testing.T) {
 	streamx.TestPbCancel(t, pbCancelAddr)
+}
+
+func TestTimeout(t *testing.T) {
+	streamx.TestPbTimeout(t, pbTimeoutAddr)
 }

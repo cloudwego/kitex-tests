@@ -93,7 +93,7 @@ func TestPingPong(t *testing.T) {
 	test.Assert(t, err == nil)
 
 	_, err = cli.GenericCall(context.Background(), "Echo", string(reqStr))
-	test.Assert(t, err == nil)
+	test.Assert(t, err == nil, err)
 }
 
 func TestOneway(t *testing.T) {
