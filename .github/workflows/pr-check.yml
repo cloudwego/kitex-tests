@@ -4,13 +4,16 @@ on: [pull_request]
 
 jobs:
   run-tests:
+    strategy:
+      matrix:
+        go: [ "1.21", oldstable, stable ]
     runs-on: [ self-hosted, Linux, X64 ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
-          go-version: stable
+          go-version: ${{ matrix.go }}
           cache: false
       - name: Run Tests
         run: ./run.sh

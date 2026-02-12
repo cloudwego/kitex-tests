@@ -19,11 +19,11 @@ import (
 	"errors"
 	"net"
 	"testing"
-	"time"
 
 	"github.com/cloudwego/kitex-tests/kitex_gen/protobuf/grpc_demo/servicea"
 	"github.com/cloudwego/kitex-tests/pkg/test"
 	"github.com/cloudwego/kitex-tests/pkg/utils/clientutils"
+	"github.com/cloudwego/kitex-tests/pkg/utils/serverutils"
 	client_opt "github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt"
 	"github.com/cloudwego/kitex/pkg/endpoint"
@@ -35,7 +35,7 @@ import (
 )
 
 func TestKitexWithoutCompressor(t *testing.T) {
-	hostport := "localhost:9020"
+	hostport := serverutils.NextListenAddr()
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 	svr := servicea.NewServer(new(ServiceAImpl), server.WithServiceAddr(addr))
 	go func() {
@@ -43,7 +43,7 @@ func TestKitexWithoutCompressor(t *testing.T) {
 		test.Assert(t, err == nil, err)
 	}()
 	defer svr.Stop()
-	time.Sleep(50 * time.Millisecond)
+	serverutils.Wait(hostport)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
 	defer clientutils.CallClose(client)
@@ -62,7 +62,7 @@ func TestKitexWithoutCompressor(t *testing.T) {
 }
 
 func TestKitexCompressor(t *testing.T) {
-	hostport := "localhost:9021"
+	hostport := serverutils.NextListenAddr()
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 	svr := servicea.NewServer(new(ServiceAImpl), server.WithServiceAddr(addr))
 	go func() {
@@ -70,7 +70,7 @@ func TestKitexCompressor(t *testing.T) {
 		test.Assert(t, err == nil, err)
 	}()
 	defer svr.Stop()
-	time.Sleep(50 * time.Millisecond)
+	serverutils.Wait(hostport)
 	client, err := GetClient(hostport)
 	test.Assert(t, err == nil, err)
 	defer clientutils.CallClose(client)
@@ -90,7 +90,7 @@ func TestKitexCompressor(t *testing.T) {
 }
 
 func TestKitexCompressorWithGRPCClient(t *testing.T) {
-	hostport := "localhost:9022"
+	hostport := serverutils.NextListenAddr()
 	addr, _ := net.ResolveTCPAddr("tcp", hostport)
 	svr := servicea.NewServer(new(ServiceAImpl), server.WithServiceAddr(addr))
 	go func() {
@@ -98,7 +98,7 @@ func TestKitexCompressorWithGRPCClient(t *testing.T) {
 		test.Assert(t, err == nil, err)
 	}()
 	defer svr.Stop()
-	time.Sleep(50 * time.Millisecond)
+	serverutils.Wait(hostport)
 
 	conn, err := grpc.Dial(hostport, grpc.WithInsecure(), grpc.WithBlock())
 	test.Assert(t, err == nil, err)
@@ -136,12 +136,12 @@ func ServiceNameMW(next endpoint.Endpoint) endpoint.Endpoint {
 }
 
 func TestKitexCompressorWithGRPCServer(t *testing.T) {
-	hostport := "localhost:9023"
+	hostport := serverutils.NextListenAddr()
 	go func() {
 		err := RunGRPCServer(hostport)
 		test.Assert(t, err == nil, err)
 	}()
-	time.Sleep(50 * time.Millisecond)
+	serverutils.Wait(hostport)
 
 	client, err := GetClient(hostport, client_opt.WithMiddleware(ServiceNameMW))
 	test.Assert(t, err == nil, err)
