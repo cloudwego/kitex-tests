@@ -36,12 +36,14 @@ export PATH=$PATH_BIN:$PATH
 # coz other runners in the same host may share path like GOMODCACHE, GOCACHE
 export GOBIN=$PATH_BIN
 
-# Fix some dependency versions to ensure compatibility when testing with Go 1.18
-# TODO: Remove this if Go 1.18 is no longer supported
-IS_GO_118=false
-if [[ `go version` == *"go1.18"* ]]; then
-  IS_GO_118=true
+# Fix some dependency versions to ensure compatibility when testing with old Go versions
+IS_OLD_GO=false
+GO_VERSION=`go version`
+if [[ $GO_VERSION == *"go1.21"* || $GO_VERSION == *"go1.22"* || $GO_VERSION == *"go1.23"* ]]; then
+  IS_OLD_GO=true
 fi
+# make sure it will not use toolchain go version automatically
+export GOTOOLCHAIN=local
 
 PROTOC_VERSION=v3.20.2
 
@@ -75,7 +77,7 @@ fi
 
 go_install() {
     echo "installing $@ ..."
-    go install $@ || go get $@
+    go install $@
     echo "installing $@ ... done"
 }
 
@@ -87,10 +89,10 @@ echo -e "\ninstalling missing commands\n"
 
 PROTOC_GEN_GO_VERSION="latest"
 PROTOC_GEN_GO_GRPC_VERSION="latest"
-if $IS_GO_118; then
-  # fix the version when running go1.18
-  PROTOC_GEN_GO_VERSION="v1.31.0"
-  PROTOC_GEN_GO_GRPC_VERSION="v1.3.0"
+if $IS_OLD_GO; then
+  # fix the version when running with old Go versions
+  PROTOC_GEN_GO_VERSION="v1.34.1"
+  PROTOC_GEN_GO_GRPC_VERSION="v1.5.1"
 fi
 
 # install protoc
@@ -184,18 +186,21 @@ fixed_version() {
 fixed_version github.com/apache/thrift v0.13.0
 
 # https://github.com/googleapis/go-genproto/issues/1015
-fixed_version google.golang.org/genproto v0.0.0-20250227231956-55c901821b1e
-fixed_version google.golang.org/genproto/googleapis/rpc v0.0.0-20250227231956-55c901821b1e
+fixed_version google.golang.org/genproto v0.0.0-20241223144023-3abc09e42ca8
+fixed_version google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142
 
 # used by this repo, and it takes seconds for `go mod tidy`
 # can we get rid of it one day? used in kitexgrpc/normalcall/normalcall_test.go
 fixed_version github.com/shirou/gopsutil/v3 v3.24.5
 
-if $IS_GO_118; then
-  # fix the version when running go1.18
-  fixed_version google.golang.org/grpc v1.56.3
-  fixed_version google.golang.org/protobuf v1.34.1
-  fixed_version github.com/jhump/protoreflect v1.8.2
+if $IS_OLD_GO; then
+  # fix the version when running old go versions
+  # FIXME:
+  # you may need to confirm the oldest Go version we support,
+  # and then check with go.mod of these repos to see which versions are good for the Go version
+  fixed_version google.golang.org/grpc v1.67.3
+  fixed_version google.golang.org/protobuf v1.35.2
+  fixed_version github.com/jhump/protoreflect v1.17.0
 fi
 
 go mod tidy
@@ -211,11 +216,7 @@ export GOMAXPROCS=$(( 3 * $nproc / 4 ))
 echo -e "\nrunning tests ... \n"
 
 # skip kitex_gen dirs which have no tests
-if $IS_GO_118; then
-  test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/ | grep -v generic/proxy`
-else
-  test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/`
-fi
+test_modules=`go list ./... | grep -v kitex_gen | grep -v grpc_gen | grep -v kitexgrpc/abc/ | grep -v generic/proxy`
 
 if [[ -n $LOCAL_REPO && -n $CI ]]; then
     # only generate coverage file in ci env
