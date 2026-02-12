@@ -159,7 +159,7 @@ func commonNormalUnaryImpl[Req, Res any](
 		return nil, errors.New("metainfo is not set")
 	}
 	if reqMsgGetter(req) == "test_unary_timeout" {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		return resGetter("pong"), nil
 	}
 	if ctx.Value("test_unary_middleware_builder").(string) != "test_unary_middleware_builder" {
@@ -503,7 +503,7 @@ func RunNormalServer(listenAddr string) server.Server {
 var basicOpts = []client.Option{
 	client.WithTracer(NewTracer()),
 	client.WithMetaHandler(transmeta.ClientHTTP2Handler), client.WithMetaHandler(transmeta.ClientTTHeaderHandler),
-	client.WithUnaryOptions(client.WithUnaryRPCTimeout(200*time.Millisecond),
+	client.WithUnaryOptions(client.WithUnaryRPCTimeout(10*time.Millisecond),
 		client.WithUnaryMiddleware(func(next endpoint.UnaryEndpoint) endpoint.UnaryEndpoint {
 			return func(ctx context.Context, req, resp interface{}) (err error) {
 				count := ctx.Value("test_unary_middleware").(*int)
