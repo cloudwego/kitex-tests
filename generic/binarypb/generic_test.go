@@ -24,6 +24,8 @@ import (
 	"testing"
 
 	"github.com/cloudwego/kitex/client"
+	"github.com/cloudwego/kitex/client/callopt"
+	"github.com/cloudwego/kitex/client/callopt/streamcall"
 	"github.com/cloudwego/kitex/client/genericclient"
 	"github.com/cloudwego/kitex/pkg/generic"
 	"github.com/cloudwego/kitex/server/genericserver"
@@ -223,4 +225,122 @@ func TestBidiStreamingV1(t *testing.T) {
 	err = resp.Unmarshal(res.([]byte))
 	test.Assert(t, err == nil)
 	test.Assert(t, resp.Message == "hello world")
+}
+
+func TestGenericCallWithIDLService(t *testing.T) {
+	protocols := []transport.Protocol{transport.TTHeader, transport.GRPC, transport.GRPCStreaming | transport.TTHeader, transport.TTHeaderStreaming | transport.TTHeader}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			// client created with an invalid IDL service name
+			genericClient := newGenericClient(generic.BinaryPbGeneric("ClientSideIDLService", packageName),
+				genericAddr.String(), client.WithTransportProtocol(protocol))
+
+			args := mock.UnaryTestArgs{Req: &pbapi.MockReq{Message: "hello world"}}
+			buf, _ := args.Marshal(nil)
+
+			_, err := genericClient.GenericCall(context.Background(), "UnaryTest", buf)
+			test.Assert(t, err != nil)
+
+			res, err := genericClient.GenericCall(context.Background(), "UnaryTest", buf,
+				callopt.WithBinaryGenericIDLService(serviceName))
+			test.Assert(t, err == nil, err)
+
+			result := &mock.UnaryTestResult{}
+			err = result.Unmarshal(res.([]byte))
+			test.Assert(t, err == nil)
+			test.Assert(t, result.Success.Message == "hello world")
+		})
+	}
+}
+
+func TestStreamingGenericCallWithIDLService(t *testing.T) {
+	// TTHeader Streaming now does not support pb
+	protocols := []transport.Protocol{transport.GRPCStreaming | transport.TTHeader, transport.GRPC}
+	for _, protocol := range protocols {
+		t.Run(protocol.String(), func(t *testing.T) {
+			// client created with an invalid IDL service name
+			genericClient := newGenericClient(generic.BinaryPbGeneric("ClientSideIDLService", packageName),
+				genericAddr.String(), client.WithTransportProtocol(protocol))
+
+			t.Run("BidiStreamingWithoutSpecifying", func(t *testing.T) {
+				stream, err := genericClient.BidirectionalStreaming(context.Background(), "BidirectionalStreamingTest")
+				test.Assert(t, err == nil, err)
+				req := &pbapi.MockReq{Message: "hello world"}
+				buf, _ := req.Marshal(nil)
+				err = stream.Send(stream.Context(), buf)
+				test.Assert(t, err == nil, err)
+				err = stream.CloseSend(stream.Context())
+				test.Assert(t, err == nil, err)
+				_, err = stream.Recv(stream.Context())
+				test.Assert(t, err != nil)
+			})
+			t.Run("ClientStreamingWithoutSpecifying", func(t *testing.T) {
+				stream, err := genericClient.ClientStreaming(context.Background(), "ClientStreamingTest")
+				test.Assert(t, err == nil, err)
+				req := &pbapi.MockReq{Message: "hello world"}
+				buf, _ := req.Marshal(nil)
+				err = stream.Send(stream.Context(), buf)
+				test.Assert(t, err == nil, err)
+				_, err = stream.CloseAndRecv(stream.Context())
+				test.Assert(t, err != nil)
+			})
+			t.Run("ServerStreamingWithoutSpecifying", func(t *testing.T) {
+				req := &pbapi.MockReq{Message: "hello world"}
+				buf, _ := req.Marshal(nil)
+				stream, err := genericClient.ServerStreaming(context.Background(), "ServerStreamingTest", buf)
+				test.Assert(t, err == nil, err)
+				_, err = stream.Recv(stream.Context())
+				test.Assert(t, err != nil)
+			})
+			t.Run("BidiStreamingWithSpecifying", func(t *testing.T) {
+				stream, err := genericClient.BidirectionalStreaming(context.Background(), "BidirectionalStreamingTest",
+					streamcall.WithBinaryGenericIDLService(serviceName))
+				test.Assert(t, err == nil, err)
+				req := &pbapi.MockReq{Message: "hello world"}
+				buf, _ := req.Marshal(nil)
+				err = stream.Send(stream.Context(), buf)
+				test.Assert(t, err == nil, err)
+				err = stream.CloseSend(stream.Context())
+				test.Assert(t, err == nil, err)
+				res, err := stream.Recv(stream.Context())
+				test.Assert(t, err == nil, err)
+				resp := &pbapi.MockResp{}
+				err = resp.Unmarshal(res.([]byte))
+				test.Assert(t, err == nil, err)
+				test.Assert(t, resp.Message == "hello world", resp)
+				_, err = stream.Recv(stream.Context())
+				test.Assert(t, err == io.EOF)
+			})
+			t.Run("ClientStreamingWithSpecifying", func(t *testing.T) {
+				stream, err := genericClient.ClientStreaming(context.Background(), "ClientStreamingTest",
+					streamcall.WithBinaryGenericIDLService(serviceName))
+				test.Assert(t, err == nil, err)
+				req := &pbapi.MockReq{Message: "hello world"}
+				buf, _ := req.Marshal(nil)
+				err = stream.Send(stream.Context(), buf)
+				test.Assert(t, err == nil, err)
+				res, err := stream.CloseAndRecv(stream.Context())
+				test.Assert(t, err == nil, err)
+				resp := &pbapi.MockResp{}
+				err = resp.Unmarshal(res.([]byte))
+				test.Assert(t, err == nil, err)
+				test.Assert(t, resp.Message == "hello world", resp)
+			})
+			t.Run("ServerStreamingWithSpecifying", func(t *testing.T) {
+				req := &pbapi.MockReq{Message: "hello world"}
+				buf, _ := req.Marshal(nil)
+				stream, err := genericClient.ServerStreaming(context.Background(), "ServerStreamingTest", buf,
+					streamcall.WithBinaryGenericIDLService(serviceName))
+				test.Assert(t, err == nil, err)
+				res, err := stream.Recv(stream.Context())
+				test.Assert(t, err == nil, err)
+				resp := &pbapi.MockResp{}
+				err = resp.Unmarshal(res.([]byte))
+				test.Assert(t, err == nil, err)
+				test.Assert(t, resp.Message == "hello world", resp)
+				_, err = stream.Recv(stream.Context())
+				test.Assert(t, err == io.EOF)
+			})
+		})
+	}
 }

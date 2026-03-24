@@ -26,17 +26,19 @@ import (
 )
 
 var (
-	thriftTestAddr        string
-	thriftTestCancelAddr  string
-	thriftTestTimeoutAddr string
+	thriftTestAddr            string
+	thriftTestCancelAddr      string
+	thriftTestTimeoutAddr     string
+	thriftGRPCCompatAddr      string
 )
 
 func TestMain(m *testing.M) {
 	var normalSrv server.Server
 	var cancelSrv server.Server
 	var timeoutSrv server.Server
+	var grpcCompatSrv server.Server
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 		thriftTestAddr = serverutils.NextListenAddr()
@@ -55,11 +57,18 @@ func TestMain(m *testing.M) {
 		timeoutSrv = streamx.RunTestTimeoutServer(thriftTestTimeoutAddr)
 		serverutils.Wait(thriftTestTimeoutAddr)
 	}()
+	go func() {
+		defer wg.Done()
+		thriftGRPCCompatAddr = serverutils.NextListenAddr()
+		grpcCompatSrv = streamx.RunGRPCCompatServer(thriftGRPCCompatAddr)
+		serverutils.Wait(thriftGRPCCompatAddr)
+	}()
 	wg.Wait()
 	m.Run()
 	normalSrv.Stop()
 	cancelSrv.Stop()
 	timeoutSrv.Stop()
+	grpcCompatSrv.Stop()
 	log.Print("streamx thrift test finished")
 }
 
@@ -73,4 +82,8 @@ func TestCancel(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	streamx.TestThriftTimeout(t, thriftTestTimeoutAddr)
+}
+
+func TestGRPCCompat(t *testing.T) {
+	streamx.TestThriftGRPCCompat(t, thriftGRPCCompatAddr)
 }
