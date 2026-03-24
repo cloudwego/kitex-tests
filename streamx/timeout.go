@@ -57,6 +57,9 @@ const (
 	bidiStreamingRecvTimeoutOnly                                   = "bidi_streaming_recv_timeout"
 	bidiStreamingRecvAndStreamTimeoutWithRecvTimeoutTakeEffect     = "bidi_streaming_recv_and_stream_timeout_with_recv_timeout_take_effect"
 	bidiStreamingRecvAndStreamTimeoutWithStreamTimeoutTakeEffect   = "bidi_streaming_recv_and_stream_timeout_with_stream_timeout_take_effect"
+
+	timeoutTakeEffect    = 10 * time.Millisecond
+	timeoutNotTakeEffect = 400 * time.Millisecond
 )
 
 func RunTestTimeoutServer(listenAddr string) server.Server {
@@ -65,7 +68,7 @@ func RunTestTimeoutServer(listenAddr string) server.Server {
 	hdl := newServerMockEventHandler(testChan)
 	svr := testtimeoutservice.NewServer(&timeoutThriftImpl{evtHdl: hdl},
 		server.WithServiceAddr(addr),
-		server.WithExitWaitTime(1*time.Second),
+		server.WithExitWaitTime(100*time.Millisecond),
 		server.WithTracer(NewTracer()),
 		server.WithTracer(evtHdlTracer),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
@@ -192,19 +195,17 @@ func commonRecvTimeoutBidiImpl[Req, Res any, Stream streaming.BidiStreamingServe
 			defer wg.Done()
 			<-finishCh
 			randI := fastrand.Intn(10)
+			var sErr error
 			for i := 0; ; i++ {
 				sendTimes++
-				sErr := stream.Send(ctx, resGetter(scenario))
-				if sErr == nil {
-					if i != randI {
-						continue
-					}
-					time.Sleep(300 * time.Millisecond)
-					continue
+				if sErr = stream.Send(ctx, resGetter(scenario)); sErr != nil {
+					break
 				}
-				verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
-				break
+				if i == randI {
+					<-ctx.Done()
+				}
 			}
+			verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
 		}()
 		wg.Wait()
 		evtHdl.AssertCalledTimes(t, ServerCalledTimes{
@@ -242,7 +243,7 @@ func commonRecvTimeoutBidiImpl[Req, Res any, Stream streaming.BidiStreamingServe
 					if i != randI {
 						continue
 					}
-					time.Sleep(300 * time.Millisecond)
+					<-ctx.Done()
 					continue
 				}
 				verifyServerSideTimeoutCase(t, ctx, sErr, isGRPC)
@@ -283,7 +284,7 @@ func commonRecvTimeoutClientImpl[Req, Res any, Stream streaming.ClientStreamingS
 			test.Assert(t, rErr == io.EOF, rErr)
 			break
 		}
-		time.Sleep(300 * time.Millisecond)
+		<-ctx.Done()
 		sErr := stream.SendMsg(ctx, resGetter(scenario))
 		test.Assert(t, sErr != nil)
 		verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
@@ -304,10 +305,15 @@ func commonRecvTimeoutClientImpl[Req, Res any, Stream streaming.ClientStreamingS
 			test.Assert(t, rErr == io.EOF, rErr)
 			break
 		}
-		time.Sleep(300 * time.Millisecond)
+		<-ctx.Done()
 		sErr := stream.SendMsg(ctx, resGetter(scenario))
-		test.Assert(t, sErr != nil)
-		verifyServerSideTimeoutCase(t, ctx, sErr, isGRPC)
+		// gRPC cannot detect stream timeouts through Send operations, so there is a chance that Send will not report an error.
+		if !isGRPC {
+			test.Assert(t, sErr != nil)
+		}
+		if sErr != nil {
+			verifyServerSideTimeoutCase(t, ctx, sErr, isGRPC)
+		}
 		evtHdl.AssertCalledTimes(t, ServerCalledTimes{
 			startTimes:  1,
 			recvTimes:   recvTimes,
@@ -338,7 +344,7 @@ func commonRecvTimeoutServerImpl[Res any, Stream streaming.ServerStreamingServer
 			sErr := stream.Send(ctx, res)
 			if sErr == nil {
 				if i == n {
-					time.Sleep(300 * time.Millisecond)
+					<-ctx.Done()
 				}
 				continue
 			}
@@ -361,7 +367,7 @@ func commonRecvTimeoutServerImpl[Res any, Stream streaming.ServerStreamingServer
 			sErr := stream.Send(ctx, res)
 			if sErr == nil {
 				if i == n {
-					time.Sleep(300 * time.Millisecond)
+					<-ctx.Done()
 				}
 				continue
 			}
@@ -516,7 +522,7 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 		ctx := setScenario(context.Background(), clientStreamingRecvTimeoutOnly)
 		var callOpts []streamcall.Option
 		if !isClientTimeout {
-			callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+			callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutTakeEffect}))
 		}
 		cliSt, err := cli.RecvTimeoutClient(ctx, callOpts...)
 		test.Assert(t, err == nil, err)
@@ -525,7 +531,6 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 			sendTimes++
 			err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingRecvTimeoutOnly))
 			test.Assert(t, err == nil, err)
-			time.Sleep(50 * time.Millisecond)
 		}
 		_, err = cliSt.CloseAndRecv(cliSt.Context())
 		test.Assert(t, err != nil)
@@ -548,7 +553,7 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 		ctx := setScenario(context.Background(), serverStreamingRecvTimeoutOnly)
 		var callOpts []streamcall.Option
 		if !isClientTimeout {
-			callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+			callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutTakeEffect}))
 		}
 		srvSt, err := cli.RecvTimeoutServer(ctx, reqGetter(serverStreamingRecvTimeoutOnly), callOpts...)
 		test.Assert(t, err == nil, err)
@@ -580,7 +585,7 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 		ctx := setScenario(context.Background(), bidiStreamingRecvTimeoutOnly)
 		var callOpts []streamcall.Option
 		if !isClientTimeout {
-			callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+			callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutTakeEffect}))
 		}
 		bidiSt, err := cli.RecvTimeoutBidi(ctx, callOpts...)
 		test.Assert(t, err == nil, err)
@@ -593,7 +598,6 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				sendTimes++
 				sErr := bidiSt.Send(bidiSt.Context(), reqGetter(bidiStreamingRecvTimeoutOnly))
 				test.Assert(t, sErr == nil, sErr)
-				time.Sleep(50 * time.Millisecond)
 			}
 			sErr := bidiSt.CloseSend(bidiSt.Context())
 			test.Assert(t, sErr == nil, sErr)
@@ -633,7 +637,7 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 			ctx = setScenario(ctx, clientStreamingRecvAndStreamTimeoutWithRecvTimeoutTakeEffect)
 			var callOpts []streamcall.Option
 			if !isClientTimeout {
-				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutTakeEffect}))
 			}
 			cliSt, err := cli.RecvTimeoutClient(ctx, callOpts...)
 			test.Assert(t, err == nil, err)
@@ -642,7 +646,6 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				sendTimes++
 				err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingRecvTimeoutOnly))
 				test.Assert(t, err == nil, err)
-				time.Sleep(50 * time.Millisecond)
 			}
 			_, err = cliSt.CloseAndRecv(cliSt.Context())
 			test.Assert(t, err != nil)
@@ -662,12 +665,12 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				evtHdl.Reset()
 			}()
 			TimeoutTChan <- t
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), timeoutTakeEffect)
 			defer cancel()
 			ctx = setScenario(ctx, clientStreamingRecvAndStreamTimeoutWithStreamTimeoutTakeEffect)
 			var callOpts []streamcall.Option
 			if !isClientTimeout {
-				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutNotTakeEffect}))
 			}
 			cliSt, err := cli.RecvTimeoutClient(ctx, callOpts...)
 			test.Assert(t, err == nil, err)
@@ -695,12 +698,12 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				evtHdl.Reset()
 			}()
 			TimeoutTChan <- t
-			ctx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), timeoutNotTakeEffect)
 			defer cancel()
 			ctx = setScenario(ctx, serverStreamingRecvAndStreamTimeoutWithRecvTimeoutTakeEffect)
 			var callOpts []streamcall.Option
 			if !isClientTimeout {
-				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutTakeEffect}))
 			}
 			srvSt, err := cli.RecvTimeoutServer(ctx, reqGetter(serverStreamingRecvAndStreamTimeoutWithRecvTimeoutTakeEffect), callOpts...)
 			test.Assert(t, err == nil, err)
@@ -729,12 +732,12 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				evtHdl.Reset()
 			}()
 			TimeoutTChan <- t
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), timeoutTakeEffect)
 			defer cancel()
 			ctx = setScenario(ctx, serverStreamingRecvAndStreamTimeoutWithStreamTimeoutTakeEffect)
 			var callOpts []streamcall.Option
 			if !isClientTimeout {
-				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutNotTakeEffect}))
 			}
 			srvSt, err := cli.RecvTimeoutServer(ctx, reqGetter(serverStreamingRecvAndStreamTimeoutWithStreamTimeoutTakeEffect), callOpts...)
 			test.Assert(t, err == nil, err)
@@ -763,12 +766,12 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				evtHdl.Reset()
 			}()
 			TimeoutTChan <- t
-			ctx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), timeoutNotTakeEffect)
 			defer cancel()
 			ctx = setScenario(ctx, bidiStreamingRecvAndStreamTimeoutWithRecvTimeoutTakeEffect)
 			var callOpts []streamcall.Option
 			if !isClientTimeout {
-				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutTakeEffect}))
 			}
 			bidiSt, err := cli.RecvTimeoutBidi(ctx, callOpts...)
 			test.Assert(t, err == nil, err)
@@ -813,12 +816,12 @@ func commonTestTimeout[Req, Res any](t *testing.T, cli timeoutClient[Req, Res], 
 				evtHdl.Reset()
 			}()
 			TimeoutTChan <- t
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), timeoutTakeEffect)
 			defer cancel()
 			ctx = setScenario(ctx, bidiStreamingRecvAndStreamTimeoutWithRecvTimeoutTakeEffect)
 			var callOpts []streamcall.Option
 			if !isClientTimeout {
-				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: 200 * time.Millisecond}))
+				callOpts = append(callOpts, streamcall.WithRecvTimeoutConfig(streaming.TimeoutConfig{Timeout: timeoutNotTakeEffect}))
 			}
 			bidiSt, err := cli.RecvTimeoutBidi(ctx, callOpts...)
 			test.Assert(t, err == nil, err)
