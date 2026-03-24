@@ -245,3 +245,62 @@ func TestGenericServiceImplV2_BidiStreaming(t *testing.T) {
 		})
 	}
 }
+
+// TestWriteDifferentElemTypes tests that writing containers with different element types
+// returns a clean error instead of panic.
+func TestWriteDifferentElemTypes(t *testing.T) {
+	p, err := generic.NewThriftFileProvider("../../idl/tenant.thrift")
+	test.Assert(t, err == nil)
+	g, err := generic.MapThriftGeneric(p)
+	test.Assert(t, err == nil)
+
+	cli, err := newGenericClient("a.b.c", g, client.WithHostPorts(testaddr))
+	test.Assert(t, err == nil)
+
+	t.Run("ListWithMixedTypes", func(t *testing.T) {
+		// list<string> but second element is int32
+		req := map[string]interface{}{
+			"Msg":  "hello",
+			"List": []interface{}{"hello", int32(100)},
+		}
+		_, err := cli.GenericCall(context.Background(), "Echo", req)
+		test.Assert(t, err != nil)
+		t.Log(err)
+	})
+
+	t.Run("SetWithMixedTypes", func(t *testing.T) {
+		// set<string> but second element is int32
+		req := map[string]interface{}{
+			"Msg": "hello",
+			"Set": []interface{}{"hello", int32(100)},
+		}
+		_, err := cli.GenericCall(context.Background(), "Echo", req)
+		test.Assert(t, err != nil)
+		t.Log(err)
+	})
+
+	t.Run("MapWithMixedValueTypes", func(t *testing.T) {
+		// map<string,string> but second value is int32
+		req := map[string]interface{}{
+			"Msg": "hello",
+			"Map": map[interface{}]interface{}{
+				"key1": "value1",
+				"key2": int32(100),
+			},
+		}
+		_, err := cli.GenericCall(context.Background(), "Echo", req)
+		test.Assert(t, err != nil)
+		t.Log(err)
+	})
+
+	t.Run("NilThenNonNilInList", func(t *testing.T) {
+		// list<string> with nil then int32
+		req := map[string]interface{}{
+			"Msg":  "hello",
+			"List": []interface{}{nil, int32(100)},
+		}
+		_, err := cli.GenericCall(context.Background(), "Echo", req)
+		test.Assert(t, err != nil)
+		t.Log(err)
+	})
+}

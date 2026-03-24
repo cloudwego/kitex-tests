@@ -767,7 +767,7 @@ func commonTestNormal[Req, Res any](t *testing.T, cli normalClient[Req, Res], cl
 	ctx = metadata.AppendToOutgoingContext(ctx, "metadatakey", "metadatavalue")
 
 	_, err := cli.EchoUnary(ctx, reqGetter("test_unary_timeout"))
-	test.Assert(t, kerrors.IsTimeoutError(err))
+	test.Assert(t, kerrors.IsTimeoutError(err), err)
 
 	// test unary middleware
 	a, b, c, d, e, f, g, h = 0, 0, 0, 0, 0, 0, 0, 0
