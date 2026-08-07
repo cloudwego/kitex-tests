@@ -115,6 +115,7 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 	ctx, stReq := thriftrpc.CreateSTRequest(metainfo.WithBackwardValues(context.Background()))
 
 	t.Run("reuse", func(t *testing.T) {
+		rpcinfo.EnablePool(true)
 		_, err := cli.TestSTReq(ctx, stReq, callopt.WithHostPort(addr))
 		test.Assert(t, err == nil, err)
 		test.Assert(t, ri.Invocation().MethodName() == "", ri.Invocation().MethodName()) // zeroed
