@@ -100,13 +100,15 @@ func TestDisableRPCInfoReuse(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("gRPC reuse rpcinfo for unary by default", func(t *testing.T) {
+	t.Run("gRPC reuse rpcinfo for unary when pool enabled", func(t *testing.T) {
+		rpcinfo.EnablePool(true)
 		_, err := cli.CallUnary(ctx, &grpc_demo.Request{Name: "1"})
 		test.Assert(t, err == nil, err)
 		test.Assert(t, ri.Invocation().MethodName() == "", ri.Invocation().MethodName())
 	})
 
-	t.Run("gRPC do not reuse rpcinfo for streaming", func(t *testing.T) {
+	t.Run("gRPC do not reuse rpcinfo for streaming even when pool enabled", func(t *testing.T) {
+		rpcinfo.EnablePool(true)
 		st, err := cli.CallClientStream(ctx)
 		test.Assert(t, err == nil, err)
 		_, err = st.CloseAndRecv()
