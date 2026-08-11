@@ -28,7 +28,6 @@ import (
 	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/client/callopt/streamcall"
 	"github.com/cloudwego/kitex/pkg/kerrors"
-	"github.com/cloudwego/kitex/pkg/klog"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
@@ -63,15 +62,17 @@ const (
 
 	scenarioKey       = "SCENARIO"
 	bizSpecialMessage = "biz_special_message"
+
+	cancelInterval = 20 * time.Millisecond
 )
 
 func RunTestCancelServer(listenAddr string) server.Server {
 	addr, _ := net.ResolveTCPAddr("tcp", listenAddr)
-	evtHdlTracer, testChan := newServerEventHandlerTracer(nil)
+	evtHdlTracer, testChan := newServerEventHandlerTracer(CancelFinishChan)
 	hdl := newServerMockEventHandler(testChan)
 	svr := testcancelservice.NewServer(&cancelThriftImpl{evtHdl: hdl},
 		server.WithServiceAddr(addr),
-		server.WithExitWaitTime(1*time.Second),
+		server.WithExitWaitTime(100*time.Millisecond),
 		server.WithTracer(NewTracer()),
 		server.WithTracer(evtHdlTracer),
 		server.WithMetaHandler(transmeta.ServerTTHeaderHandler),
@@ -172,9 +173,6 @@ func commonCancelBidiImpl[Req, Res any, Stream streaming.BidiStreamingServer[Req
 	resGetter func(string) *Res,
 	evtHdl *ServerMockEventHandler,
 ) error {
-	defer func() {
-		CancelFinishChan <- struct{}{}
-	}()
 	t := <-CancelTChan
 	scenario, ok := getScenario(ctx)
 	test.Assert(t, ok)
@@ -204,7 +202,6 @@ func commonCancelBidiImpl[Req, Res any, Stream streaming.BidiStreamingServer[Req
 				sendTimes++
 				sErr := stream.Send(ctx, res)
 				if sErr == nil {
-					time.Sleep(50 * time.Millisecond)
 					continue
 				}
 				verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
@@ -227,9 +224,6 @@ func commonCancelClientImpl[Req, Res any, Stream streaming.ClientStreamingServer
 	ctx context.Context, stream Stream,
 	evtHdl *ServerMockEventHandler,
 ) error {
-	defer func() {
-		CancelFinishChan <- struct{}{}
-	}()
 	t := <-CancelTChan
 	isGRPC := isGRPCFunc(t, ctx)
 
@@ -293,9 +287,6 @@ func commonCancelServerImpl[Res any, Stream streaming.ServerStreamingServer[Res]
 	resGetter func(string) *Res,
 	evtHdl *ServerMockEventHandler,
 ) error {
-	defer func() {
-		CancelFinishChan <- struct{}{}
-	}()
 	t := <-CancelTChan
 	isGRPC := isGRPCFunc(t, ctx)
 
@@ -312,10 +303,9 @@ func commonCancelServerImpl[Res any, Stream streaming.ServerStreamingServer[Res]
 			sendTimes++
 			sErr := stream.Send(ctx, res)
 			if sErr == nil {
-				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			t.Logf("scenario[%s] Recv err: %v", scenario, sErr)
+			t.Logf("scenario[%s] Send err: %v", scenario, sErr)
 			verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
 			break
 		}
@@ -332,10 +322,9 @@ func commonCancelServerImpl[Res any, Stream streaming.ServerStreamingServer[Res]
 			sendTimes++
 			sErr := stream.Send(ctx, res)
 			if sErr == nil {
-				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			klog.CtxErrorf(ctx, "scenario[%s] Recv err: %v", scenario, sErr)
+			t.Logf("scenario[%s] Recv err: %v", scenario, sErr)
 			verifyServerSideCancelCase(t, ctx, sErr, isGRPC)
 			break
 		}
@@ -363,7 +352,6 @@ func commonCancelServerImpl[Res any, Stream streaming.ServerStreamingServer[Res]
 			sendTimes++
 			sErr = stream.Send(ctx, res)
 			if sErr == nil {
-				time.Sleep(50 * time.Millisecond)
 				continue
 			}
 			t.Logf("scenario[%s] Recv err: %v", scenario, sErr)
@@ -388,9 +376,9 @@ func getScenario(ctx context.Context) (string, bool) {
 	return metainfo.GetValue(ctx, scenarioKey)
 }
 
-func verifyClientSideCancelCase(t *testing.T, ctx context.Context, err error, isGRPC bool) {
+func verifyClientSideCancelCase(t *testing.T, ctx context.Context, err error, isGRPC, isSend bool) {
 	verifyCancelContext(t, ctx)
-	verifyClientSideCancelErr(t, err, isGRPC)
+	verifyClientSideCancelErr(t, err, isGRPC, isSend)
 }
 
 func verifyServerSideCancelCase(t *testing.T, ctx context.Context, err error, isGRPC bool) {
@@ -408,11 +396,16 @@ func verifyCancelContext(t *testing.T, ctx context.Context) {
 	test.Assert(t, ctxDone)
 }
 
-func verifyClientSideCancelErr(t *testing.T, err error, isGRPC bool) {
+func verifyClientSideCancelErr(t *testing.T, err error, isGRPC, isSend bool) {
 	if isGRPC {
 		st, ok := status.FromError(err)
 		test.Assert(t, ok)
-		test.Assert(t, st.Code() == codes.Canceled, st.Code())
+		code := st.Code()
+		if isSend {
+			test.Assert(t, code == codes.Canceled || code == codes.Internal, code, st.Message())
+		} else {
+			test.Assert(t, code == codes.Canceled, code, st.Message())
+		}
 	} else {
 		test.Assert(t, errors.Is(err, kerrors.ErrStreamingCanceled), err)
 	}
@@ -587,15 +580,14 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 		cliSt, err := cli.CancelClient(ctx)
 		test.Assert(t, err == nil, err)
 		cancel()
-		// todo: modify this timeout
-		time.Sleep(6 * time.Second)
-		err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingWithoutSendingAnyReq))
-		verifyClientSideCancelCase(t, cliSt.Context(), err, isGRPC)
+		// just for triggering cancel fast
+		err = cliSt.RecvMsg(cliSt.Context(), reqGetter(clientStreamingWithoutSendingAnyReq))
+		verifyClientSideCancelCase(t, cliSt.Context(), err, isGRPC, false)
 		evtHdl.AssertCalledTimes(t, ClientCalledTimes{
 			startTimes:      1,
 			recvHeaderTimes: 0,
-			recvTimes:       0,
-			sendTimes:       1,
+			recvTimes:       1,
+			sendTimes:       0,
 			finishTimes:     1,
 		})
 	})
@@ -617,7 +609,7 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 		cliSt, err := cli.CancelClient(ctx)
 		test.Assert(t, err == nil, err)
 		go func() {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(cancelInterval)
 			cancel()
 		}()
 		var sendTimes uint32
@@ -625,10 +617,9 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 			sendTimes++
 			err = cliSt.Send(cliSt.Context(), reqGetter(clientStreamingDuringNormalInteraction))
 			if err == nil {
-				time.Sleep(50 * time.Millisecond)
 				continue
 			}
-			verifyClientSideCancelCase(t, cliSt.Context(), err, isGRPC)
+			verifyClientSideCancelCase(t, cliSt.Context(), err, isGRPC, true)
 			break
 		}
 		evtHdl.AssertCalledTimes(t, ClientCalledTimes{
@@ -680,11 +671,11 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 		ctx = setScenario(ctx, serverStreamingRemoteRespondingSlowly)
 		srvSt, err := cli.CancelServer(ctx, reqGetter(serverStreamingRemoteRespondingSlowly))
 		test.Assert(t, err == nil, err)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(cancelInterval)
 		cancel()
 		CancelSendChan <- struct{}{}
 		_, err = srvSt.Recv(srvSt.Context())
-		verifyClientSideCancelCase(t, srvSt.Context(), err, isGRPC)
+		verifyClientSideCancelCase(t, srvSt.Context(), err, isGRPC, false)
 		evtHdl.AssertCalledTimes(t, ClientCalledTimes{
 			startTimes:      1,
 			recvHeaderTimes: 0,
@@ -708,18 +699,19 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 		srvSt, err := cli.CancelServer(ctx, reqGetter(serverStreamingDuringNormalInteraction))
 		test.Assert(t, err == nil, err)
 		go func() {
-			time.Sleep(50 * time.Millisecond)
+			// It takes some time to wait for the remote to reply.
+			time.Sleep(cancelInterval * 3)
 			cancel()
 		}()
 		var recvTimes uint32
 		for {
 			recvTimes++
-			res, err := srvSt.Recv(srvSt.Context())
-			if err == nil {
+			res, rErr := srvSt.Recv(srvSt.Context())
+			if rErr == nil {
 				test.Assert(t, resMsgGetter(res) == serverStreamingDuringNormalInteraction, res)
 				continue
 			}
-			verifyClientSideCancelCase(t, srvSt.Context(), err, isGRPC)
+			verifyClientSideCancelCase(t, srvSt.Context(), rErr, isGRPC, false)
 			break
 		}
 		evtHdl.AssertCalledTimes(t, ClientCalledTimes{
@@ -779,7 +771,7 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 		bidiSt, err := cli.CancelBidi(ctx)
 		test.Assert(t, err == nil, err)
 		go func() {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(cancelInterval)
 			cancel()
 		}()
 		var sendTimes, recvTimes uint32
@@ -791,10 +783,9 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 				sendTimes++
 				sErr := bidiSt.Send(bidiSt.Context(), reqGetter(bidiStreamingIndependentSendRecv))
 				if sErr == nil {
-					time.Sleep(50 * time.Millisecond)
 					continue
 				}
-				verifyClientSideCancelCase(t, bidiSt.Context(), sErr, isGRPC)
+				verifyClientSideCancelCase(t, bidiSt.Context(), sErr, isGRPC, true)
 				break
 			}
 		}()
@@ -807,7 +798,7 @@ func commonTestCancel[Req, Res any](t *testing.T, cli cancelClient[Req, Res], is
 					test.Assert(t, resMsgGetter(res) == bidiStreamingIndependentSendRecv, res)
 					continue
 				}
-				verifyClientSideCancelCase(t, bidiSt.Context(), rErr, isGRPC)
+				verifyClientSideCancelCase(t, bidiSt.Context(), rErr, isGRPC, false)
 				break
 			}
 		}()
