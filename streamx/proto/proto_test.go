@@ -80,6 +80,10 @@ func TestCancel(t *testing.T) {
 	streamx.TestPbCancel(t, pbCancelAddr)
 }
 
+func TestCascadeCancel(t *testing.T) {
+	streamx.TestPbCascadeCancel(t)
+}
+
 func TestTimeout(t *testing.T) {
 	streamx.TestPbTimeout(t, pbTimeoutAddr)
 }

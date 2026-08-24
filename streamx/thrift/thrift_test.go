@@ -80,6 +80,10 @@ func TestCancel(t *testing.T) {
 	streamx.TestThriftCancel(t, thriftTestCancelAddr)
 }
 
+func TestCascadeCancel(t *testing.T) {
+	streamx.TestThriftCascadeCancel(t)
+}
+
 func TestTimeout(t *testing.T) {
 	streamx.TestThriftTimeout(t, thriftTestTimeoutAddr)
 }
